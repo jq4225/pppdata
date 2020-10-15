@@ -1,0 +1,137 @@
+---
+title: "final_datacleaning"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(lubridate)
+library(tidycensus)
+options(tigris_use_cache = TRUE)
+census_api_key("c627b3c962b5b06cdbb714e3ebe65dda42d70a47")
+
+
+```
+
+```{r}
+# Just pulling out household median income here
+acs_income <- read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
+                       skip = 1) %>%
+  clean_names() %>%
+  select(id, geographic_area_name, 
+         estimate_median_income_dollars_families_families) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         estimate_median_income_dollars_families_families = 
+           as.double(estimate_median_income_dollars_families_families))
+```
+```{r}
+ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
+  clean_names() %>%
+  select(loan_range, zip, date_approved) %>%
+  drop_na(zip) %>%
+  
+  # This calculates the date on which loans were approved vs. when apps opened.
+  mutate(date_approved = mdy(date_approved), 
+         days_to_approval = date_approved - mdy("04/03/2020"),
+         zip = as.character(zip))
+
+```
+```{r}
+banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
+  'ZIP' = col_character()))%>%
+  clean_names() %>%
+  select(zip) %>%
+  filter(zip != 0) %>%
+  
+  # FDIC data drops leading zeroes from zip codes, so we add them back!
+  mutate(zip = str_pad(zip, width = 5, "left", "0")) %>%
+  mutate(zip = str_trim(zip, side = "both")) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+
+```
+
+```{r}
+# population
+
+pop <- read_csv("raw_data/acs_pop/ACSDT5Y2018.B01003_data_with_overlays_2020-10-06T100104.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  select(-margin_of_error_total)
+```
+
+
+```{r}
+# race
+
+race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name,percent_estimate_race_total_population_one_race_white,
+         percent_estimate_race_total_population_one_race_black_or_african_american) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_race_total_population_one_race_white = 
+           as.double(percent_estimate_race_total_population_one_race_white),
+         percent_estimate_race_total_population_one_race_black_or_african_american = 
+           as.double(percent_estimate_race_total_population_one_race_black_or_african_american))
+```
+
+
+```{r}
+# The fun part is merging these datasets -- I'm using inner join since all rows
+# should match up between different acs subsets
+pop_race <- inner_join(pop, race, by = "geographic_area_name")
+income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name") %>%
+  select(-id.y, -id.x) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+```
+
+
+```{r}
+# Merging FDIC and ACS data. We use left join to preserve all zip codes, even
+# those without banks
+
+acs_with_banking <- left_join(income_pop_race, banks, 
+                              by = c("geographic_area_name" = "zip")) %>%
+  # replace no banks in a county with zero banks in a county
+  replace_na(replace = list(number = 0))
+
+acs_with_banking
+```
+
+
+```{r}
+ppp_with_demographics <- left_join(ppp_150, acs_with_banking, 
+                                   by = c("zip" = "geographic_area_name")) %>%
+  mutate(banks_per_pop = number/(estimate_total/10000))
+
+ppp_with_demographics
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+test <- ppp_with_demographics %>%
+  drop_na(days_to_approval, estimate_median_income_dollars_families_families,
+          percent_estimate_race_total_population_one_race_white) %>%
+  mutate(days_to_approval = as.double(days_to_approval))
+
+
+test2<- 
+  lm(test$days_to_approval ~ 1 + test$estimate_median_income_dollars_families_families +
+       test$percent_estimate_race_total_population_one_race_white +
+       test$banks_per_pop)
+
+summary(test2)
+
+```
+
