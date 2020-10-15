@@ -109,13 +109,17 @@ acs_with_banking
 ppp_with_demographics <- left_join(ppp_150, acs_with_banking, 
                                    by = c("zip" = "geographic_area_name")) %>%
   mutate(banks_per_pop = number/(estimate_total/10000))
-
-ppp_with_demographics
 ```
 
 
 ```{r}
+cut_ppp <- ppp_with_demographics %>%
+  mutate(cuts =  cut(percent_estimate_race_total_population_one_race_black_or_african_american,
+                   seq(0, 100, by = 10))) %>%
+  group_by(cuts) %>%
+  summarize(mean_days = mean(as.double(days_to_approval)))
 
+cut_ppp
 ```
 
 

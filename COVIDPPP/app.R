@@ -8,40 +8,40 @@
 #
 
 library(shiny)
+library(tidyverse)
+ppp <- readRDS('ppp_preliminary.rds')
+cut_ppp <- readRDS('cut_ppp.rds')
 
 # Define UI for application that draws a histogram
-ui <- fluidPage(
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
-    )
+ui <<- navbarPage("Gov 50: Justin Qi Milestone",
+                  tabPanel("Data",
+                           plotOutput("distPlot")),
+                  tabPanel("About",
+                           mainPanel(
+                               h2("About"),
+                               tags$a(href="https://github.com/jq4225/pppdata", 
+                                      "Github repo here!"),
+                               p("I am using two main sources of data for my project.
+                                  First, I'm using the American Community Survey's 2018 projections,
+                                  which include racial, demographic, and income breakdowns for 
+                                 every ZIP code in the US. I'm also using an FDIC list of all the 
+                                 banking locations in the US broken down by ZIP code. Finally,
+                                 I'm using the SBA's dataset on Paycheck Protection Loans of more 
+                                 than $150,000 given this year, as of August 8th.")
+                           ))
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
     output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+        cut_ppp %>%
+            drop_na(cuts) %>%
+            ggplot(aes(x = cuts, y = mean_days)) + geom_col() +
+              labs(x = "Proportion of Black/African American, Percent",
+                   y = "Average Wait Time for PPP Loan (days)")
+        
     })
 }
 
