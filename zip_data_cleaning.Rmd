@@ -106,7 +106,10 @@ acs_with_banking
 
 
 ```{r}
-ppp_with_demographics <- left_join(ppp_150, acs_with_banking, 
+ppp_total <- rbind(ppp_150, all_states2)
+
+
+ppp_with_demographics <- left_join(ppp_total, acs_with_banking, 
                                    by = c("zip" = "geographic_area_name")) %>%
   mutate(banks_per_pop = number/(estimate_total/10000))
 ```
@@ -176,7 +179,8 @@ for(i in 1:length(file.names)) {
 }
 
 all_states2 <- all_states %>%
-  rename("loan_range" = "loan_amount")
+  rename("loan_range" = "loan_amount") %>%
+  mutate(loan_range = as.character(loan_range))
 ```
 
 
@@ -189,5 +193,7 @@ file.names[1]
 
 ```{r}
 glimpse(all_states2)
+
+glimpse(ppp_150)
 ```
 
