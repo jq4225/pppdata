@@ -136,6 +136,58 @@ test2<-
        test$banks_per_pop)
 
 summary(test2)
+```
 
+
+```{r}
+sba_cleaning <- function(file) {
+  x <- read_csv(file) %>%
+    clean_names() %>%
+    select(loan_amount, zip, date_approved) %>%
+    drop_na(zip) %>%
+    mutate(date_approved = mdy(date_approved), 
+         days_to_approval = date_approved - mdy("04/03/2020"),
+         zip = as.character(zip))
+}
+```
+
+
+```{r}
+alabama <- sba_cleaning("raw_data/sba/Alabama_150.csv")
+alaska <- sba_cleaning("raw_data/sba/Alaska_150.csv")
+americansamoa <- sba_cleaning("raw_data/sba/AmericanSamoa_150.csv")
+arizona <- sba_cleaning("raw_data/sba/arizona_150.csv")
+arkansas <- sba_cleaning("raw_data/sba/arkansas_150.csv")
+california <- sba_cleaning("raw_data/sba/california_150.csv")
+colorado <- sba_cleaning("raw_data/sba/colorado_150.csv")
+connecticut <- sba_cleaning("raw_data/sba/colorado_150.csv")
+dc <- sba_cleaning()
+```
+
+
+```{r}
+file.names <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+all_states<- tibble()
+
+for(i in 1:length(file.names)) {
+  file <- sba_cleaning(paste("raw_data/sba/states/",file.names[i], sep = ""))
+  all_states <- rbind(all_states, file)
+}
+
+all_states2 <- all_states %>%
+  rename("loan_range" = "loan_amount")
+```
+
+
+```{r}
+file.names <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+file.names[1]
+```
+
+
+```{r}
+glimpse(all_states2)
 ```
 
