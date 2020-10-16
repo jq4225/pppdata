@@ -1,0 +1,21 @@
+---
+title: "Using final data cleaning"
+author: "Justin Qi"
+date: "10/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(lubridate)
+
+zip_data <- readRDS("ppp_states_no_nas.rds")
+```
+
+
+```{r}
+glimpse(zip_data)
+```
