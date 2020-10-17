@@ -12,10 +12,22 @@ library(readxl)
 library(janitor)
 library(lubridate)
 
-zip_data <- readRDS("ppp_states_no_nas.rds")
+zip_data <- readRDS("zip_ppp_allstates_1016.rds")
 ```
 
 
 ```{r}
-glimpse(zip_data)
+zip_data_modified <- zip_data %>%
+  mutate(log_days = log(days_to_approval)) %>%
+  mutate(log_days = ifelse(log_days == -Inf, 0, log_days))
+```
+
+
+```{r}
+test_regression <- 
+  lm(zip_data_modified$log_days ~ 1 + zip_data_modified$estimate_median_income_dollars_families_families +
+       zip_data_modified$percent_estimate_race_total_population_one_race_black_or_african_american +
+       zip_data_modified$banks_per_pop)
+
+summary(test_regression)
 ```
