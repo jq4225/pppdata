@@ -1,0 +1,67 @@
+---
+title: "Adding new controls"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(readxl)
+ppp_allstates <- readRDS(file = "zip_ppp_allstates_1017.rds")
+```
+
+```{r creating a zip to CD crosswalk}
+zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", skip = 1) %>%
+  clean_names() %>%
+  mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, sep = "-")) %>%
+  select(-state_code, -population_2010) %>%
+  group_by(zip_census_tabulation_area) %>%
+  # de-duplicate by assigning zips to only the CD where most of them are in
+  arrange(cd116_to_zcta5_allocation_factor) %>%
+  slice(1)
+```
+
+
+```{r creating a zip to CD crosswalk2}
+
+```
+
+
+```{r converting Cook Political Report}
+cook_pvi <- read_csv(file = 'raw_data/cook_pvi/data-5vPn3.csv') %>%
+  clean_names() %>%
+  mutate(pvi_split = str_split(pvi, pattern = "\\+")) %>%
+  unnest(pvi_split) %>%
+  group_by(dist) %>%
+  mutate(col = seq_along(dist)) %>%
+  spread(key = col, value = pvi_split) %>%
+  rename(party = "1", pct = "2") %>%
+  mutate(pct = as.double(pct), dem_indicator = ifelse(party == "D", -1, 1)) %>%
+  mutate(pct = pct * dem_indicator) %>%
+  select(dist, party, pct)
+```
+
+
+```{r mapping zip to cd}
+zip_pvi <- left_join(zip_cd_crosswalk, cook_pvi, by = c("cd_name" = "dist")) %>%
+  drop_na(pct) %>%
+  select(zip_census_tabulation_area, cd_name, pct) %>%
+  mutate(zip_census_tabulation_area = as.character(zip_census_tabulation_area))
+```
+
+
+```{r left_joining}
+ppp_allstates_pvi <- left_join(ppp_allstates, zip_pvi, by = c("zip" = "zip_census_tabulation_area")) %>%
+  drop_na(pct)
+```
+
+
+```{r county-zip_crosswalk}
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx',
+                                   col_types = c("text", "numeric", "guess",
+                                                 "guess", "guess", "guess"))
+county_zip_crosswalk
+```
+
+
