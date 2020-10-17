@@ -79,6 +79,18 @@ race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-
 
 
 ```{r}
+# Reading in education data
+educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv") %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  select()
+
+# column is called: Estimate!!Percent!!Population 25 years and over!!Population 35 to 44 years!!High school graduate or higher
+
+```
+
+
+```{r}
 # The fun part is merging these datasets -- I'm using inner join since all rows
 # should match up between different acs subsets
 pop_race <- inner_join(pop, race, by = "geographic_area_name")
