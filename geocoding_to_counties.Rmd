@@ -37,9 +37,13 @@ ppp_geocoded
 
 
 ```{r geocoding 2}
-ppp_geocoded_2 <- ppp_150 %>%
-  rowwise() %>%
+ppp_geocoded_pt1 <- ppp_150 %>%
+  drop_na(address, city, state, zip) %>%
   cxy_geocode(street = 'address', city = 'city', state = 'state', zip = 'zip')
+```
+
+
+```{r geocoding 2}
 
 ```
 

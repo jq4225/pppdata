@@ -9,6 +9,9 @@ library(tidyverse)
 library(janitor)
 library(readxl)
 ppp_allstates <- readRDS(file = "zip_ppp_allstates_1017.rds")
+ppp_allstates_pvi <- readRDS(file = "ppp_pvi_1017.rds")
+
+# Everything in this file as of 5 pm 10/17 is already in the ppp_acs_pvi_covid rds file
 ```
 
 ```{r creating a zip to CD crosswalk}
@@ -58,10 +61,64 @@ ppp_allstates_pvi <- left_join(ppp_allstates, zip_pvi, by = c("zip" = "zip_censu
 
 
 ```{r county-zip_crosswalk}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx',
-                                   col_types = c("text", "numeric", "guess",
-                                                 "guess", "guess", "guess"))
-county_zip_crosswalk
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date > as.Date("2020-03-27")) %>%
+  select(-county, -state)
+```
+
+
+```{r county-zip_crosswalk}
+# 7 day rolling average cases and deaths around application start date 
+
+weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips")) %>%
+  filter(date <= as.Date("2020-04-03")) %>%
+  group_by(zip) %>%
+  mutate(mean_cases_app_start = mean(cases), mean_deaths_app_start = mean(deaths)) %>%
+  select(-cases, -deaths, -date) %>%
+  distinct() %>%
+  mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
+         mean_start_deaths_weighted = mean_deaths_app_start * res_ratio) %>%
+  select(-mean_cases_app_start, -mean_deaths_app_start) %>%
+  mutate(mean_start_cases_weighted = sum(mean_start_cases_weighted),
+         mean_start_deaths_weighted = sum(mean_start_deaths_weighted)) %>%
+  select(-county, -res_ratio) %>%
+  distinct()
+
+```
+
+
+```{r county-zip_crosswalk_2}
+ppp_allstates_covid <- left_join(ppp_allstates_pvi, weighted_cases1, by = "zip")
+```
+
+
+```{r county-zip_crosswalk_3}
+# Didn't end up doing this -- just using covid cases in the beginning of April -- this is wayyy too computationally intensive
+dates_approved <- ppp_allstates_covid %>%
+  select(zip, date_approved) %>%
+  mutate(date_begin = date_approved - 6)
+
+
+weighted_cases2 <-left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips")) %>%
+  mutate(weighted_cases = cases * res_ratio, weighted_deaths = deaths * res_ratio) %>%
+  select(-res_ratio) %>%
+  group_by(zip, date) %>%
+  mutate(weighted_cases = sum(weighted_cases), weighted_deaths = sum(weighted_deaths)) %>% 
+  select(-county, -cases, -deaths)
+
+weighted_cases3 <- left_join(dates_approved, weighted_cases2, by = "zip")
+```
+
+
+```{r county-zip_crosswalk_4}
+# Dividing this for a case and death count per ten thousand people
+ppp_covidadj <- ppp_allstates_covid %>%
+  mutate(mean_start_cases_weighted = mean_start_cases_weighted * 10000 / estimate_total,
+         mean_start_deaths_weighted = mean_start_deaths_weighted * 10000 / estimate_total)
 ```
 
 
