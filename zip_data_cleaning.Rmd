@@ -80,11 +80,16 @@ race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-
 
 ```{r}
 # Reading in education data
-educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv") %>%
+educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv",
+                 skip = 1) %>%
   clean_names() %>%
-  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
-  select()
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)))
 
+hs_educ <- educ %>%
+  select(id, geographic_area_name, 
+         estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 # column is called: Estimate!!Percent!!Population 25 years and over!!Population 35 to 44 years!!High school graduate or higher
 
 ```
@@ -98,6 +103,9 @@ income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name")
   select(-id.y, -id.x) %>%
   mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 
+income_pop_race_educ <- inner_join(income_pop_race, hs_educ, by = "geographic_area_name") %>%
+  select(-id)
+
 ```
 
 
@@ -105,7 +113,7 @@ income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name")
 # Merging FDIC and ACS data. We use left join to preserve all zip codes, even
 # those without banks
 
-acs_with_banking <- left_join(income_pop_race, banks, 
+acs_with_banking <- left_join(income_pop_race_educ, banks, 
                               by = c("geographic_area_name" = "zip")) %>%
   # replace no banks in a county with zero banks in a county
   replace_na(replace = list(number = 0))
