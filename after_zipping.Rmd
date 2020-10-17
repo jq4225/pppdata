@@ -11,23 +11,31 @@ library(tidyverse)
 library(readxl)
 library(janitor)
 library(lubridate)
+library(stringr)
 
-zip_data <- readRDS("zip_ppp_allstates_1016.rds")
+zip_data <- readRDS("zip_ppp_allstates_1017.rds")
 ```
 
 
 ```{r}
-zip_data_modified <- zip_data %>%
-  mutate(log_days = log(days_to_approval)) %>%
-  mutate(log_days = ifelse(log_days == -Inf, 0, log_days))
+# included in latest now -- this is just making dummies based on loan size
+zip_data_with_dummies <- zip_data %>%
+  mutate("350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
+         "150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
+         "5mil_10mil" = ifelse(loan_range == "a $5-10 million", 1, 0),
+         "2mil_5mil" = ifelse(loan_range == "b $2-5 million", 1, 0),
+         "1mil_2mil" = ifelse(loan_range == "c $1-2 million", 1, 0),
+         "150_less" = ifelse(loan_range == "less than 150k", 1, 0)
+         )
 ```
 
 
 ```{r}
-test_regression <- 
-  lm(zip_data_modified$log_days ~ 1 + zip_data_modified$estimate_median_income_dollars_families_families +
-       zip_data_modified$percent_estimate_race_total_population_one_race_black_or_african_american +
-       zip_data_modified$banks_per_pop)
+# covid cases
 
-summary(test_regression)
+```
+
+
+```{r}
+# dummy for whether bank takes or doesn't take outside customers
 ```

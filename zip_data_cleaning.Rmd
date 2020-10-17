@@ -133,7 +133,8 @@ ppp_total <- rbind(ppp_150_newcol, all_states2)
 
 ppp_with_demographics <- left_join(ppp_total, acs_with_banking, 
                                    by = c("zip" = "geographic_area_name")) %>%
-  mutate(banks_per_pop = number/(estimate_total/10000))
+  mutate(banks_per_pop = number/(estimate_total/10000)) %>%
+  mutate(high_school_pct = as.double(high_school_pct))
 ```
 
 
@@ -150,15 +151,15 @@ cut_ppp
 
 ```{r}
 test <- ppp_with_demographics %>%
-  drop_na(days_to_approval, estimate_median_income_dollars_families_families,
-          percent_estimate_race_total_population_one_race_white) %>%
+  drop_na(days_to_approval, estimate_median_income_dollars_families_families, high_school_pct) %>%
   mutate(days_to_approval = as.double(days_to_approval))
 
 
 test2<- 
   lm(test$days_to_approval ~ 1 + test$estimate_median_income_dollars_families_families +
-       test$percent_estimate_race_total_population_one_race_white +
-       test$banks_per_pop)
+       test$percent_estimate_race_total_population_one_race_black_or_african_american +
+       test$percent_estimate_race_total_population_one_race_white + 
+       test$banks_per_pop + test$high_school_pct)
 
 summary(test2)
 ```
