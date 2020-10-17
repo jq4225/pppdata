@@ -27,7 +27,7 @@ acs_income <- read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays
 ```{r}
 ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   clean_names() %>%
-  select(loan_range, zip, date_approved) %>%
+  select(loan_range, zip, date_approved, lender) %>%
   drop_na(zip) %>%
   
   # This calculates the date on which loans were approved vs. when apps opened.
@@ -169,7 +169,7 @@ summary(test2)
 sba_cleaning <- function(file) {
   x <- read_csv(file) %>%
     clean_names() %>%
-    select(loan_amount, zip, date_approved) %>%
+    select(loan_amount, zip, date_approved, lender) %>%
     drop_na(zip) %>%
     mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),

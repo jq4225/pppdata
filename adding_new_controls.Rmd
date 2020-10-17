@@ -8,8 +8,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
 library(readxl)
-ppp_allstates <- readRDS(file = "zip_ppp_allstates_1017.rds")
-ppp_allstates_pvi <- readRDS(file = "ppp_pvi_1017.rds")
+ppp_allstates <- readRDS(file = "zip_ppp_allstates_1017_dummy.rds")
+#ppp_allstates_pvi <- readRDS(file = "ppp_pvi_1017.rds")
 
 # Everything in this file as of 5 pm 10/17 is already in the ppp_acs_pvi_covid rds file
 ```
@@ -118,7 +118,24 @@ weighted_cases3 <- left_join(dates_approved, weighted_cases2, by = "zip")
 # Dividing this for a case and death count per ten thousand people
 ppp_covidadj <- ppp_allstates_covid %>%
   mutate(mean_start_cases_weighted = mean_start_cases_weighted * 10000 / estimate_total,
-         mean_start_deaths_weighted = mean_start_deaths_weighted * 10000 / estimate_total)
+         mean_start_deaths_weighted = mean_start_deaths_weighted * 10000 / estimate_total) %>%
+  rename(loan_350_1mil = "350_1mil", loan_150_350 = "150-350",
+         loan_5mil_10mil = "5mil_10mil", loan_2mil_5mil = "2mil_5mil",
+         loan_1mil_2mil = "1mil_2mil", loan_150_less = "150_less")
+```
+
+
+```{r county-zip_crosswalk_4}
+test_regression <-
+  lm(ppp_covidadj$days_to_approval ~ 1 + ppp_covidadj$estimate_median_income_dollars_families_families +
+       ppp_covidadj$percent_estimate_race_total_population_one_race_black_or_african_american +
+       ppp_covidadj$percent_estimate_race_total_population_one_race_white + ppp_covidadj$high_school_pct +
+       ppp_covidadj$banks_per_pop + ppp_covidadj$loan_350_1mil + ppp_covidadj$loan_150_350 + 
+       ppp_covidadj$loan_5mil_10mil +ppp_covidadj$loan_2mil_5mil + ppp_covidadj$loan_1mil_2mil +
+       ppp_covidadj$pct + ppp_covidadj$mean_start_cases_weighted + 
+       ppp_covidadj$mean_start_deaths_weighted)
+
+summary(test_regression)
 ```
 
 
