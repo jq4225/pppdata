@@ -39,7 +39,7 @@ loan_numbers <- old_data %>%
 ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender") %>%
   rename("cook_pvi" = "pct", 
          "black_percent" = "percent_estimate_race_total_population_one_race_black_or_african_american",
-         "White_percent" = "percent_estimate_race_total_population_one_race_white",
+         "white_percent" = "percent_estimate_race_total_population_one_race_white",
          "median_family_income" = "estimate_median_income_dollars_families_families",
          "population" = "estimate_total") %>%
   select(-loan_range)
@@ -58,37 +58,89 @@ ppp_allvars_1018_rural <- left_join(ppp_allvars_1018, rural, by = "zip") %>%
 ppp_allvars_1018_rural <- ppp_allvars_1018_rural %>%
   mutate(rural = replace_na(rural, 0)) %>%
   mutate(rural = as.double(rural))
-  
 ```
 
 
 ```{r}
-bank_deposits <- read_csv("raw_data/fdic/All_Reports_20200630_Total_Deposits.csv") %>%
-  select(name, dep) %>%
-  mutate(dep = as.double(dep), name = tolower(name))
+# Business counts coding
+biz_count <- read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlays_2020-10-19T095307.csv",
+                      skip = 1) %>%
+  clean_names()  %>%
+  mutate(geographic_area_name = substring(geographic_area_name, 5, 9)) %>%
+  filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
+  select(geographic_area_name, number_of_establishments)
+
+ppp_allvars_1019 <- left_join(ppp_allvars_1018_rural, biz_count, 
+                              by = c("zip" = "geographic_area_name")) %>%
+  rename("white_percent" = "White_percent") %>%
+  drop_na(number_of_establishments, white_percent, black_percent,
+          high_school_pct, banks_per_pop, cook_pvi, mean_start_cases_weighted,
+          mean_start_deaths_weighted, bank_ppp_issued, rural)
 ```
 
 
 ```{r}
-left_join(banks, bank_deposits, by = c("lender" = "name")) %>%
-  group_by(lender) %>%
-  filter(is.na(dep))
+# bank_deposits <- read_csv("raw_data/fdic/All_Reports_20200630_Total_Deposits.csv") %>%
+#   select(name, dep) %>%
+#   mutate(dep = as.double(dep), name = tolower(name))
+```
+
+
+```{r}
+# left_join(banks, bank_deposits, by = c("lender" = "name")) %>%
+#   group_by(lender) %>%
+#   filter(is.na(dep))
+```
+
+
+```{r}
+ppp_logtest <- ppp_allvars_1019 %>%
+  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval)))
 ```
 
 
 ```{r}
 #ppp_allvars_1018_rural <- readRDS('ppp_allvars_1018_rural.rds')
 test_regression <-
-  lm(ppp_allvars_1018_rural$days_to_approval ~ 1 + ppp_allvars_1018_rural$median_family_income +
-       ppp_allvars_1018_rural$black_percent +
-       ppp_allvars_1018_rural$White_percent + ppp_allvars_1018_rural$high_school_pct +
-       ppp_allvars_1018_rural$banks_per_pop + 
-       ppp_allvars_1018_rural$loan_350_1mil + ppp_allvars_1018_rural$loan_150_350 + 
-       ppp_allvars_1018_rural$loan_5mil_10mil +
-       ppp_allvars_1018_rural$loan_2mil_5mil + ppp_allvars_1018_rural$loan_1mil_2mil +
-       ppp_allvars_1018_rural$cook_pvi + ppp_allvars_1018_rural$mean_start_cases_weighted + 
-       ppp_allvars_1018_rural$mean_start_deaths_weighted + ppp_allvars_1018_rural$bank_ppp_issued +
-       ppp_allvars_1018_rural$rural)
+  lm(ppp_allvars_1019$days_to_approval ~ 1 + ppp_allvars_1019$median_family_income +
+       ppp_allvars_1019$black_percent +
+       ppp_allvars_1019$white_percent + ppp_allvars_1019$high_school_pct +
+       ppp_allvars_1019$banks_per_pop + 
+       ppp_allvars_1019$loan_350_1mil + ppp_allvars_1019$loan_150_350 + 
+       ppp_allvars_1019$loan_5mil_10mil +
+       ppp_allvars_1019$loan_2mil_5mil + ppp_allvars_1019$loan_1mil_2mil +
+       ppp_allvars_1019$cook_pvi + ppp_allvars_1019$mean_start_cases_weighted + 
+       ppp_allvars_1019$mean_start_deaths_weighted + ppp_allvars_1019$bank_ppp_issued +
+       ppp_allvars_1019$rural + ppp_allvars_1019$number_of_establishments)
 
 summary(test_regression)
 ```
+
+
+```{r}
+log_regression_test <- 
+    lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
+       ppp_logtest$black_percent +
+       ppp_logtest$White_percent + ppp_logtest$high_school_pct +
+       ppp_logtest$banks_per_pop + 
+       ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
+       ppp_logtest$loan_5mil_10mil +
+       ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
+       ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
+       ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
+       ppp_logtest$rural)
+
+summary(log_regression_test)
+```
+```{r}
+# Adding in marital status
+marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
+                    skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, estimate_now_married_except_separated_population_15_years_and_over) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
+  rename("married_percent" = "estimate_now_married_except_separated_population_15_years_and_over")
+
+ppp_allvars_1019_marital <- left_join(ppp_allvars_1019, marital, by = c("zip" = "geographic_area_name")) %>%
+  drop_na(married_percent)
