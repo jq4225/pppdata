@@ -15,11 +15,28 @@ loan_data <- readRDS("ppp_acs_pvi_covid_1017.rds")
 ```{r}
 banks <- loan_data %>%
   select(lender) %>%
-  distinct()
+  group_by(lender) %>%
+  summarize(number_of_loans = n(), .groups = "drop") %>%
+  ungroup() %>%
+  mutate(lender = tolower(lender))
 
 banks_gov_project <- loan_data %>%
   select(lender) %>%
   group_by(lender) %>%
   summarize(number_of_loans = n(), .groups = "drop") %>%
   filter(number_of_loans >= 1000)
+```
+
+
+```{r}
+bank_deposits <- read_csv("raw_data/fdic/All_Reports_20200630_Total_Deposits.csv") %>%
+  select(name, dep) %>%
+  mutate(dep = as.double(dep), name = tolower(name))
+```
+
+
+```{r}
+left_join(banks, bank_deposits, by = c("lender" = "name")) %>%
+  group_by(lender) %>%
+  filter(is.na(dep))
 ```
