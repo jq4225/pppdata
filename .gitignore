@@ -6,5 +6,7 @@
  
 raw_data
 old_data
+.rds
+.csv
 *rds
 *csv
