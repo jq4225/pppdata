@@ -9,6 +9,7 @@ library(janitor)
 library(tidyverse)
 
 loan_data <- readRDS("ppp_acs_pvi_covid_1017.rds")
+old_data <- readRDS("ppp_loanonly_all_loans.rds")
 ```
 
 
@@ -25,6 +26,17 @@ banks_gov_project <- loan_data %>%
   group_by(lender) %>%
   summarize(number_of_loans = n(), .groups = "drop") %>%
   filter(number_of_loans >= 1000)
+```
+
+
+```{r}
+# Counting the number of loans per bank
+loan_numbers <- old_data %>%
+  select(lender) %>%
+  group_by(lender) %>%
+  summarize(number_ppp = n(), .groups = "drop")
+
+ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender")
 ```
 
 
