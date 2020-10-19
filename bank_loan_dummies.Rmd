@@ -1,0 +1,25 @@
+---
+title: "bank loan dummies"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(janitor)
+library(tidyverse)
+
+loan_data <- readRDS("ppp_acs_pvi_covid_1017.rds")
+```
+
+
+```{r}
+banks <- loan_data %>%
+  select(lender) %>%
+  distinct()
+
+banks_gov_project <- loan_data %>%
+  select(lender) %>%
+  group_by(lender) %>%
+  summarize(number_of_loans = n(), .groups = "drop") %>%
+  filter(number_of_loans >= 1000)
+```
