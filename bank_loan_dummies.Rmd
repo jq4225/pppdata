@@ -36,7 +36,13 @@ loan_numbers <- old_data %>%
   group_by(lender) %>%
   summarize(number_ppp = n(), .groups = "drop")
 
-ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender")
+ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender") %>%
+  rename("cook_pvi" = "pct", 
+         "black_percent" = "percent_estimate_race_total_population_one_race_black_or_african_american",
+         "White_percent" = "percent_estimate_race_total_population_one_race_white",
+         "median_family_income" = "estimate_median_income_dollars_families_families",
+         "population" = "estimate_total") %>%
+  select(-loan_range)
 ```
 
 
@@ -51,4 +57,16 @@ bank_deposits <- read_csv("raw_data/fdic/All_Reports_20200630_Total_Deposits.csv
 left_join(banks, bank_deposits, by = c("lender" = "name")) %>%
   group_by(lender) %>%
   filter(is.na(dep))
+```
+
+
+```{r}
+test_regression <-
+  lm(ppp_allvars_1018$days_to_approval ~ 1 + ppp_allvars_1018$estimate_median_income_dollars_families_families +
+       ppp_allvars_1018$percent_estimate_race_total_population_one_race_black_or_african_american +
+       ppp_allvars_1018$percent_estimate_race_total_population_one_race_white + ppp_allvars_1018$high_school_pct +
+       ppp_allvars_1018$banks_per_pop + ppp_allvars_1018$loan_350_1mil + ppp_allvars_1018$loan_150_350 + 
+       ppp_allvars_1018$loan_5mil_10mil +ppp_allvars_1018$loan_2mil_5mil + ppp_allvars_1018$loan_1mil_2mil +
+       ppp_allvars_1018$pct + ppp_allvars_1018$mean_start_cases_weighted + 
+       ppp_allvars_1018$mean_start_deaths_weighted + ppp_allvars_1018$number_ppp)
 ```
