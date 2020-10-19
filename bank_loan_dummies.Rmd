@@ -34,7 +34,7 @@ banks_gov_project <- loan_data %>%
 loan_numbers <- old_data %>%
   select(lender) %>%
   group_by(lender) %>%
-  summarize(number_ppp = n(), .groups = "drop")
+  summarize(bank_ppp_issued = n(), .groups = "drop")
 
 ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender") %>%
   rename("cook_pvi" = "pct", 
@@ -43,6 +43,22 @@ ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender") %>%
          "median_family_income" = "estimate_median_income_dollars_families_families",
          "population" = "estimate_total") %>%
   select(-loan_range)
+```
+
+
+```{r}
+# Rural data dummy coding
+rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
+  clean_names() %>%
+  select(-state) %>%
+  mutate(rural = 1)
+
+ppp_allvars_1018_rural <- left_join(ppp_allvars_1018, rural, by = "zip") %>%
+  
+ppp_allvars_1018_rural <- ppp_allvars_1018_rural %>%
+  mutate(rural = replace_na(rural, 0)) %>%
+  mutate(rural = as.double(rural))
+  
 ```
 
 
@@ -61,12 +77,18 @@ left_join(banks, bank_deposits, by = c("lender" = "name")) %>%
 
 
 ```{r}
+#ppp_allvars_1018_rural <- readRDS('ppp_allvars_1018_rural.rds')
 test_regression <-
-  lm(ppp_allvars_1018$days_to_approval ~ 1 + ppp_allvars_1018$median_family_income +
-       ppp_allvars_1018$black_percent +
-       ppp_allvars_1018$White_percent + ppp_allvars_1018$high_school_pct +
-       ppp_allvars_1018$banks_per_pop + ppp_allvars_1018$loan_350_1mil + ppp_allvars_1018$loan_150_350 + 
-       ppp_allvars_1018$loan_5mil_10mil +ppp_allvars_1018$loan_2mil_5mil + ppp_allvars_1018$loan_1mil_2mil +
-       ppp_allvars_1018$cook_pvi + ppp_allvars_1018$mean_start_cases_weighted + 
-       ppp_allvars_1018$mean_start_deaths_weighted + ppp_allvars_1018$number_ppp)
+  lm(ppp_allvars_1018_rural$days_to_approval ~ 1 + ppp_allvars_1018_rural$median_family_income +
+       ppp_allvars_1018_rural$black_percent +
+       ppp_allvars_1018_rural$White_percent + ppp_allvars_1018_rural$high_school_pct +
+       ppp_allvars_1018_rural$banks_per_pop + 
+       ppp_allvars_1018_rural$loan_350_1mil + ppp_allvars_1018_rural$loan_150_350 + 
+       ppp_allvars_1018_rural$loan_5mil_10mil +
+       ppp_allvars_1018_rural$loan_2mil_5mil + ppp_allvars_1018_rural$loan_1mil_2mil +
+       ppp_allvars_1018_rural$cook_pvi + ppp_allvars_1018_rural$mean_start_cases_weighted + 
+       ppp_allvars_1018_rural$mean_start_deaths_weighted + ppp_allvars_1018_rural$bank_ppp_issued +
+       ppp_allvars_1018_rural$rural)
+
+summary(test_regression)
 ```

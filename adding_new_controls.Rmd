@@ -137,4 +137,9 @@ test_regression <-
 summary(test_regression)
 ```
 
+```{r}
+# Exporting to CSV
+ppp_addresses <- ppp_allvars_1018 %>%
+  select(address, city, state, zip)
+```
 
