@@ -102,16 +102,17 @@ ppp_logtest <- ppp_allvars_1019 %>%
 ```{r}
 #ppp_allvars_1018_rural <- readRDS('ppp_allvars_1018_rural.rds')
 test_regression <-
-  lm(ppp_allvars_1019$days_to_approval ~ 1 + ppp_allvars_1019$median_family_income +
-       ppp_allvars_1019$black_percent +
-       ppp_allvars_1019$white_percent + ppp_allvars_1019$high_school_pct +
-       ppp_allvars_1019$banks_per_pop + 
-       ppp_allvars_1019$loan_350_1mil + ppp_allvars_1019$loan_150_350 + 
-       ppp_allvars_1019$loan_5mil_10mil +
-       ppp_allvars_1019$loan_2mil_5mil + ppp_allvars_1019$loan_1mil_2mil +
-       ppp_allvars_1019$cook_pvi + ppp_allvars_1019$mean_start_cases_weighted + 
-       ppp_allvars_1019$mean_start_deaths_weighted + ppp_allvars_1019$bank_ppp_issued +
-       ppp_allvars_1019$rural + ppp_allvars_1019$number_of_establishments)
+  lm(ppp_allvars_1019_marital$days_to_approval ~ 1 + ppp_allvars_1019_marital$median_family_income +
+       ppp_allvars_1019_marital$black_percent +
+       ppp_allvars_1019_marital$white_percent + ppp_allvars_1019_marital$high_school_pct +
+       ppp_allvars_1019_marital$banks_per_pop + 
+       ppp_allvars_1019_marital$loan_350_1mil + ppp_allvars_1019_marital$loan_150_350 + 
+       ppp_allvars_1019_marital$loan_5mil_10mil +
+       ppp_allvars_1019_marital$loan_2mil_5mil + ppp_allvars_1019_marital$loan_1mil_2mil +
+       ppp_allvars_1019_marital$cook_pvi + ppp_allvars_1019_marital$mean_start_cases_weighted + 
+       ppp_allvars_1019_marital$mean_start_deaths_weighted + ppp_allvars_1019_marital$bank_ppp_issued +
+       ppp_allvars_1019_marital$rural + ppp_allvars_1019_marital$number_of_establishments +
+       ppp_allvars_1019_marital$married_percent)
 
 summary(test_regression)
 ```
@@ -142,5 +143,7 @@ marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2
          geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
   rename("married_percent" = "estimate_now_married_except_separated_population_15_years_and_over")
 
-ppp_allvars_1019_marital <- left_join(ppp_allvars_1019, marital, by = c("zip" = "geographic_area_name")) %>%
-  drop_na(married_percent)
+ppp_allvars_1019_marital <- left_join(ppp_allvars_1019, marital, 
+                                      by = c("zip" = "geographic_area_name")) %>%
+  drop_na(married_percent) %>%
+  mutate(married_percent = as.double(married_percent))
