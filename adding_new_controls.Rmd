@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
 library(readxl)
-ppp_allstates <- readRDS(file = "zip_ppp_allstates_1017_dummy.rds")
+ppp_allstates <- readRDS(file = "zip_ppp_allstates_1018_dummy.rds")
 
 # Everything in this file as of 5 pm 10/17 is already in the ppp_acs_pvi_covid rds file
 ```

@@ -13,7 +13,7 @@ library(janitor)
 library(lubridate)
 library(stringr)
 
-zip_data <- readRDS("zip_ppp_allstates_1017.rds")
+zip_data <- readRDS("zip_ppp_allstates_1018.rds")
 ```
 
 
