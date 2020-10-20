@@ -7,9 +7,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(janitor)
 library(tidyverse)
+library(readxl)
 
-loan_data <- readRDS("ppp_covidadj_1018.rds")
-old_data <- readRDS("ppp_loanonly_all_loans.rds")
+loan_data <- readRDS("ppp_allvars_1019_marital.rds")
+#old_data <- readRDS("ppp_loanonly_all_loans.rds")
 ```
 
 
@@ -26,6 +27,36 @@ banks_gov_project <- loan_data %>%
   group_by(lender) %>%
   summarize(number_of_loans = n(), .groups = "drop") %>%
   filter(number_of_loans >= 1000)
+```
+
+
+```{r}
+bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+  mutate(sba_name = tolower(sba_name)) %>%
+  mutate(sba_name = str_trim(sba_name, side = "both")) %>%
+  drop_na(preference, requirement)
+
+ppp_setup <- loan_data %>%
+  mutate(lender = str_trim(lender, side = "both"), lender = tolower(lender))
+
+ppp_allvars_1019_banking <- left_join(ppp_setup, bank_ppp_policy_manual,
+                                      by = c("lender" = "sba_name")) %>%
+  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+  drop_na(requirement) %>%
+  mutate(preference = replace_na(preference, 0))
+```
+
+
+```{r}
+# Should I exclude credit unions? I'm matching credit unions and making them members only
+bank_loan_policies <- banks %>%
+  mutate(members_only = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 0),
+         members_only = ifelse(str_detect(lender, pattern = "\\scu$"), 1, members_only),
+         members_only = ifelse(str_detect(lender, pattern = "credit union"), 1, members_only))
+
+
 ```
 
 
@@ -100,39 +131,63 @@ ppp_logtest <- ppp_allvars_1019 %>%
 
 
 ```{r}
-#ppp_allvars_1018_rural <- readRDS('ppp_allvars_1018_rural.rds')
+# Deprecated code now
+ppp_allvars_1019_marital <- readRDS('ppp_allvars_1019_marital.rds') %>%
+  # Population weight the businesses -- I forgot to do this the first time
+  mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
+  select(-number_of_establishments)
+```
+
+
+```{r}
+ppp_allvars_1019_banking <- ppp_allvars_1019_banking  %>%
+  # Population weight the businesses -- I forgot to do this the first time
+  mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
+  select(-number_of_establishments)
+
 test_regression <-
-  lm(ppp_allvars_1019_marital$days_to_approval ~ 1 + ppp_allvars_1019_marital$median_family_income +
-       ppp_allvars_1019_marital$black_percent +
-       ppp_allvars_1019_marital$white_percent + ppp_allvars_1019_marital$high_school_pct +
-       ppp_allvars_1019_marital$banks_per_pop + 
-       ppp_allvars_1019_marital$loan_350_1mil + ppp_allvars_1019_marital$loan_150_350 + 
-       ppp_allvars_1019_marital$loan_5mil_10mil +
-       ppp_allvars_1019_marital$loan_2mil_5mil + ppp_allvars_1019_marital$loan_1mil_2mil +
-       ppp_allvars_1019_marital$cook_pvi + ppp_allvars_1019_marital$mean_start_cases_weighted + 
-       ppp_allvars_1019_marital$mean_start_deaths_weighted + ppp_allvars_1019_marital$bank_ppp_issued +
-       ppp_allvars_1019_marital$rural + ppp_allvars_1019_marital$number_of_establishments +
-       ppp_allvars_1019_marital$married_percent)
+  lm(ppp_allvars_1019_banking$days_to_approval ~ 1 + ppp_allvars_1019_banking$median_family_income +
+       ppp_allvars_1019_banking$black_percent +
+       ppp_allvars_1019_banking$white_percent + ppp_allvars_1019_banking$high_school_pct +
+       ppp_allvars_1019_banking$banks_per_pop + 
+       ppp_allvars_1019_banking$loan_350_1mil + ppp_allvars_1019_banking$loan_150_350 + 
+       ppp_allvars_1019_banking$loan_5mil_10mil +
+       ppp_allvars_1019_banking$loan_2mil_5mil + ppp_allvars_1019_banking$loan_1mil_2mil +
+       ppp_allvars_1019_banking$cook_pvi + ppp_allvars_1019_banking$mean_start_cases_weighted + 
+       ppp_allvars_1019_banking$mean_start_deaths_weighted + ppp_allvars_1019_banking$bank_ppp_issued +
+       ppp_allvars_1019_banking$rural + ppp_allvars_1019_banking$businesses_per_pop +
+       ppp_allvars_1019_banking$married_percent + ppp_allvars_1019_banking$preference +
+       ppp_allvars_1019_banking$requirement)
 
 summary(test_regression)
 ```
 
 
 ```{r}
+ppp_logtest <- ppp_allvars_1019_banking %>%
+  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
+  mutate(logbiz = ifelse(log(businesses_per_pop) == -Inf, 0, log(businesses_per_pop))) %>%
+  mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)))
+
 log_regression_test <- 
     lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
        ppp_logtest$black_percent +
-       ppp_logtest$White_percent + ppp_logtest$high_school_pct +
-       ppp_logtest$banks_per_pop + 
+       ppp_logtest$white_percent + ppp_logtest$high_school_pct +
+       ppp_logtest$logbanks + 
        ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
        ppp_logtest$loan_5mil_10mil +
        ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
        ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
        ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
-       ppp_logtest$rural)
+       ppp_logtest$rural + ppp_logtest$logbiz + 
+    ppp_logtest$married_percent + ppp_logtest$preference + 
+      ppp_logtest$preference * ppp_logtest$black_percent + 
+      ppp_logtest$requirement * ppp_logtest$black_percent +
+    ppp_logtest$requirement)
 
 summary(log_regression_test)
 ```
+
 ```{r}
 # Adding in marital status
 marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
