@@ -1,0 +1,75 @@
+---
+title: "latest_covid_cases"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+
+ppp_allvars_1019_banking <- readRDS('ppp_allvars_1019_banking.rds')
+```
+
+
+```{r creating covid case counts}
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date > as.Date("2020-03-27")) %>%
+  select(-county, -state)
+
+weighted_cases_current <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips"))
+```
+
+
+```{r creating covid case counts, after cleaning}
+weighted_cases_current_2 <- weighted_cases_current %>%
+  mutate(weighted_cases = cases * res_ratio,
+         weighted_deaths = deaths * res_ratio) %>%
+  select(-county, -res_ratio) %>%
+  group_by(zip, date) %>%
+  summarize(weighted_cases = sum(weighted_cases),
+            weighted_deaths = sum(weighted_deaths))
+
+weighted_cases_current_3 <- weighted_cases_current_2 %>%
+  filter(date <= as.Date("2020-08-08"), date >= as.Date("2020-03-27"))
+  
+dates_approved <- ppp_allvars_1019_banking %>%
+  select(zip, date_approved) %>%
+  distinct()
+
+weighted_cases_current_4 <- left_join(dates_approved, weighted_cases_current_3,
+                                      by = "zip")
+
+weighted_cases_current_5 <- weighted_cases_current_4 %>%
+  group_by(zip, date_approved) %>%
+  filter(date <= date_approved, date > (date_approved - 7))
+
+weighted_cases_current_6 <- weighted_cases_current_5 %>%
+  summarize(mean_end_cases_weighted = mean(weighted_cases),
+            mean_end_deaths_weighted = mean(weighted_deaths), .groups = "drop")
+```
+
+
+```{r merging}
+ppp_allvars_1020 <- left_join(ppp_allvars_1019_banking, weighted_cases_current_6,
+                              by = c("zip", "date_approved")) %>%
+  drop_na(mean_end_cases_weighted, mean_end_deaths_weighted)
+
+ppp_allvars_1020 <- ppp_allvars_1020 %>%
+  mutate(mean_end_cases_weighted = mean_end_cases_weighted * 10000 / population,
+         mean_end_deaths_weighted = mean_end_deaths_weighted * 10000 / population)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

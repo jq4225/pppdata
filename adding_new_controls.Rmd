@@ -96,7 +96,7 @@ ppp_allstates_covid <- left_join(ppp_allstates_pvi, weighted_cases1, by = "zip")
 
 
 ```{r county-zip_crosswalk_3}
-# Didn't end up doing this -- just using covid cases in the beginning of April -- this is wayyy too computationally intensive
+# Didn't end up doing this -- just using covid cases in the beginning of April -- this is wayyy too computationally intensive. This is actually done better in latest_covid_cases.rmd
 dates_approved <- ppp_allstates_covid %>%
   select(zip, date_approved) %>%
   mutate(date_begin = date_approved - 6)
