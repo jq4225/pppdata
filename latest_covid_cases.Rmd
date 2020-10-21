@@ -7,6 +7,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
+library(readxl)
+library(openintro)
 
 ppp_allvars_1019_banking <- readRDS('ppp_allvars_1019_banking.rds')
 ```
@@ -36,13 +38,17 @@ weighted_cases_current_2 <- weighted_cases_current %>%
 
 weighted_cases_current_3 <- weighted_cases_current_2 %>%
   filter(date <= as.Date("2020-08-08"), date >= as.Date("2020-03-27"))
-  
+
+
+# Using distinct is so we don't get a memory overflow here -- it's necessary
 dates_approved <- ppp_allvars_1019_banking %>%
   select(zip, date_approved) %>%
   distinct()
 
 weighted_cases_current_4 <- left_join(dates_approved, weighted_cases_current_3,
                                       by = "zip")
+
+# rolling 7-day average of cases and deaths before the loan approval date
 
 weighted_cases_current_5 <- weighted_cases_current_4 %>%
   group_by(zip, date_approved) %>%
@@ -64,12 +70,128 @@ ppp_allvars_1020 <- ppp_allvars_1020 %>%
          mean_end_deaths_weighted = mean_end_deaths_weighted * 10000 / population)
 ```
 
-## Including Plots
+```{r}
+# Now we want to include social distancing restrictions by state
+state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
+                             sheet = "2020-06-22_Social Distancing Or", skip = 1,
+                             col_types = c("guess", "date", "date", "date", "date",
+                                           "date", "date", "guess", "date",
+                                           "date", "date", "date", "date",
+                                           "date")) %>%
+  clean_names() %>%
+  select(state, stay_at_home_start, non_essential_business_closure_start, 
+         stay_at_home_end, 
+         non_essential_business_closure_end) %>%
+  
+  # We just make NAs some later date just so they don't mess up our inequalities
+  
+  mutate(stay_at_home_start = replace_na(stay_at_home_start, as.Date("2021-01-01")),
+         stay_at_home_end = replace_na(stay_at_home_end, as.Date("2021-01-01")),
+         non_essential_business_closure_start = 
+           replace_na(non_essential_business_closure_start, as.Date("2021-01-01")),
+         non_essential_business_closure_end = 
+           replace_na(non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
+  mutate(stay_at_home_apr = ifelse(stay_at_home_start <= as.Date("2020-04-03"),
+                                   1, 0),
+         non_essential_closure_apr = 
+           ifelse(non_essential_business_closure_start <= as.Date("2020-04-03"),
+                  1, 0)) %>%
+  mutate(stay_at_home_apr = replace_na(stay_at_home_apr, 0),
+         non_essential_closure_apr = replace_na(non_essential_closure_apr, 0))
 
-You can also embed plots, for example:
+states <- ppp_allvars_1020 %>%
+  select(cd_name, date_approved) %>%
+  mutate(state_abb = str_sub(cd_name, 1, 2)) %>%
+  mutate(state = abbr2state(state_abb))
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+states_merged <- left_join(states, state_policies, by = "state") %>%
+  mutate(stay_at_home_current = 
+           ifelse(stay_at_home_start <= date_approved & 
+                    date_approved <= stay_at_home_end,
+                  1, 0),
+         non_essential_closure_current =  
+           ifelse(non_essential_business_closure_start <= date_approved & 
+                    date_approved <= non_essential_business_closure_end,
+                  1, 0))
+
+states_merged_cleaned <- states_merged %>%
+  select(stay_at_home_apr, stay_at_home_current, 
+         non_essential_closure_apr, non_essential_closure_current)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+ppp_allvars_1020_lockdowns <- bind_cols(ppp_allvars_1020, states_merged_cleaned)
+```
+
+
+```{r}
+```
+
+
+```{r}
+test_regression <-
+  lm(ppp_allvars_1020_lockdowns$days_to_approval ~ 1 + ppp_allvars_1020_lockdowns$median_family_income +
+       ppp_allvars_1020_lockdowns$black_percent +
+       ppp_allvars_1020_lockdowns$white_percent + ppp_allvars_1020_lockdowns$high_school_pct +
+       ppp_allvars_1020_lockdowns$banks_per_pop + 
+       ppp_allvars_1020_lockdowns$loan_350_1mil + ppp_allvars_1020_lockdowns$loan_150_350 + 
+       ppp_allvars_1020_lockdowns$loan_5mil_10mil +
+       ppp_allvars_1020_lockdowns$loan_2mil_5mil + ppp_allvars_1020_lockdowns$loan_1mil_2mil +
+       ppp_allvars_1020_lockdowns$cook_pvi + ppp_allvars_1020_lockdowns$mean_start_cases_weighted + 
+       ppp_allvars_1020_lockdowns$mean_start_deaths_weighted + ppp_allvars_1020_lockdowns$mean_end_cases_weighted +
+       ppp_allvars_1020_lockdowns$mean_end_deaths_weighted + 
+       ppp_allvars_1020_lockdowns$bank_ppp_issued +
+       ppp_allvars_1020_lockdowns$rural + ppp_allvars_1020_lockdowns$number_of_establishments +
+       ppp_allvars_1020_lockdowns$married_percent + ppp_allvars_1020_lockdowns$preference +
+       ppp_allvars_1020_lockdowns$requirement + 
+       ppp_allvars_1020_lockdowns$stay_at_home_apr +
+       ppp_allvars_1020_lockdowns$stay_at_home_current +
+       ppp_allvars_1020_lockdowns$non_essential_closure_apr +
+       ppp_allvars_1020_lockdowns$non_essential_closure_current +
+       
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$preference +
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$requirement + 
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$loan_350_1mil +
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$loan_150_350 +
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$loan_1mil_2mil +
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$loan_5mil_10mil +
+       ppp_allvars_1020_lockdowns$black_percent * ppp_allvars_1020_lockdowns$loan_5mil_10mil)
+
+summary(test_regression)
+```
+
+```{r}
+ppp_logtest <- ppp_allvars_1020_lockdowns %>%
+  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
+  mutate(logbiz = ifelse(log(number_of_establishments) == -Inf, 0, log(number_of_establishments))) %>%
+  mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)))
+
+log_regression_test <- 
+    lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
+       ppp_logtest$black_percent +
+       ppp_logtest$white_percent + ppp_logtest$high_school_pct +
+       ppp_logtest$logbanks + 
+       ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
+       ppp_logtest$loan_5mil_10mil +
+       ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
+       ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
+       ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
+       ppp_logtest$rural + ppp_logtest$logbiz + 
+       ppp_logtest$married_percent + ppp_logtest$preference + 
+       ppp_logtest$requirement +
+       ppp_logtest$stay_at_home_apr +
+       ppp_logtest$stay_at_home_current +
+       ppp_logtest$non_essential_closure_apr +
+       ppp_logtest$non_essential_closure_current +
+       
+       ppp_logtest$black_percent * ppp_logtest$preference +
+       ppp_logtest$black_percent * ppp_logtest$requirement + 
+       ppp_logtest$black_percent * ppp_logtest$loan_350_1mil +
+       ppp_logtest$black_percent * ppp_logtest$loan_150_350 +
+       ppp_logtest$black_percent * ppp_logtest$loan_1mil_2mil +
+       ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil +
+       ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil)
+summary(log_regression_test)
+```
+
