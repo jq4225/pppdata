@@ -9,6 +9,7 @@ library(tidyverse)
 library(janitor)
 library(readxl)
 library(openintro)
+library(zoo)
 
 ppp_allvars_1019_banking <- readRDS('ppp_allvars_1019_banking.rds')
 ```
@@ -126,6 +127,58 @@ ppp_allvars_1020_lockdowns <- bind_cols(ppp_allvars_1020, states_merged_cleaned)
 
 
 ```{r}
+# Adding in some COVID-related unemployment data too!
+
+# This is taken from earlier
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
+  clean_names() %>%
+  select(state_fips_code, county_fips_code, period, 
+         unemployed, labor_force, unemployment_rate_percent) %>%
+  mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
+  drop_na(fips_code)
+
+# Weight this by population
+
+unemploy_zip <- left_join(county_zip_crosswalk, unemploy,
+                          by = c("county" = "fips_code")) %>%
+  select(-state_fips_code, -county_fips_code) %>%
+  group_by(zip, period) %>%
+  mutate(labor_force = labor_force * res_ratio,
+         unemployed = unemployed * res_ratio) %>%
+  summarize(total_labor = sum(labor_force),
+            total_unemployed = sum(unemployed), .groups = "drop") %>%
+  mutate(unemployment_rate = total_unemployed * 100 / total_labor) %>%
+  filter(period %in% c("Apr-20", "May-20", "Jun-20", "Jul-20", "Aug-20 p"))
+
+unemploy_zip_dates <- unemploy_zip %>%
+  mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
+  mutate(period = as.Date(paste("01", period, sep="-"), "%d-%b-%y")) %>%
+  mutate(month = month(period))
+```
+
+
+```{r}
+# Matching months
+ppp_months <- ppp_allvars_1020_lockdowns %>%
+  mutate(month = month(date_approved))
+
+ppp_allvars_1022_unemploy <- left_join(ppp_months, unemploy_zip_dates, 
+                                       by = c("zip", "month"))
+
+unemploy_apr <- unemploy_zip_dates %>%
+  filter(month == 4) %>%
+  select(-total_labor, -total_unemployed, -period) %>%
+  rename("unemployment_rate_apr" = "unemployment_rate")
+
+ppp_allvars_1022_unemploy_2 <- left_join(ppp_allvars_1022_unemploy,
+                                         unemploy_apr, by = "zip") %>%
+  select(-total_labor, -total_unemployed, -period) %>%
+  drop_na(unemployment_rate, unemployment_rate_apr)
 ```
 
 
