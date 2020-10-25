@@ -11,7 +11,7 @@ library(readxl)
 library(openintro)
 library(zoo)
 
-ppp_allvars_1019_banking <- readRDS('ppp_allvars_1019_banking.rds')
+ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
 ```
 
 
@@ -42,7 +42,7 @@ weighted_cases_current_3 <- weighted_cases_current_2 %>%
 
 
 # Using distinct is so we don't get a memory overflow here -- it's necessary
-dates_approved <- ppp_allvars_1019_banking %>%
+dates_approved <- ppp_allvars_1024_marital %>%
   select(zip, date_approved) %>%
   distinct()
 
@@ -62,11 +62,11 @@ weighted_cases_current_6 <- weighted_cases_current_5 %>%
 
 
 ```{r merging}
-ppp_allvars_1020 <- left_join(ppp_allvars_1019_banking, weighted_cases_current_6,
+ppp_allvars_1024 <- left_join(ppp_allvars_1024, weighted_cases_current_6,
                               by = c("zip", "date_approved")) %>%
   drop_na(mean_end_cases_weighted, mean_end_deaths_weighted)
 
-ppp_allvars_1020 <- ppp_allvars_1020 %>%
+ppp_allvars_1024 <- ppp_allvars_1024 %>%
   mutate(mean_end_cases_weighted = mean_end_cases_weighted * 10000 / population,
          mean_end_deaths_weighted = mean_end_deaths_weighted * 10000 / population)
 ```
