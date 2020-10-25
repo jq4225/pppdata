@@ -190,6 +190,7 @@ summary(log_regression_test)
 ```
 
 ```{r}
+ppp_allvars_1024 <- readRDS('ppp_allvars_1024_notdone.rds')
 # Adding in marital status
 marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
                     skip = 1) %>%

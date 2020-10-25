@@ -1,0 +1,101 @@
+---
+title: "mapping_descriptives"
+author: "Justin Qi"
+date: "10/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(maps)
+```
+
+```{r getting zip code counts for original}
+original <- readRDS('ppp_loanonly_all_loans.rds') %>%
+  select(zip) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+```
+
+```{r new data}
+new <- readRDS('ppp_allvars_1022.rds') %>%
+  select(zip) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+```
+
+
+```{r new data 2}
+# Testing an older dataset to see what changed
+new2 <- ppp_covidadj %>%
+  #readRDS('ppp_pvi_1017.rds') %>%
+  select(zip) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+```
+
+
+```{r matching up zips and lat/long}
+ziplat <- read_delim('raw_data/crosswalks/us-zip-code-latitude-and-longitude.csv',
+                   delim = ";") %>%
+  clean_names() %>%
+  select(zip, latitude, longitude)
+
+original_lat <- left_join(original, ziplat, by = "zip") %>%
+  drop_na(latitude)
+
+new_lat <- left_join(new, ziplat, by = "zip") %>%
+  drop_na(latitude)
+
+new2_late <- left_join(new2, ziplat, by = "zip") %>%
+  drop_na(latitude)
+
+```
+
+
+```{r graphing}
+us <- map_data('state')
+
+ggplot(original_lat, aes(longitude, latitude)) +
+  geom_polygon(data=us,aes(x=long,y=lat, group = group),color='gray',fill=NA,alpha=.35)+
+  geom_point(aes(color = number),size=1,alpha=0.05) + 
+  theme_void()+
+  xlim(-125,-65)+ylim(25,50) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(),
+        axis.text = element_blank()) + 
+  scale_colour_gradient(high="dark blue", low="light blue",
+                        name = "Number of Loans")
+```
+
+
+```{r graphing}
+ggplot(new_lat, aes(longitude, latitude)) +
+  geom_polygon(data = us, aes(x = long,y = lat, group = group),color='gray',
+               fill = NA, alpha = .35)+
+  geom_point(aes(color = number),size=1,alpha=0.11) + 
+  theme_void() +
+  xlim(-125,-65) +
+  ylim(25,50) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(),
+        axis.text = element_blank(), panel.grid.major = element_blank()) +
+  scale_colour_gradient(high="dark blue", low="light blue", 
+                        name = "Number of Loans")
+```
+
+
+```{r graphing}
+ggplot(new2_late, aes(longitude, latitude)) +
+  geom_polygon(data = us, aes(x = long,y = lat, group = group),color='gray',
+               fill = NA, alpha = .35)+
+  geom_point(aes(color = number),size=1,alpha=0.11) + 
+  theme_void() +
+  xlim(-125,-65) +
+  ylim(25,50) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(),
+        axis.text = element_blank(), panel.grid.major = element_blank()) +
+  scale_colour_gradient(high="dark blue", low="light blue", 
+                        name = "Number of Loans")
+```
+
