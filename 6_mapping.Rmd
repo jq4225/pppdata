@@ -20,7 +20,7 @@ original <- readRDS('ppp_loanonly_all_loans.rds') %>%
 ```
 
 ```{r new data}
-new <- readRDS('ppp_allvars_1022.rds') %>%
+new <- readRDS('ppp_allvars_1024_unemploy.rds') %>%
   select(zip) %>%
   group_by(zip) %>%
   summarize(number = n(), .groups = "drop")
@@ -49,8 +49,8 @@ original_lat <- left_join(original, ziplat, by = "zip") %>%
 new_lat <- left_join(new, ziplat, by = "zip") %>%
   drop_na(latitude)
 
-new2_late <- left_join(new2, ziplat, by = "zip") %>%
-  drop_na(latitude)
+# new2_late <- left_join(new2, ziplat, by = "zip") %>%
+#   drop_na(latitude)
 
 ```
 
@@ -60,7 +60,7 @@ us <- map_data('state')
 
 ggplot(original_lat, aes(longitude, latitude)) +
   geom_polygon(data=us,aes(x=long,y=lat, group = group),color='gray',fill=NA,alpha=.35)+
-  geom_point(aes(color = number),size=1,alpha=0.05) + 
+  geom_point(aes(color = number),size=1,alpha=0.07) + 
   theme_void()+
   xlim(-125,-65)+ylim(25,50) +
   theme(axis.title = element_blank(), axis.ticks = element_blank(),
