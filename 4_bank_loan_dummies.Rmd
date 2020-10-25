@@ -9,13 +9,14 @@ library(janitor)
 library(tidyverse)
 library(readxl)
 
-loan_data <- readRDS("ppp_allvars_1019_marital.rds")
-#old_data <- readRDS("ppp_loanonly_all_loans.rds")
+loan_data <- readRDS("ppp_covidadj.rds")
+old_data <- readRDS("ppp_loanonly_all_loans.rds")
 ```
 
 
 ```{r}
-banks <- loan_data %>%
+# Don't run this anymore
+banks <- old_data %>%
   select(lender) %>%
   group_by(lender) %>%
   summarize(number_of_loans = n(), .groups = "drop") %>%
@@ -65,9 +66,10 @@ bank_loan_policies <- banks %>%
 loan_numbers <- old_data %>%
   select(lender) %>%
   group_by(lender) %>%
-  summarize(bank_ppp_issued = n(), .groups = "drop")
+  summarize(bank_ppp_issued = n(), .groups = "drop") %>%
+  mutate(lender = tolower(lender))
 
-ppp_allvars_1018 <- left_join(loan_data, loan_numbers, by = "lender") %>%
+ppp_allvars_1024 <- left_join(ppp_allvars_1019_banking, loan_numbers, by = "lender") %>%
   rename("cook_pvi" = "pct", 
          "black_percent" = "percent_estimate_race_total_population_one_race_black_or_african_american",
          "white_percent" = "percent_estimate_race_total_population_one_race_white",
@@ -84,9 +86,7 @@ rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
   select(-state) %>%
   mutate(rural = 1)
 
-ppp_allvars_1018_rural <- left_join(ppp_allvars_1018, rural, by = "zip") %>%
-  
-ppp_allvars_1018_rural <- ppp_allvars_1018_rural %>%
+ppp_allvars_1024_rural <- left_join(ppp_allvars_1024, rural, by = "zip") %>%
   mutate(rural = replace_na(rural, 0)) %>%
   mutate(rural = as.double(rural))
 ```
@@ -98,12 +98,13 @@ biz_count <- read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlay
                       skip = 1) %>%
   clean_names()  %>%
   mutate(geographic_area_name = substring(geographic_area_name, 5, 9)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
   filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
   select(geographic_area_name, number_of_establishments)
 
-ppp_allvars_1019 <- left_join(ppp_allvars_1018_rural, biz_count, 
+ppp_allvars_1024 <- left_join(ppp_allvars_1024_rural, biz_count, 
                               by = c("zip" = "geographic_area_name")) %>%
-  rename("white_percent" = "White_percent") %>%
+  #rename("white_percent" = "White_percent") %>%
   drop_na(number_of_establishments, white_percent, black_percent,
           high_school_pct, banks_per_pop, cook_pvi, mean_start_cases_weighted,
           mean_start_deaths_weighted, bank_ppp_issued, rural)
@@ -140,7 +141,7 @@ ppp_allvars_1019_marital <- readRDS('ppp_allvars_1019_marital.rds') %>%
 
 
 ```{r}
-ppp_allvars_1019_banking <- ppp_allvars_1019_banking  %>%
+ppp_allvars_1024 <- ppp_allvars_1024  %>%
   # Population weight the businesses -- I forgot to do this the first time
   mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
   select(-number_of_establishments)
@@ -198,7 +199,7 @@ marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2
          geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
   rename("married_percent" = "estimate_now_married_except_separated_population_15_years_and_over")
 
-ppp_allvars_1019_marital <- left_join(ppp_allvars_1019, marital, 
+ppp_allvars_1024_marital <- left_join(ppp_allvars_1024, marital, 
                                       by = c("zip" = "geographic_area_name")) %>%
   drop_na(married_percent) %>%
   mutate(married_percent = as.double(married_percent))

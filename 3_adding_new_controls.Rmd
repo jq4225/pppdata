@@ -16,11 +16,16 @@ ppp_allstates <- readRDS(file = "zip_ppp_allstates_1018_dummy.rds")
 ```{r creating a zip to CD crosswalk}
 zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", skip = 1) %>%
   clean_names() %>%
+  mutate(x116th_congressional_district = ifelse(x116th_congressional_district == "00",
+                                                "AL", x116th_congressional_district)) %>%
   mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, sep = "-")) %>%
   select(-state_code, -population_2010) %>%
   group_by(zip_census_tabulation_area) %>%
+  
   # de-duplicate by assigning zips to only the CD where most of them are in
+  
   arrange(cd116_to_zcta5_allocation_factor) %>%
+  mutate(zip_census_tabulation_area = str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
   slice(1)
 ```
 
