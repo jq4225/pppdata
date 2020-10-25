@@ -1,0 +1,335 @@
+---
+title: "descriptives"
+output: html_document
+---
+
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(arsenal)
+library(readxl)
+
+loan_only <- readRDS('ppp_loanonly_all_loans.rds')
+
+most_recent <- readRDS('ppp_allvars_1024_unemploy.rds')
+```
+
+```{r}
+loan_only %>%
+  mutate(days_to_approval = as.double(days_to_approval)) %>%
+  summarize(n = n(),
+            mean = mean(days_to_approval),
+            std = sd(days_to_approval),
+            min = min(days_to_approval),
+            max = max(days_to_approval))
+
+most_recent %>%
+    summarize(n = n(),
+            mean = mean(days_to_approval),
+            std = sd(days_to_approval),
+            min = min(days_to_approval),
+            max = max(days_to_approval))
+```
+
+
+
+```{r}
+sapply(most_recent, mean)
+```
+
+```{r}
+sapply(most_recent, sd)
+```
+
+```{r}
+acs_income <- read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
+                       skip = 1) %>%
+  clean_names() %>%
+  select(id, geographic_area_name, 
+         estimate_median_income_dollars_families_families) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         estimate_median_income_dollars_families_families = 
+           as.double(estimate_median_income_dollars_families_families)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+ppptemp <- left_join(loan_only, acs_income, by = c("zip" = "geographic_area_name")) %>%
+  drop_na(estimate_median_income_dollars_families_families)
+
+ppptemp %>%
+  summarize(mean = mean(estimate_median_income_dollars_families_families),
+            sd = sd(estimate_median_income_dollars_families_families))
+```
+
+
+```{r}
+pop <- read_csv("raw_data/acs_pop/ACSDT5Y2018.B01003_data_with_overlays_2020-10-06T100104.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  select(-margin_of_error_total) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
+  'ZIP' = col_character()))%>%
+  clean_names() %>%
+  select(zip) %>%
+  filter(zip != 0) %>%
+  
+  # FDIC data drops leading zeroes from zip codes, so we add them back!
+  mutate(zip = str_pad(zip, width = 5, "left", "0")) %>%
+  mutate(zip = str_trim(zip, side = "both")) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+
+ppp_pop <- left_join(loan_only, pop, by = c("zip" = "geographic_area_name")) %>%
+  drop_na(estimate_total) %>%
+  filter(estimate_total != 0)
+
+temp2 <- left_join(ppp_pop, banks, by = "zip") %>%
+  drop_na(number) %>%
+  mutate(number = number * 10000/estimate_total)
+
+temp2 %>%
+  summarize(banks = n(), mean = mean(number), sd = sd(number))
+```
+
+
+```{r}
+race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name,percent_estimate_race_total_population_one_race_white,
+         percent_estimate_race_total_population_one_race_black_or_african_american) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_race_total_population_one_race_white = 
+           as.double(percent_estimate_race_total_population_one_race_white),
+         percent_estimate_race_total_population_one_race_black_or_african_american = 
+           as.double(percent_estimate_race_total_population_one_race_black_or_african_american)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+temp3 <- left_join(loan_only, race, by = c("zip" = "geographic_area_name"))
+
+temp3 %>%
+  drop_na(percent_estimate_race_total_population_one_race_black_or_african_american,
+          percent_estimate_race_total_population_one_race_white) %>%
+  summarize(number = n(), mean1 = mean(percent_estimate_race_total_population_one_race_black_or_african_american),
+            sd1 = sd(percent_estimate_race_total_population_one_race_black_or_african_american),
+            mean2 = mean(percent_estimate_race_total_population_one_race_white),
+            sd2 = sd(percent_estimate_race_total_population_one_race_white))
+```
+
+
+```{r}
+educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv",
+                 skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)))
+
+hs_educ <- educ %>%
+  select(id, geographic_area_name, 
+         estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+temp4 <- left_join(loan_only, hs_educ, by = c("zip" = "geographic_area_name")) %>%
+  drop_na(high_school_pct)
+
+temp4 %>%
+  mutate(high_school_pct = as.double(high_school_pct)) %>%
+  drop_na(high_school_pct) %>%
+  summarize(number = n(), mean = mean(high_school_pct),
+            sd = sd(high_school_pct))
+```
+```{r}
+zip_data_with_dummies <- loan_only %>%
+  mutate("350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
+         "150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
+         "5mil_10mil" = ifelse(loan_range == "a $5-10 million", 1, 0),
+         "2mil_5mil" = ifelse(loan_range == "b $2-5 million", 1, 0),
+         "1mil_2mil" = ifelse(loan_range == "c $1-2 million", 1, 0),
+         "150_less" = ifelse(loan_range == "less than 150k", 1, 0)
+         ) %>%
+    rename(loan_350_1mil = "350_1mil", loan_150_350 = "150-350",
+         loan_5mil_10mil = "5mil_10mil", loan_2mil_5mil = "2mil_5mil",
+         loan_1mil_2mil = "1mil_2mil", loan_150_less = "150_less")
+
+zip_data_with_dummies %>%
+  summarize(mean_150 = mean(loan_150_less),
+            sd_150 = sd(loan_150_less),
+            mean_150_350 = mean(loan_150_350),
+            sd_150_350 = sd(loan_150_350),
+            mean_350_1 = mean(loan_350_1mil),
+            sd_350_1 = sd(loan_350_1mil),
+            mean_1_2 = mean(loan_1mil_2mil),
+            sd_1_2 = sd(loan_1mil_2mil),
+            mean_2_5 = mean(loan_2mil_5mil),
+            sd_2_5 = sd(loan_2mil_5mil),
+            mean_5_10 = mean(loan_5mil_10mil),
+            sd_5_10 = sd(loan_5mil_10mil))
+
+```
+```{r}
+zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", skip = 1) %>%
+  clean_names() %>%
+  mutate(x116th_congressional_district = ifelse(x116th_congressional_district == "00",
+                                                "AL", x116th_congressional_district)) %>%
+  mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, sep = "-")) %>%
+  select(-state_code, -population_2010) %>%
+  group_by(zip_census_tabulation_area) %>%
+  
+  # de-duplicate by assigning zips to only the CD where most of them are in
+  
+  arrange(cd116_to_zcta5_allocation_factor) %>%
+  mutate(zip_census_tabulation_area = str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
+  slice(1)
+
+cook_pvi <- read_csv(file = 'raw_data/cook_pvi/data-5vPn3.csv') %>%
+  clean_names() %>%
+  mutate(pvi_split = str_split(pvi, pattern = "\\+")) %>%
+  unnest(pvi_split) %>%
+  group_by(dist) %>%
+  mutate(col = seq_along(dist)) %>%
+  spread(key = col, value = pvi_split) %>%
+  rename(party = "1", pct = "2") %>%
+  mutate(pct = as.double(pct), dem_indicator = ifelse(party == "D", -1, 1)) %>%
+  mutate(pct = pct * dem_indicator) %>%
+  select(dist, party, pct)
+
+zip_pvi <- left_join(zip_cd_crosswalk, cook_pvi, by = c("cd_name" = "dist")) %>%
+  drop_na(pct) %>%
+  select(zip_census_tabulation_area, cd_name, pct) %>%
+  mutate(zip_census_tabulation_area = as.character(zip_census_tabulation_area))
+
+temp5 <- left_join(loan_only, zip_pvi, by = c("zip" = "zip_census_tabulation_area")) %>%
+  drop_na(pct)
+
+temp5 %>%
+  summarize(n = n(), mean = mean(pct), sd = sd(pct))
+```
+```{r}
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date > as.Date("2020-03-27")) %>%
+  select(-county, -state)
+
+weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips")) %>%
+  filter(date <= as.Date("2020-04-03")) %>%
+  group_by(zip) %>%
+  mutate(mean_cases_app_start = mean(cases), mean_deaths_app_start = mean(deaths)) %>%
+  select(-cases, -deaths, -date) %>%
+  distinct() %>%
+  mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
+         mean_start_deaths_weighted = mean_deaths_app_start * res_ratio) %>%
+  select(-mean_cases_app_start, -mean_deaths_app_start) %>%
+  mutate(mean_start_cases_weighted = sum(mean_start_cases_weighted),
+         mean_start_deaths_weighted = sum(mean_start_deaths_weighted)) %>%
+  select(-county, -res_ratio) %>%
+  distinct()
+
+temp6 <- left_join(ppp_pop, weighted_cases1, by = "zip") %>%
+  drop_na(mean_start_cases_weighted, mean_start_deaths_weighted) %>%
+  mutate(mean_start_cases_weighted = mean_start_cases_weighted * 10000 / estimate_total,
+         mean_start_deaths_weighted = mean_start_deaths_weighted * 10000 / estimate_total)
+
+temp6 %>%
+  summarize(n = n(), mean1 = mean(mean_start_cases_weighted),
+            sd1 = sd(mean_start_cases_weighted),
+            mean2 = mean(mean_start_deaths_weighted),
+            sd2 = sd(mean_start_deaths_weighted))
+
+```
+```{r}
+bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+  mutate(sba_name = tolower(sba_name)) %>%
+  mutate(sba_name = str_trim(sba_name, side = "both")) %>%
+  drop_na(preference, requirement)
+
+ppp_setup <- loan_only %>%
+  mutate(lender = str_trim(lender, side = "both"), lender = tolower(lender))
+
+temp7 <- left_join(ppp_setup, bank_ppp_policy_manual,
+                                      by = c("lender" = "sba_name")) %>%
+  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+  drop_na(requirement) %>%
+  mutate(preference = replace_na(preference, 0))
+
+temp7 %>%
+  summarize(n = n(), mean1 = mean(preference), sd1 = sd(preference),
+         mean2 = mean(requirement), sd2 = sd(requirement))
+```
+
+
+```{r}
+loan_numbers <- loan_only %>%
+  select(lender) %>%
+  group_by(lender) %>%
+  summarize(bank_ppp_issued = n(), .groups = "drop")
+
+temp8 <- left_join(loan_only, loan_numbers, by = "lender") %>%
+  # rename("cook_pvi" = "pct", 
+  #        "black_percent" = "percent_estimate_race_total_population_one_race_black_or_african_american",
+  #        "white_percent" = "percent_estimate_race_total_population_one_race_white",
+  #        "median_family_income" = "estimate_median_income_dollars_families_families",
+  #        "population" = "estimate_total") %>%
+  select(-loan_range)
+
+temp8 %>%
+  drop_na(bank_ppp_issued) %>%
+  summarize(n = n(), mean = mean(bank_ppp_issued), sd = sd(bank_ppp_issued))
+```
+
+```{r}
+rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
+  clean_names() %>%
+  select(-state) %>%
+  mutate(rural = 1)
+
+temp9 <- left_join(loan_only, rural, by = "zip") %>%
+  mutate(rural = replace_na(rural, 0)) %>%
+  mutate(rural = as.double(rural))
+
+temp9 %>%
+  summarize(mean = mean(rural), sd = sd(rural))
+```
+```{r}
+biz_count <- read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlays_2020-10-19T095307.csv",
+                      skip = 1) %>%
+  clean_names()  %>%
+  mutate(geographic_area_name = substring(geographic_area_name, 5, 9)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
+  filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
+  select(geographic_area_name, number_of_establishments)
+
+temp10 <- left_join(ppp_pop, biz_count, 
+                              by = c("zip" = "geographic_area_name")) %>%
+  drop_na(number_of_establishments) %>%
+  mutate(businesses_per_pop = number_of_establishments / (estimate_total/10000)) %>%
+  select(-number_of_establishments)
+
+temp10 %>%
+  summarize(n = n(), mean = mean(businesses_per_pop),
+            sd = sd(businesses_per_pop))
+```
+```{r}
+marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
+                    skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, estimate_now_married_except_separated_population_15_years_and_over) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
+  rename("married_percent" = "estimate_now_married_except_separated_population_15_years_and_over")
+
+temp11 <- left_join(loan_only, marital, 
+                                      by = c("zip" = "geographic_area_name")) %>%
+  drop_na(married_percent) %>%
+  mutate(married_percent = as.double(married_percent))
+```
+
+
+
