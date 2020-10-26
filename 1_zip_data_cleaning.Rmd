@@ -190,8 +190,8 @@ file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", patter
 ```{r}
 all_states<- tibble()
 
-for(i in 1:length(file.names2)) {
-  file <- sba_cleaning(paste("raw_data/sba/states/",file.names2[i], sep = ""))
+for(i in 1:length(file.names1)) {
+  file <- sba_cleaning(paste("raw_data/sba/states/",file.names1[i], sep = ""))
   all_states <- rbind(all_states, file)
 }
 
