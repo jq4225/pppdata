@@ -270,7 +270,10 @@ temp7 %>%
 loan_numbers <- loan_only %>%
   select(lender) %>%
   group_by(lender) %>%
-  summarize(bank_ppp_issued = n(), .groups = "drop")
+  summarize(bank_ppp_issued = n(), .groups = "drop") %>%
+  
+loan_numbers %>%
+  summarize(n = n(), mean = mean(bank_ppp_issued), sd = sd(bank_ppp_issued))
 
 temp8 <- left_join(loan_only, loan_numbers, by = "lender") %>%
   # rename("cook_pvi" = "pct", 
@@ -282,6 +285,7 @@ temp8 <- left_join(loan_only, loan_numbers, by = "lender") %>%
 
 temp8 %>%
   drop_na(bank_ppp_issued) %>%
+  distinct(lender) %>%
   summarize(n = n(), mean = mean(bank_ppp_issued), sd = sd(bank_ppp_issued))
 ```
 
