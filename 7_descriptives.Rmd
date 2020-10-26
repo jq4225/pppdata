@@ -7,9 +7,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
-#library(arsenal)
+library(arsenal)
 library(readxl)
-library(openintro)
 
 loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
@@ -270,10 +269,7 @@ temp7 %>%
 loan_numbers <- loan_only %>%
   select(lender) %>%
   group_by(lender) %>%
-  summarize(bank_ppp_issued = n(), .groups = "drop") %>%
-  
-loan_numbers %>%
-  summarize(n = n(), mean = mean(bank_ppp_issued), sd = sd(bank_ppp_issued))
+  summarize(bank_ppp_issued = n(), .groups = "drop")
 
 temp8 <- left_join(loan_only, loan_numbers, by = "lender") %>%
   # rename("cook_pvi" = "pct", 
@@ -285,7 +281,6 @@ temp8 <- left_join(loan_only, loan_numbers, by = "lender") %>%
 
 temp8 %>%
   drop_na(bank_ppp_issued) %>%
-  distinct(lender) %>%
   summarize(n = n(), mean = mean(bank_ppp_issued), sd = sd(bank_ppp_issued))
 ```
 
@@ -321,7 +316,6 @@ temp10 %>%
   summarize(n = n(), mean = mean(businesses_per_pop),
             sd = sd(businesses_per_pop))
 ```
-
 ```{r}
 marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
                     skip = 1) %>%
@@ -334,175 +328,13 @@ marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2
 temp11 <- left_join(loan_only, marital, 
                                       by = c("zip" = "geographic_area_name")) %>%
   drop_na(married_percent) %>%
-  mutate(married_percent = as.double(married_percent))
+  mutate(married_percent = as.double(married_percent)) %>%
+  drop_na(married_percent)
+
+temp11 %>%
+  summarize(n = n(), mean = mean(married_percent),
+            sd = sd(married_percent))
 ```
 
-
-```{r}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
-  clean_names() %>%
-  select(county, zip, res_ratio)
-
-county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
-  filter(date > as.Date("2020-03-27")) %>%
-  select(-county, -state)
-
-weighted_cases_current <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips"))
-
-weighted_cases_current_2 <- weighted_cases_current %>%
-  mutate(weighted_cases = cases * res_ratio,
-         weighted_deaths = deaths * res_ratio) %>%
-  select(-county, -res_ratio) %>%
-  group_by(zip, date) %>%
-  summarize(weighted_cases = sum(weighted_cases),
-            weighted_deaths = sum(weighted_deaths))
-
-weighted_cases_current_3 <- weighted_cases_current_2 %>%
-  filter(date <= as.Date("2020-08-08"), date >= as.Date("2020-03-27"))
-
-
-# Using distinct is so we don't get a memory overflow here -- it's necessary
-dates_approved <- ppp_pop %>%
-  select(zip, date_approved) %>%
-  distinct()
-
-weighted_cases_current_4 <- left_join(dates_approved, weighted_cases_current_3,
-                                      by = "zip")
-
-# rolling 7-day average of cases and deaths before the loan approval date
-
-weighted_cases_current_5 <- weighted_cases_current_4 %>%
-  group_by(zip, date_approved) %>%
-  filter(date <= date_approved, date > (date_approved - 7))
-
-weighted_cases_current_6 <- weighted_cases_current_5 %>%
-  summarize(mean_end_cases_weighted = mean(weighted_cases),
-            mean_end_deaths_weighted = mean(weighted_deaths), .groups = "drop")
-```
-
-
-```{r}
-temp12 <- left_join(ppp_pop, weighted_cases_current_6,
-                              by = c("zip", "date_approved")) %>%
-  drop_na(mean_end_cases_weighted, mean_end_deaths_weighted)
-
-temp12a <- temp12 %>%
-  mutate(mean_end_cases_weighted = 
-           mean_end_cases_weighted * 10000 / estimate_total,
-         mean_end_deaths_weighted = 
-           mean_end_deaths_weighted * 10000 / estimate_total)
-
-temp12a %>%
-  summarize(n = n(), mean1 = mean(mean_end_cases_weighted), sd1 = sd(mean_end_cases_weighted),
-            mean2 = mean(mean_end_deaths_weighted), sd2 = sd(mean_end_deaths_weighted))
-```
-
-
-```{r}
-state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
-                             sheet = "2020-06-22_Social Distancing Or", skip = 1,
-                             col_types = c("guess", "date", "date", "date", "date",
-                                           "date", "date", "guess", "date",
-                                           "date", "date", "date", "date",
-                                           "date")) %>%
-  clean_names() %>%
-  select(state, stay_at_home_start, non_essential_business_closure_start, 
-         stay_at_home_end, 
-         non_essential_business_closure_end) %>%
-  
-  # We just make NAs some later date just so they don't mess up our inequalities
-  
-  mutate(stay_at_home_start = replace_na(stay_at_home_start, as.Date("2021-01-01")),
-         stay_at_home_end = replace_na(stay_at_home_end, as.Date("2021-01-01")),
-         non_essential_business_closure_start = 
-           replace_na(non_essential_business_closure_start, as.Date("2021-01-01")),
-         non_essential_business_closure_end = 
-           replace_na(non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
-  mutate(stay_at_home_apr = ifelse(stay_at_home_start <= as.Date("2020-04-03"),
-                                   1, 0),
-         non_essential_closure_apr = 
-           ifelse(non_essential_business_closure_start <= as.Date("2020-04-03"),
-                  1, 0)) %>%
-  mutate(stay_at_home_apr = replace_na(stay_at_home_apr, 0),
-         non_essential_closure_apr = replace_na(non_essential_closure_apr, 0))
-```
-```{r}
-state_policies <- state_policies %>%
-  mutate(state_abbrev = state2abbr(state))
-
-ppp_total2 <- ppp_total %>%
-  drop_na(state)
-
-temp13 <- left_join(ppp_total2, state_policies, by = c("state" = "state_abbrev")) %>%
-  drop_na(stay_at_home_apr) %>%
-   mutate(stay_at_home_current = 
-           ifelse(stay_at_home_start <= date_approved & 
-                    date_approved <= stay_at_home_end,
-                  1, 0),
-         non_essential_closure_current =  
-           ifelse(non_essential_business_closure_start <= date_approved & 
-                    date_approved <= non_essential_business_closure_end,
-                  1, 0))
-
-temp13 %>%
-  summarize(n = n(), mean = mean(stay_at_home_apr), sd = sd(stay_at_home_apr),
-            mean2 = mean(non_essential_closure_apr), sd2 = sd(non_essential_closure_apr))
-
-temp13 %>%
-  summarize(mean = mean(stay_at_home_current), sd = sd(stay_at_home_current),
-            mean2 = mean(non_essential_closure_current),
-            sd2 = sd(non_essential_closure_current))
-```
-```{r}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
-  clean_names() %>%
-  select(county, zip, res_ratio)
-
-unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
-  clean_names() %>%
-  select(state_fips_code, county_fips_code, period, 
-         unemployed, labor_force, unemployment_rate_percent) %>%
-  mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
-  drop_na(fips_code)
-
-# Weight this by population
-
-unemploy_zip <- left_join(county_zip_crosswalk, unemploy,
-                          by = c("county" = "fips_code")) %>%
-  select(-state_fips_code, -county_fips_code) %>%
-  group_by(zip, period) %>%
-  mutate(labor_force = labor_force * res_ratio,
-         unemployed = unemployed * res_ratio) %>%
-  summarize(total_labor = sum(labor_force),
-            total_unemployed = sum(unemployed), .groups = "drop") %>%
-  mutate(unemployment_rate = total_unemployed * 100 / total_labor) %>%
-  filter(period %in% c("Apr-20", "May-20", "Jun-20", "Jul-20", "Aug-20 p"))
-
-unemploy_zip_dates <- unemploy_zip %>%
-  mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
-  mutate(period = as.Date(paste("01", period, sep="-"), "%d-%b-%y")) %>%
-  mutate(month = month(period))
-```
-
-```{r}
-ppp_months <- loan_only %>%
-  mutate(month = month(date_approved))
-
-temp14 <- left_join(ppp_months, unemploy_zip_dates, 
-                                       by = c("zip", "month"))
-
-unemploy_apr <- unemploy_zip_dates %>%
-  filter(month == 4) %>%
-  select(-total_labor, -total_unemployed, -period) %>%
-  rename("unemployment_rate_apr" = "unemployment_rate")
-
-temp14a <- left_join(temp14,unemploy_apr, by = "zip") %>%
-  select(-total_labor, -total_unemployed, -period) %>%
-  drop_na(unemployment_rate, unemployment_rate_apr)
-
-temp14a %>%
-  summarize(mean1 = mean(unemployment_rate_apr), sd1 = sd(unemployment_rate_apr),
-            mean2 = mean(unemployment_rate), sd2 = sd(unemployment_rate))
-```
 
 
