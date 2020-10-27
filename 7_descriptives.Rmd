@@ -12,7 +12,7 @@ library(readxl)
 
 loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
-most_recent <- readRDS('ppp_allvars_1024_unemploy.rds')
+#most_recent <- readRDS('ppp_allvars_1024_unemploy.rds')
 ```
 
 ```{r}
@@ -334,6 +334,26 @@ temp11 <- left_join(loan_only, marital,
 temp11 %>%
   summarize(n = n(), mean = mean(married_percent),
             sd = sd(married_percent))
+```
+
+
+```{r}
+inequality <- read_csv('raw_data/acs_gini/ACSDT5Y2018.B19083_data_with_overlays_2020-10-26T225918.csv',
+                       skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, estimate_gini_index) %>%
+  mutate(estimate_gini_index = as.double(estimate_gini_index),
+         geographic_area_name = 
+           map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+temp15 <- left_join(loan_only, inequality, 
+                    by = c("zip" = "geographic_area_name")) %>%
+  drop_na(estimate_gini_index)
+
+temp15 %>%
+  summarize(n = n(), mean = mean(estimate_gini_index),
+            sd = sd(estimate_gini_index))
 ```
 
 
