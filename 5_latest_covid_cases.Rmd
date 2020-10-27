@@ -200,6 +200,9 @@ ppp_allvars_1027 <- left_join(current, inequality,
   select(-month.y) %>%
   rename("month" = "month.x") %>%
   drop_na(estimate_gini_index)
+
+# ppp_allvars_1027 %>%
+#   summarize(mean = mean(estimate_gini_index), sd = sd(estimate_gini_index))
   
   
 ```
