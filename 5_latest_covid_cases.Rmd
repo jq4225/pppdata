@@ -11,7 +11,7 @@ library(readxl)
 library(openintro)
 library(zoo)
 
-ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
+#ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
 ```
 
 
@@ -183,35 +183,59 @@ ppp_allvars_1024_unemploy_2 <- left_join(ppp_allvars_1024_unemploy,
 
 
 ```{r}
+# Adding in gini index
+inequality <- read_csv('raw_data/acs_gini/ACSDT5Y2018.B19083_data_with_overlays_2020-10-26T225918.csv',
+                       skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, estimate_gini_index) %>%
+  mutate(estimate_gini_index = as.double(estimate_gini_index),
+         geographic_area_name = 
+           map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+current <- readRDS('ppp_allvars_1024_unemploy.rds')
+
+ppp_allvars_1027 <- left_join(current, inequality, 
+                              by = c("zip" = "geographic_area_name")) %>%
+  select(-month.y) %>%
+  rename("month" = "month.x") %>%
+  drop_na(estimate_gini_index)
+  
+  
+```
+
+
+```{r}
 test_regression <-
-  lm(ppp_allvars_1024_unemploy_2$days_to_approval ~ 1 + ppp_allvars_1024_unemploy_2$median_family_income +
-       ppp_allvars_1024_unemploy_2$black_percent +
-       ppp_allvars_1024_unemploy_2$white_percent + ppp_allvars_1024_unemploy_2$high_school_pct +
-       ppp_allvars_1024_unemploy_2$banks_per_pop + 
-       ppp_allvars_1024_unemploy_2$loan_350_1mil + ppp_allvars_1024_unemploy_2$loan_150_350 + 
-       ppp_allvars_1024_unemploy_2$loan_5mil_10mil +
-       ppp_allvars_1024_unemploy_2$loan_2mil_5mil + ppp_allvars_1024_unemploy_2$loan_1mil_2mil +
-       ppp_allvars_1024_unemploy_2$cook_pvi + ppp_allvars_1024_unemploy_2$mean_start_cases_weighted + 
-       ppp_allvars_1024_unemploy_2$mean_start_deaths_weighted + ppp_allvars_1024_unemploy_2$mean_end_cases_weighted +
-       ppp_allvars_1024_unemploy_2$mean_end_deaths_weighted + 
-       ppp_allvars_1024_unemploy_2$bank_ppp_issued +
-       ppp_allvars_1024_unemploy_2$rural + ppp_allvars_1024_unemploy_2$businesses_per_pop +
-       ppp_allvars_1024_unemploy_2$married_percent + ppp_allvars_1024_unemploy_2$preference +
-       ppp_allvars_1024_unemploy_2$requirement + 
-       ppp_allvars_1024_unemploy_2$stay_at_home_apr +
-       ppp_allvars_1024_unemploy_2$stay_at_home_current +
-       ppp_allvars_1024_unemploy_2$non_essential_closure_apr +
-       ppp_allvars_1024_unemploy_2$non_essential_closure_current + 
-       ppp_allvars_1024_unemploy_2$unemployment_rate + 
-       ppp_allvars_1024_unemploy_2$unemployment_rate_apr + 
+  lm(ppp_allvars_1027$days_to_approval ~ 1 + ppp_allvars_1027$median_family_income +
+       ppp_allvars_1027$black_percent +
+       ppp_allvars_1027$white_percent + ppp_allvars_1027$high_school_pct +
+       ppp_allvars_1027$banks_per_pop + 
+       ppp_allvars_1027$loan_350_1mil + ppp_allvars_1027$loan_150_350 + 
+       ppp_allvars_1027$loan_5mil_10mil +
+       ppp_allvars_1027$loan_2mil_5mil + ppp_allvars_1027$loan_1mil_2mil +
+       ppp_allvars_1027$cook_pvi + ppp_allvars_1027$mean_start_cases_weighted + 
+       ppp_allvars_1027$mean_start_deaths_weighted + ppp_allvars_1027$mean_end_cases_weighted +
+       ppp_allvars_1027$mean_end_deaths_weighted + 
+       ppp_allvars_1027$bank_ppp_issued +
+       ppp_allvars_1027$rural + ppp_allvars_1027$businesses_per_pop +
+       ppp_allvars_1027$married_percent + ppp_allvars_1027$preference +
+       ppp_allvars_1027$requirement + 
+       ppp_allvars_1027$stay_at_home_apr +
+       ppp_allvars_1027$stay_at_home_current +
+       ppp_allvars_1027$non_essential_closure_apr +
+       ppp_allvars_1027$non_essential_closure_current + 
+       ppp_allvars_1027$unemployment_rate + 
+       ppp_allvars_1027$unemployment_rate_apr + 
+       ppp_allvars_1027$estimate_gini_index +
        
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$preference +
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$requirement + 
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$loan_350_1mil +
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$loan_150_350 +
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$loan_1mil_2mil +
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$loan_5mil_10mil +
-       ppp_allvars_1024_unemploy_2$black_percent * ppp_allvars_1024_unemploy_2$loan_5mil_10mil)
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$preference +
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$requirement + 
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_350_1mil +
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_150_350 +
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_1mil_2mil +
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_5mil_10mil +
+       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_5mil_10mil)
 
 summary(test_regression)
 ```

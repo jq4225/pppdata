@@ -9,8 +9,9 @@ library(tidyverse)
 library(readxl)
 library(janitor)
 library(stringr)
+library(openintro)
 
-loan_only <- readRDS('ppp_total.rds')
+loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 ```
 
 
@@ -253,4 +254,139 @@ combined_unemploy2 <- left_join(combined_unemploy,
   drop_na(unemployment_rate_percent, unemployment_rate_apr) %>%
   select(-period, -unemployed, -labor_force, -state_fips_code,
          -county_fips_code)
+```
+
+
+```{r}
+# Still need state reqs and loan regs, number of loans per bank
+so_far <- readRDS('counties_unemploy.rds')
+
+state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
+                             sheet = "2020-06-22_Social Distancing Or", skip = 1,
+                             col_types = c("guess", "date", "date", "date", "date",
+                                           "date", "date", "guess", "date",
+                                           "date", "date", "date", "date",
+                                           "date")) %>%
+  clean_names() %>%
+  select(state, stay_at_home_start, non_essential_business_closure_start, 
+         stay_at_home_end, 
+         non_essential_business_closure_end) %>%
+  
+  # We just make NAs some later date just so they don't mess up our inequalities
+  
+  mutate(stay_at_home_start = replace_na(stay_at_home_start, as.Date("2021-01-01")),
+         stay_at_home_end = replace_na(stay_at_home_end, as.Date("2021-01-01")),
+         non_essential_business_closure_start = 
+           replace_na(non_essential_business_closure_start, as.Date("2021-01-01")),
+         non_essential_business_closure_end = 
+           replace_na(non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
+  mutate(stay_at_home_apr = ifelse(stay_at_home_start <= as.Date("2020-04-03"),
+                                   1, 0),
+         non_essential_closure_apr = 
+           ifelse(non_essential_business_closure_start <= as.Date("2020-04-03"),
+                  1, 0)) %>%
+  mutate(stay_at_home_apr = replace_na(stay_at_home_apr, 0),
+         non_essential_closure_apr = replace_na(non_essential_closure_apr, 0))
+
+
+prepping_state_policies <- so_far %>%
+  mutate(state_name = abbr2state(state)) %>%
+  drop_na(state_name) %>%
+  select(-month.y) %>%
+  rename("month" = "month.x")
+
+states_merged <- left_join(prepping_state_policies, state_policies, 
+                           by = c("state_name" = "state")) %>%
+    mutate(stay_at_home_current = 
+           ifelse(stay_at_home_start <= date_approved & 
+                    date_approved <= stay_at_home_end,
+                  1, 0),
+         non_essential_closure_current =  
+           ifelse(non_essential_business_closure_start <= date_approved & 
+                    date_approved <= non_essential_business_closure_end,
+                  1, 0)) %>%
+  select(-stay_at_home_start, -stay_at_home_end, -non_essential_business_closure_start,
+         -non_essential_business_closure_end) %>%
+  mutate(lender = tolower(lender), lender = str_trim(lender, side = "both"))
+```
+
+
+```{r}
+bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+  mutate(sba_name = tolower(sba_name)) %>%
+  mutate(sba_name = str_trim(sba_name, side = "both")) %>%
+  drop_na(preference, requirement)
+
+banking_policies <- left_join(states_merged, bank_ppp_policy_manual,
+                                      by = c("lender" = "sba_name")) %>%
+  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+  drop_na(requirement) %>%
+  mutate(preference = replace_na(preference, 0))
+
+loan_numbers <- loan_only %>%
+  select(lender) %>%
+  group_by(lender) %>%
+  summarize(bank_ppp_issued = n(), .groups = "drop") %>%
+  mutate(lender = tolower(lender))
+
+loan_numbers <- 
+  left_join(banking_policies, loan_numbers, by = "lender")
+
+loan_numbers2 <- loan_numbers %>%
+  select(-bank_name)
+
+loan_numbers2 <- loan_numbers2 %>%
+  mutate(days_to_approval = as.double(days_to_approval))
+```
+
+
+```{r}
+
+gini <- read_csv('raw_data/county/county_inequality.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id, estimate_gini_index) %>%
+  mutate(estimate_gini_index = as.double(estimate_gini_index))
+
+income_inequality <- left_join(loan_numbers2, gini, by = "id") %>%
+  drop_na(estimate_gini_index)
+  
+```
+
+
+```{r}
+test_regression <-
+  lm(income_inequality$days_to_approval ~ 1 + income_inequality$median_income +
+       income_inequality$black_percent +
+       income_inequality$white_percent + income_inequality$high_school_pct +
+       income_inequality$banks_per_pop + 
+       income_inequality$loan_350_1mil + income_inequality$loan_150_350 + 
+       income_inequality$loan_5mil_10mil +
+       income_inequality$loan_2mil_5mil + income_inequality$loan_1mil_2mil +
+       income_inequality$republican_percent + income_inequality$mean_start_cases + 
+       income_inequality$mean_start_deaths + income_inequality$mean_end_cases +
+       income_inequality$mean_end_deaths + 
+       income_inequality$bank_ppp_issued +
+       income_inequality$pop_den + income_inequality$businesses_per_pop +
+       income_inequality$married_percent + income_inequality$preference +
+       income_inequality$requirement + 
+       income_inequality$stay_at_home_apr +
+       income_inequality$stay_at_home_current +
+       income_inequality$non_essential_closure_apr +
+       income_inequality$non_essential_closure_current + 
+       income_inequality$unemployment_rate_percent + 
+       income_inequality$unemployment_rate_apr + 
+       income_inequality$estimate_gini_index +
+       
+       income_inequality$black_percent * income_inequality$preference +
+       income_inequality$black_percent * income_inequality$requirement + 
+       income_inequality$black_percent * income_inequality$loan_350_1mil +
+       income_inequality$black_percent * income_inequality$loan_150_350 +
+       income_inequality$black_percent * income_inequality$loan_1mil_2mil +
+       income_inequality$black_percent * income_inequality$loan_5mil_10mil +
+       income_inequality$black_percent * income_inequality$loan_5mil_10mil)
+
+summary(test_regression)
+
 ```
