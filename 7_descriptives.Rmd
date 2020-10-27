@@ -354,6 +354,8 @@ temp15 <- left_join(loan_only, inequality,
 temp15 %>%
   summarize(n = n(), mean = mean(estimate_gini_index),
             sd = sd(estimate_gini_index))
+
+
 ```
 
 

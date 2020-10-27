@@ -343,7 +343,6 @@ loan_numbers2 <- loan_numbers2 %>%
 
 
 ```{r}
-
 gini <- read_csv('raw_data/county/county_inequality.csv', skip = 1) %>%
   clean_names() %>%
   select(id, estimate_gini_index) %>%
@@ -351,41 +350,53 @@ gini <- read_csv('raw_data/county/county_inequality.csv', skip = 1) %>%
 
 income_inequality <- left_join(loan_numbers2, gini, by = "id") %>%
   drop_na(estimate_gini_index)
-  
+```
+
+
+```{r}
+# Crime rates
+crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+                    skip = 1) %>%
+  clean_names() %>%
+  select(fips, violent_crime_rate)
+
+county_crime <- left_join(income_inequality, crime, by = "fips") %>%
+  drop_na(violent_crime_rate)
 ```
 
 
 ```{r}
 test_regression <-
-  lm(income_inequality$days_to_approval ~ 1 + income_inequality$median_income +
-       income_inequality$black_percent +
-       income_inequality$white_percent + income_inequality$high_school_pct +
-       income_inequality$banks_per_pop + 
-       income_inequality$loan_350_1mil + income_inequality$loan_150_350 + 
-       income_inequality$loan_5mil_10mil +
-       income_inequality$loan_2mil_5mil + income_inequality$loan_1mil_2mil +
-       income_inequality$republican_percent + income_inequality$mean_start_cases + 
-       income_inequality$mean_start_deaths + income_inequality$mean_end_cases +
-       income_inequality$mean_end_deaths + 
-       income_inequality$bank_ppp_issued +
-       income_inequality$pop_den + income_inequality$businesses_per_pop +
-       income_inequality$married_percent + income_inequality$preference +
-       income_inequality$requirement + 
-       income_inequality$stay_at_home_apr +
-       income_inequality$stay_at_home_current +
-       income_inequality$non_essential_closure_apr +
-       income_inequality$non_essential_closure_current + 
-       income_inequality$unemployment_rate_percent + 
-       income_inequality$unemployment_rate_apr + 
-       income_inequality$estimate_gini_index +
+  lm(county_crime$days_to_approval ~ 1 + county_crime$median_income +
+       county_crime$black_percent +
+       county_crime$white_percent + county_crime$high_school_pct +
+       county_crime$banks_per_pop + 
+       county_crime$loan_350_1mil + county_crime$loan_150_350 + 
+       county_crime$loan_5mil_10mil +
+       county_crime$loan_2mil_5mil + county_crime$loan_1mil_2mil +
+       county_crime$republican_percent + county_crime$mean_start_cases + 
+       county_crime$mean_start_deaths + county_crime$mean_end_cases +
+       county_crime$mean_end_deaths + 
+       county_crime$bank_ppp_issued +
+       county_crime$pop_den + county_crime$businesses_per_pop +
+       county_crime$married_percent + county_crime$preference +
+       county_crime$requirement + 
+       county_crime$stay_at_home_apr +
+       county_crime$stay_at_home_current +
+       county_crime$non_essential_closure_apr +
+       county_crime$non_essential_closure_current + 
+       county_crime$unemployment_rate_percent + 
+       county_crime$unemployment_rate_apr + 
+       county_crime$estimate_gini_index +
+       county_crime$violent_crime_rate +
        
-       income_inequality$black_percent * income_inequality$preference +
-       income_inequality$black_percent * income_inequality$requirement + 
-       income_inequality$black_percent * income_inequality$loan_350_1mil +
-       income_inequality$black_percent * income_inequality$loan_150_350 +
-       income_inequality$black_percent * income_inequality$loan_1mil_2mil +
-       income_inequality$black_percent * income_inequality$loan_5mil_10mil +
-       income_inequality$black_percent * income_inequality$loan_5mil_10mil)
+       county_crime$black_percent * county_crime$preference +
+       county_crime$black_percent * county_crime$requirement + 
+       county_crime$black_percent * county_crime$loan_350_1mil +
+       county_crime$black_percent * county_crime$loan_150_350 +
+       county_crime$black_percent * county_crime$loan_1mil_2mil +
+       county_crime$black_percent * county_crime$loan_5mil_10mil +
+       county_crime$black_percent * county_crime$loan_5mil_10mil)
 
 summary(test_regression)
 
