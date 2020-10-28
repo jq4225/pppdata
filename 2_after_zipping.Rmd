@@ -13,13 +13,13 @@ library(janitor)
 library(lubridate)
 library(stringr)
 
-zip_data <- readRDS("zip_ppp_allstates_1018.rds")
+#zip_data <- readRDS("zip_ppp_allstates_1018.rds")
 ```
 
 
 ```{r}
 # included in latest now -- this is just making dummies based on loan size
-zip_data_with_dummies <- zip_data %>%
+zip_data_with_dummies <- test %>%
   mutate("350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
          "150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
          "5mil_10mil" = ifelse(loan_range == "a $5-10 million", 1, 0),

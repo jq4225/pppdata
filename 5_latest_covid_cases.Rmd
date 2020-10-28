@@ -47,6 +47,8 @@ dates_approved <- ppp_allvars_1024_marital %>%
   select(zip, date_approved) %>%
   distinct()
 
+# This still often causes a memory overflow :(
+
 weighted_cases_current_4 <- left_join(dates_approved, weighted_cases_current_3,
                                       by = "zip")
 
