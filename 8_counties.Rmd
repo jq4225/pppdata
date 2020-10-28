@@ -14,7 +14,58 @@ library(broom)
 library(lmtest)
 library(sandwich)
 
-loan_only <- readRDS('ppp_loanonly_all_loans.rds')
+#loan_only <- readRDS('ppp_loanonly_all_loans.rds')
+```
+
+
+```{r}
+# Loan data has to include jobs!
+
+ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
+  clean_names() %>%
+  select(loan_range, zip, date_approved, lender, address, city, state, jobs_reported) %>%
+  drop_na(zip) %>%
+  
+  # This calculates the date on which loans were approved vs. when apps opened.
+  mutate(date_approved = mdy(date_approved), 
+         days_to_approval = date_approved - mdy("04/03/2020"),
+         zip = as.character(zip))
+
+
+sba_cleaning <- function(file) {
+  x <- read_csv(file) %>%
+    clean_names() %>%
+    select(loan_amount, zip, date_approved, lender, city, state, jobs_reported) %>%
+    drop_na(zip) %>%
+    mutate(date_approved = mdy(date_approved), 
+         days_to_approval = date_approved - mdy("04/03/2020"),
+         zip = as.character(zip))
+}
+
+# run for Mac
+file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+# run for Windows
+file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+all_states<- tibble()
+
+for(i in 1:length(file.names2)) {
+  file <- sba_cleaning(paste("raw_data/sba/states/",file.names2[i], sep = ""))
+  all_states <- rbind(all_states, file)
+}
+
+all_states2 <- all_states %>%
+  mutate(loan_range = "less than 150k", address = NA)
+
+ppp_150_newcol <- ppp_150 %>%
+  mutate(loan_amount = NA) %>%
+  mutate(loan_amount = as.character(loan_amount))
+
+loan_only <- rbind(ppp_150_newcol, all_states2) %>%
+  
+loan_only <- loan_only %>%
+  drop_na(jobs_reported)
 ```
 
 
@@ -262,7 +313,8 @@ combined_unemploy2 <- left_join(combined_unemploy,
 
 ```{r}
 # Still need state reqs and loan regs, number of loans per bank
-so_far <- readRDS('counties_unemploy.rds')
+so_far <- combined_unemploy2
+  #readRDS('counties_unemploy.rds')
 
 state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
                              sheet = "2020-06-22_Social Distancing Or", skip = 1,
@@ -328,7 +380,9 @@ banking_policies <- left_join(states_merged, bank_ppp_policy_manual,
   drop_na(requirement) %>%
   mutate(preference = replace_na(preference, 0))
 
-loan_numbers <- loan_only %>%
+loan_only2 <- readRDS('ppp_loanonly_all_loans.rds')
+
+loan_numbers <- loan_only2 %>%
   select(lender) %>%
   group_by(lender) %>%
   summarize(bank_ppp_issued = n(), .groups = "drop") %>%
@@ -392,6 +446,7 @@ test_regression <-
        county_crime$unemployment_rate_apr + 
        county_crime$estimate_gini_index +
        county_crime$violent_crime_rate +
+       county_crime$jobs_reported +
        
        county_crime$black_percent * county_crime$preference +
        county_crime$black_percent * county_crime$requirement + 
@@ -494,75 +549,75 @@ summary(regression_2)
 ```{r}
 # Adding in jobs created because I'm dumb
 
-ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
-  clean_names() %>%
-  select(zip, date_approved, lender, address, city, state, jobs_reported) %>%
-  drop_na(zip, jobs_reported) %>%
-  
-  # This calculates the date on which loans were approved vs. when apps opened.
-  mutate(date_approved = mdy(date_approved), 
-         days_to_approval = date_approved - mdy("04/03/2020"),
-         zip = as.character(zip), 
-         lender = tolower(lender))
-
-sba_cleaning <- function(file) {
-  x <- read_csv(file) %>%
-    clean_names() %>%
-    select(loan_amount, zip, date_approved, lender, city, state, jobs_reported) %>%
-    drop_na(zip) %>%
-    mutate(date_approved = mdy(date_approved), 
-         days_to_approval = date_approved - mdy("04/03/2020"),
-         zip = as.character(zip),
-         lender = tolower(lender))
-}
-
-# run for Mac
-file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
-
-# run for Windows
-file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
-
-all_states<- tibble()
-
-for(i in 1:length(file.names2)) {
-  file <- sba_cleaning(paste("raw_data/sba/states/",file.names2[i], sep = ""))
-  all_states <- rbind(all_states, file)
-}
-
-all_states2 <- all_states %>%
-  mutate(address = NA)
-
-ppp_150_newcol <- ppp_150 %>%
-  mutate(loan_amount = NA) %>%
-  mutate(loan_amount = as.character(loan_amount))
-
-ppp_total <- rbind(ppp_150_newcol, all_states2) %>%
-  mutate(days_to_approval = as.double(days_to_approval))
+# ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
+#   clean_names() %>%
+#   select(zip, date_approved, lender, address, city, state, jobs_reported) %>%
+#   drop_na(zip, jobs_reported) %>%
+#   
+#   # This calculates the date on which loans were approved vs. when apps opened.
+#   mutate(date_approved = mdy(date_approved), 
+#          days_to_approval = date_approved - mdy("04/03/2020"),
+#          zip = as.character(zip), 
+#          lender = tolower(lender))
+# 
+# sba_cleaning <- function(file) {
+#   x <- read_csv(file) %>%
+#     clean_names() %>%
+#     select(loan_amount, zip, date_approved, lender, city, state, jobs_reported) %>%
+#     drop_na(zip) %>%
+#     mutate(date_approved = mdy(date_approved), 
+#          days_to_approval = date_approved - mdy("04/03/2020"),
+#          zip = as.character(zip),
+#          lender = tolower(lender))
+# }
+# 
+# # run for Mac
+# file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+# 
+# # run for Windows
+# file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+# 
+# all_states<- tibble()
+# 
+# for(i in 1:length(file.names2)) {
+#   file <- sba_cleaning(paste("raw_data/sba/states/",file.names2[i], sep = ""))
+#   all_states <- rbind(all_states, file)
+# }
+# 
+# all_states2 <- all_states %>%
+#   mutate(address = NA)
+# 
+# ppp_150_newcol <- ppp_150 %>%
+#   mutate(loan_amount = NA) %>%
+#   mutate(loan_amount = as.character(loan_amount))
+# 
+# ppp_total <- rbind(ppp_150_newcol, all_states2) %>%
+#   mutate(days_to_approval = as.double(days_to_approval))
 ```
 
 
 ```{r}
-# Let's try joining
-
-# First let's clean this up by doing lender matching
-
-county_jobs <- left_join(county_crime, jobs_matched, by = c("zip", "date_approved", "lender",
-                                                         "address"))
-
-# Don't have to run this again if you don't need
-bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
-  mutate(sba_name = tolower(sba_name)) %>%
-  mutate(sba_name = str_trim(sba_name, side = "both")) %>%
-  drop_na(preference, requirement)
-
-jobs_matched <- left_join(ppp_total, bank_ppp_policy_manual,
-                                      by = c("lender" = "sba_name")) %>%
-  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
-  drop_na(requirement) %>%
-  mutate(preference = replace_na(preference, 0)) %>%
-  select(-preference, -requirement)
+# # Let's try joining
+# 
+# # First let's clean this up by doing lender matching
+# 
+# county_jobs <- left_join(county_crime, jobs_matched, by = c("zip", "date_approved", "lender",
+#                                                          "address"))
+# 
+# # Don't have to run this again if you don't need
+# bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+#   mutate(sba_name = tolower(sba_name)) %>%
+#   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
+#   drop_na(preference, requirement)
+# 
+# jobs_matched <- left_join(ppp_total, bank_ppp_policy_manual,
+#                                       by = c("lender" = "sba_name")) %>%
+#   mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
+#          requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
+#          requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+#   drop_na(requirement) %>%
+#   mutate(preference = replace_na(preference, 0)) %>%
+#   select(-preference, -requirement)
 
 ```
 
