@@ -456,7 +456,7 @@ coeftest(test_regression, vcov = vcovHC(test_regression, type = "HC0"))
 ```{r}
 regression_2 <-   lm(county_crime$days_to_approval ~ 1 + county_crime$median_income +
        county_crime$black_percent +
-       I(county_crime$black_percent^2)
+       I(county_crime$black_percent^2) +
        county_crime$white_percent + I(county_crime$white_percent^2) +
        county_crime$high_school_pct +
        county_crime$banks_per_pop + I(county_crime$banks_per_pop^2) +
@@ -489,6 +489,6 @@ regression_2 <-   lm(county_crime$days_to_approval ~ 1 + county_crime$median_inc
        county_crime$black_percent * county_crime$loan_5mil_10mil +
        county_crime$black_percent * county_crime$loan_5mil_10mil)
 
-summary(regression2)
+summary(regression_2)
 ```
 
