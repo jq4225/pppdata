@@ -10,6 +10,7 @@ library(janitor)
 library(readxl)
 library(openintro)
 library(zoo)
+library(lmtest)
 
 #ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
 ```
@@ -203,44 +204,80 @@ ppp_allvars_1027 <- left_join(current, inequality,
 
 # ppp_allvars_1027 %>%
 #   summarize(mean = mean(estimate_gini_index), sd = sd(estimate_gini_index))
+```
+
+
+```{r}
+# Adding in violent crime rates
+crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+                    skip = 1) %>%
+  clean_names() %>%
+  select(fips, annual_average_violent_crimes)
+
+# Don't need to run this again if you have it above
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+# Weighting by population
+
+crime_zip <- left_join(county_zip_crosswalk, crime, by = c("county" = "fips")) %>%
+  mutate(annual_average_violent_crimes = annual_average_violent_crimes * res_ratio) %>%
+  drop_na(annual_average_violent_crimes) %>%
+  group_by(zip) %>%
+  summarize(total_crime = sum(annual_average_violent_crimes), .groups = "drop")
+
+ppp_allvars_1027_crime <- left_join(ppp_allvars_1027, crime_zip, by = "zip") %>%
+  mutate(violent_crime_rate = total_crime * 100000 / population) %>%
+  drop_na(violent_crime_rate) %>%
+  select(-total_crime)
   
-  
+#ppp_allvars_1027_crime %>% summarize(mean = mean(violent_crime_rate), sd = sd(violent_crime_rate))
+
+
 ```
 
 
 ```{r}
 test_regression <-
-  lm(ppp_allvars_1027$days_to_approval ~ 1 + ppp_allvars_1027$median_family_income +
-       ppp_allvars_1027$black_percent +
-       ppp_allvars_1027$white_percent + ppp_allvars_1027$high_school_pct +
-       ppp_allvars_1027$banks_per_pop + 
-       ppp_allvars_1027$loan_350_1mil + ppp_allvars_1027$loan_150_350 + 
-       ppp_allvars_1027$loan_5mil_10mil +
-       ppp_allvars_1027$loan_2mil_5mil + ppp_allvars_1027$loan_1mil_2mil +
-       ppp_allvars_1027$cook_pvi + ppp_allvars_1027$mean_start_cases_weighted + 
-       ppp_allvars_1027$mean_start_deaths_weighted + ppp_allvars_1027$mean_end_cases_weighted +
-       ppp_allvars_1027$mean_end_deaths_weighted + 
-       ppp_allvars_1027$bank_ppp_issued +
-       ppp_allvars_1027$rural + ppp_allvars_1027$businesses_per_pop +
-       ppp_allvars_1027$married_percent + ppp_allvars_1027$preference +
-       ppp_allvars_1027$requirement + 
-       ppp_allvars_1027$stay_at_home_apr +
-       ppp_allvars_1027$stay_at_home_current +
-       ppp_allvars_1027$non_essential_closure_apr +
-       ppp_allvars_1027$non_essential_closure_current + 
-       ppp_allvars_1027$unemployment_rate + 
-       ppp_allvars_1027$unemployment_rate_apr + 
-       ppp_allvars_1027$estimate_gini_index +
+  lm(ppp_allvars_1027_crime$days_to_approval ~ 1 + ppp_allvars_1027_crime$median_family_income +
+       ppp_allvars_1027_crime$black_percent +
+       ppp_allvars_1027_crime$white_percent + ppp_allvars_1027_crime$high_school_pct +
+       ppp_allvars_1027_crime$banks_per_pop + 
+       ppp_allvars_1027_crime$loan_350_1mil + ppp_allvars_1027_crime$loan_150_350 + 
+       ppp_allvars_1027_crime$loan_5mil_10mil +
+       ppp_allvars_1027_crime$loan_2mil_5mil + ppp_allvars_1027_crime$loan_1mil_2mil +
+       ppp_allvars_1027_crime$cook_pvi + ppp_allvars_1027_crime$mean_start_cases_weighted + 
+       ppp_allvars_1027_crime$mean_start_deaths_weighted + ppp_allvars_1027_crime$mean_end_cases_weighted +
+       ppp_allvars_1027_crime$mean_end_deaths_weighted + 
+       ppp_allvars_1027_crime$bank_ppp_issued +
+       ppp_allvars_1027_crime$rural + ppp_allvars_1027_crime$businesses_per_pop +
+       ppp_allvars_1027_crime$married_percent + ppp_allvars_1027_crime$preference +
+       ppp_allvars_1027_crime$requirement + 
+       ppp_allvars_1027_crime$stay_at_home_apr +
+       ppp_allvars_1027_crime$stay_at_home_current +
+       ppp_allvars_1027_crime$non_essential_closure_apr +
+       ppp_allvars_1027_crime$non_essential_closure_current + 
+       ppp_allvars_1027_crime$unemployment_rate + 
+       ppp_allvars_1027_crime$unemployment_rate_apr + 
+       ppp_allvars_1027_crime$estimate_gini_index +
+       ppp_allvars_1027_crime$violent_crime_rate +
        
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$preference +
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$requirement + 
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_350_1mil +
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_150_350 +
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_1mil_2mil +
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_5mil_10mil +
-       ppp_allvars_1027$black_percent * ppp_allvars_1027$loan_5mil_10mil)
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$preference +
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$requirement + 
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_350_1mil +
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_150_350 +
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_1mil_2mil +
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_5mil_10mil +
+       ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_5mil_10mil)
 
 summary(test_regression)
+```
+
+
+```{r}
+bptest()
 ```
 
 ```{r}
@@ -275,5 +312,10 @@ log_regression_test <-
        ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil +
        ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil)
 summary(log_regression_test)
+```
+
+
+```{r}
+bptest(test_regression)
 ```
 

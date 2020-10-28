@@ -354,8 +354,36 @@ temp15 <- left_join(loan_only, inequality,
 temp15 %>%
   summarize(n = n(), mean = mean(estimate_gini_index),
             sd = sd(estimate_gini_index))
+```
 
 
+```{r}
+# Adding in violent crime rates
+crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+                    skip = 1) %>%
+  clean_names() %>%
+  select(fips, annual_average_violent_crimes)
+
+# Don't need to run this again if you have it above
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+# Weighting by population
+
+crime_zip <- left_join(county_zip_crosswalk, crime, by = c("county" = "fips")) %>%
+  mutate(annual_average_violent_crimes = annual_average_violent_crimes * res_ratio) %>%
+  drop_na(annual_average_violent_crimes) %>%
+  group_by(zip) %>%
+  summarize(total_crime = sum(annual_average_violent_crimes), .groups = "drop")
+
+temp16 <- left_join(ppp_pop, crime_zip, by = "zip") %>%
+  mutate(violent_crime_rate = total_crime * 100000 / estimate_total) %>%
+  drop_na(violent_crime_rate) %>%
+  select(-total_crime)
+  
+temp16 %>% summarize(n = n(), mean = mean(violent_crime_rate), sd = sd(violent_crime_rate))
 ```
 
 
