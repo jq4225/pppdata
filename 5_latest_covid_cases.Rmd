@@ -13,6 +13,7 @@ library(zoo)
 library(lmtest)
 library(sandwich)
 library(miceadds)
+library(estimatr)
 
 #ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
 ```
@@ -297,8 +298,9 @@ zip_regression_hetero_tibble = tidy(zip_regression_hetero)
 
 
 ```{r}
-lm.cluster(ppp_allvars_1027_crime, 
-           days_to_approval ~ 1 + median_family_income +
+ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+
+zip_regression_robuts <- lm_robust(days_to_approval ~ 1 + median_family_income +
        black_percent +
        I(black_percent ^ 2) +
        white_percent + I(white_percent ^ 2) +
@@ -330,9 +332,8 @@ lm.cluster(ppp_allvars_1027_crime,
        I(black_percent * loan_150_350) +
        I(black_percent * loan_1mil_2mil) +
        I(black_percent * loan_5mil_10mil) +
-       I(black_percent * loan_5mil_10mil),
-       
-       cluster = ppp_allvars_1027_crime$zip)
+       I(black_percent * loan_5mil_10mil), 
+       ppp_allvars_1027_crime, clusters = zip, se_type = "CR0")
 
 
 ```
@@ -372,6 +373,15 @@ summary(log_regression_test)
 ```
 
 
+```{r}
+test_regression <- readRDS('zip_regression1.rds')
+ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+residuals <- resid(test_regression)
+ggplot(ppp_allvars_1027_crime, mapping = aes(x = days_to_approval, y = residuals)) + 
+  geom_jitter(alpha = 0.3, fill = "dodgerblue") +
+  ylim(-250, 500) + 
+  labs(x = "Days to Approval", y = "Residuals", title = "Waiting Time vs. Residuals")
+```
 ```{r}
 bptest(test_regression)
 ```

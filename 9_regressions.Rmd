@@ -1,0 +1,87 @@
+---
+title: "regressions"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(estimatr)
+library(lmtest)
+library(sandwich)
+library(broom)
+```
+
+```{r}
+# most recent data
+most_recent <- readRDS('ppp_allvars_1028.rds') %>%
+  mutate(median_family_income = median_family_income / 1000,
+         bank_ppp_issued = bank_ppp_issued / 1000,
+         businesses_per_pop = businesses_per_pop / 100,
+         violent_crime_rate = violent_crime_rate / 10)
+```
+
+```{r}
+# Straight regression -- all variables, no interactions
+
+all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent +
+       white_percent +
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported,
+       most_recent, clusters = zip, se_type = "CR0")
+
+summary(all_linear_reg)
+
+tibble_all_linear <- tidy(all_linear_reg)
+
+```
+```{r}
+all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent + I(black_percent^2) +
+       white_percent + I(white_percent^2) +
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported,
+       most_recent, clusters = zip, se_type = "CR0")
+
+summary(all_linear_reg)
+
+```
+
