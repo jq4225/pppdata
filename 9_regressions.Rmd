@@ -17,7 +17,25 @@ most_recent <- readRDS('ppp_allvars_1028.rds') %>%
   mutate(median_family_income = median_family_income / 1000,
          bank_ppp_issued = bank_ppp_issued / 1000,
          businesses_per_pop = businesses_per_pop / 100,
-         violent_crime_rate = violent_crime_rate / 10)
+         violent_crime_rate = violent_crime_rate / 10) %>%
+  mutate(zip = as.factor(zip))
+```
+
+
+```{r}
+#residuals <-summary(all_linear_reg)$df.residual
+
+ggplot(data = most_recent, mapping = aes(x = days_to_approval, y = (days_to_approval - all_linear_reg$fitted.values))) +
+  geom_jitter(alpha = 0.3, color = "dodgerblue") +
+  ylim(-250, 500) +
+  labs(x = "Days to Approval", y = "Residuals", title = "Waiting Time vs. Residuals")
+```
+
+
+```{r}
+# most recent county
+
+most_recent_county <- readRDS('counties_all_1028.rds')
 ```
 
 ```{r}
@@ -47,7 +65,7 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        estimate_gini_index +
        violent_crime_rate +
        jobs_reported,
-       most_recent, clusters = zip, se_type = "CR0")
+       most_recent, clusters = zip, se_type = "CR2")
 
 summary(all_linear_reg)
 
@@ -55,7 +73,33 @@ tibble_all_linear <- tidy(all_linear_reg)
 
 ```
 ```{r}
-all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+all_linear_reg_b <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent +
+       white_percent +
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_current +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported,
+       most_recent, clusters = zip, se_type = "CR0")
+
+summary(all_linear_reg_b)
+
+```
+```{r}
+all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
        black_percent + I(black_percent^2) +
        white_percent + I(white_percent^2) +
        high_school_pct +
@@ -63,10 +107,12 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        loan_350_1mil + loan_150_350 + 
        loan_5mil_10mil +
        loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
+       cook_pvi + I(cook_pvi^2) +
+         mean_start_cases_weighted + I(mean_start_cases_weighted^2) +
+       mean_start_deaths_weighted + I(mean_start_deaths_weighted^2) +
+       mean_end_cases_weighted + I(mean_end_cases_weighted^2) +
+       mean_end_deaths_weighted + I(mean_end_deaths_weighted^2) +
+       bank_ppp_issued + I(bank_ppp_issued^2) +
        rural + businesses_per_pop +
        married_percent + preference +
        requirement + 
@@ -74,14 +120,87 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        stay_at_home_current +
        non_essential_closure_apr +
        non_essential_closure_current + 
-       unemployment_rate + 
+       unemployment_rate + I(unemployment_rate^2)+
+       unemployment_rate_apr + I(unemployment_rate_apr^2) +
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported + I(jobs_reported^2),
+       most_recent, clusters = zip, se_type = "CR0")
+
+summary(all_linear_reg_c)
+
+tibble_all_linear_c <- tidy(all_linear_reg_c)
+```
+
+
+```{r}
+most_recent_county <- counties_all_1028 %>%
+   mutate(median_income = median_income / 1000,
+         bank_ppp_issued = bank_ppp_issued / 1000,
+         # This is b/c we didn't do per 10,000 people before, but we want hundreds of businesses per 10,000 people, or 100
+         businesses_per_pop = businesses_per_pop * 100,
+         violent_crime_rate = violent_crime_rate / 10,
+         pop_den = pop_den / 100,
+         black_percent = black_percent * 100,
+         white_percent = white_percent * 100) %>%
+  mutate(fips = as.factor(fips))
+  
+county_reg_a <- lm_robust(days_to_approval ~ 1 + median_income +
+       black_percent +
+       white_percent +
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       republican_percent + mean_end_cases +
+       mean_end_deaths + 
+       bank_ppp_issued +
+       pop_den + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_current +
+       non_essential_closure_current + 
+       unemployment_rate_percent + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported,
+       most_recent_county, clusters = fips, se_type = "CR0")
+
+summary(county_reg_a)
+```
+
+```{r}
+
+```
+
+```{r}
+county_reg_b <- lm_robust(days_to_approval ~ 1 + median_income +
+       black_percent +
+       white_percent +
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       republican_percent + mean_start_cases + mean_start_deaths + 
+         mean_end_cases +
+       mean_end_deaths + 
+       bank_ppp_issued +
+       pop_den + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr + 
+       non_essential_closure_apr + 
+       stay_at_home_current +
+       non_essential_closure_current + 
+       unemployment_rate_percent + 
        unemployment_rate_apr + 
        estimate_gini_index +
        violent_crime_rate +
        jobs_reported,
-       most_recent, clusters = zip, se_type = "CR0")
+       most_recent_county, clusters = fips, se_type = "CR0")
 
-summary(all_linear_reg)
-
+summary(county_reg_b)
 ```
 
