@@ -8,9 +8,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(janitor)
 library(tidyverse)
 library(readxl)
-ppp_allvars_1024 <- readRDS('ppp_allvars_1024_notdone.rds')
-# loan_data <- readRDS("ppp_covidadj.rds")
-# old_data <- readRDS("ppp_loanonly_all_loans.rds")
+#ppp_allvars_1024 <- readRDS('ppp_allvars_1024_notdone.rds')
+
+loan_data <- ppp_covidadj
+  #readRDS("ppp_covidadj.rds")
+old_data <- readRDS("ppp_loanonly_all_loans.rds")
 ```
 
 
