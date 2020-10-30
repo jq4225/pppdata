@@ -47,6 +47,9 @@ dates_approved <- ppp_allvars_1024_marital %>%
   select(zip, date_approved) %>%
   distinct()
 
+weighted_cases_current_3 <- readRDS('weighted_cases_current_3.rds')
+dates_approved <- readRDS('dates_approved.rds')
+
 weighted_cases_current_4 <- left_join(dates_approved, weighted_cases_current_3,
                                       by = "zip")
 

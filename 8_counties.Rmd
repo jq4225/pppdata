@@ -547,7 +547,7 @@ ppp_total <- rbind(ppp_150_newcol, all_states2) %>%
 # First let's clean this up by doing lender matching
 
 county_jobs <- left_join(county_crime, jobs_matched, by = c("zip", "date_approved", "lender",
-                                                         "address"))
+                                                         "address", "city", "state"))
 
 # Don't have to run this again if you don't need
 bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
