@@ -13,6 +13,8 @@ library(maps)
 ```
 
 ```{r getting zip code counts for original}
+# Reading in the original loan data, which includes zip (all we need)
+
 original <- readRDS('ppp_loanonly_all_loans.rds') %>%
   select(zip) %>%
   group_by(zip) %>%
@@ -20,6 +22,9 @@ original <- readRDS('ppp_loanonly_all_loans.rds') %>%
 ```
 
 ```{r new data}
+# This uses a slightly older version than our final dataset but the difference
+# in the number of loans is pretty negligible.
+
 new <- readRDS('ppp_allvars_1024_unemploy.rds') %>%
   select(zip) %>%
   group_by(zip) %>%
@@ -29,19 +34,24 @@ new <- readRDS('ppp_allvars_1024_unemploy.rds') %>%
 
 ```{r new data 2}
 # Testing an older dataset to see what changed
-new2 <- ppp_covidadj %>%
-  #readRDS('ppp_pvi_1017.rds') %>%
-  select(zip) %>%
-  group_by(zip) %>%
-  summarize(number = n(), .groups = "drop")
+
+# new2 <- ppp_covidadj %>%
+#   #readRDS('ppp_pvi_1017.rds') %>%
+#   select(zip) %>%
+#   group_by(zip) %>%
+#   summarize(number = n(), .groups = "drop")
 ```
 
 
 ```{r matching up zips and lat/long}
-ziplat <- read_delim('raw_data/crosswalks/us-zip-code-latitude-and-longitude.csv',
+# This converts zip codes to rough lat-long estimates
+ziplat <- 
+  read_delim('raw_data/crosswalks/us-zip-code-latitude-and-longitude.csv',
                    delim = ";") %>%
   clean_names() %>%
   select(zip, latitude, longitude)
+
+# We convert original loan data and new loan data to zip.
 
 original_lat <- left_join(original, ziplat, by = "zip") %>%
   drop_na(latitude)
@@ -56,13 +66,18 @@ new_lat <- left_join(new, ziplat, by = "zip") %>%
 
 
 ```{r graphing}
+# Use a US map and then make a heatmap of the loans by zip code. I did this
+# using an online tutorial: 
+# https://rstudio-pubs-static.s3.amazonaws.com/274683_cd798195cbaf4a7a900cceaafb73ea11.html
+
 us <- map_data('state')
 
 ggplot(original_lat, aes(longitude, latitude)) +
-  geom_polygon(data=us,aes(x=long,y=lat, group = group),color='gray',fill=NA,alpha=.35)+
-  geom_point(aes(color = number),size=1,alpha=0.07) + 
-  theme_void()+
-  xlim(-125,-65)+ylim(25,50) +
+  geom_polygon(data=us,aes(x = long,y = lat, group = group),
+               color = 'gray', fill = NA, alpha = .35)+
+  geom_point(aes(color = number),size = 1,alpha = 0.07) + 
+  theme_void() +
+  xlim(-125,-65) + ylim(25,50) +
   theme(axis.title = element_blank(), axis.ticks = element_blank(),
         axis.text = element_blank()) + 
   scale_colour_gradient(high="dark blue", low="light blue",
@@ -71,13 +86,14 @@ ggplot(original_lat, aes(longitude, latitude)) +
 
 
 ```{r graphing}
+# Similarly we then do this for our final dataset too!
 ggplot(new_lat, aes(longitude, latitude)) +
-  geom_polygon(data = us, aes(x = long,y = lat, group = group),color='gray',
+  geom_polygon(data = us, aes(x = long,y = lat, group = group), color = 'gray',
                fill = NA, alpha = .35)+
-  geom_point(aes(color = number),size=1,alpha=0.11) + 
+  geom_point(aes(color = number), size=1, alpha=0.11) + 
   theme_void() +
-  xlim(-125,-65) +
-  ylim(25,50) +
+  xlim(-125, -65) +
+  ylim(25, 50) +
   theme(axis.title = element_blank(), axis.ticks = element_blank(),
         axis.text = element_blank(), panel.grid.major = element_blank()) +
   scale_colour_gradient(high="dark blue", low="light blue", 
@@ -86,16 +102,16 @@ ggplot(new_lat, aes(longitude, latitude)) +
 
 
 ```{r graphing}
-ggplot(new2_late, aes(longitude, latitude)) +
-  geom_polygon(data = us, aes(x = long,y = lat, group = group),color='gray',
-               fill = NA, alpha = .35)+
-  geom_point(aes(color = number),size=1,alpha=0.11) + 
-  theme_void() +
-  xlim(-125,-65) +
-  ylim(25,50) +
-  theme(axis.title = element_blank(), axis.ticks = element_blank(),
-        axis.text = element_blank(), panel.grid.major = element_blank()) +
-  scale_colour_gradient(high="dark blue", low="light blue", 
-                        name = "Number of Loans")
+# ggplot(new2_late, aes(longitude, latitude)) +
+#   geom_polygon(data = us, aes(x = long,y = lat, group = group),color='gray',
+#                fill = NA, alpha = .35)+
+#   geom_point(aes(color = number),size=1,alpha=0.11) + 
+#   theme_void() +
+#   xlim(-125,-65) +
+#   ylim(25,50) +
+#   theme(axis.title = element_blank(), axis.ticks = element_blank(),
+#         axis.text = element_blank(), panel.grid.major = element_blank()) +
+#   scale_colour_gradient(high="dark blue", low="light blue", 
+#                         name = "Number of Loans")
 ```
 

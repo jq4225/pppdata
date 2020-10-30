@@ -14,17 +14,9 @@ library(lubridate)
 ```
 
 ```{r}
-# Just pulling out household median income here
-acs_income <- read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
-                       skip = 1) %>%
-  clean_names() %>%
-  select(id, geographic_area_name, 
-         estimate_median_income_dollars_families_families) %>%
-  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
-         estimate_median_income_dollars_families_families = 
-           as.double(estimate_median_income_dollars_families_families))
-```
-```{r}
+# This is 150k+ data for PPP loans, which we're going to read in first and
+# take the relevant data from.
+
 ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   clean_names() %>%
   select(loan_range, zip, date_approved, lender, address, city, state,
@@ -32,140 +24,12 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   drop_na(zip, jobs_reported) %>%
   
   # This calculates the date on which loans were approved vs. when apps opened.
+  
   mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),
          zip = as.character(zip))
 
 ```
-```{r}
-banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
-  'ZIP' = col_character()))%>%
-  clean_names() %>%
-  select(zip) %>%
-  filter(zip != 0) %>%
-  
-  # FDIC data drops leading zeroes from zip codes, so we add them back!
-  mutate(zip = str_pad(zip, width = 5, "left", "0")) %>%
-  mutate(zip = str_trim(zip, side = "both")) %>%
-  group_by(zip) %>%
-  summarize(number = n(), .groups = "drop")
-
-```
-
-```{r}
-# population
-
-pop <- read_csv("raw_data/acs_pop/ACSDT5Y2018.B01003_data_with_overlays_2020-10-06T100104.csv",
-                skip = 1) %>%
-  clean_names() %>%
-  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
-  select(-margin_of_error_total)
-```
-
-
-```{r}
-# race
-
-race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
-                skip = 1) %>%
-  clean_names() %>%
-  select(geographic_area_name,percent_estimate_race_total_population_one_race_white,
-         percent_estimate_race_total_population_one_race_black_or_african_american) %>%
-  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
-         percent_estimate_race_total_population_one_race_white = 
-           as.double(percent_estimate_race_total_population_one_race_white),
-         percent_estimate_race_total_population_one_race_black_or_african_american = 
-           as.double(percent_estimate_race_total_population_one_race_black_or_african_american))
-```
-
-
-```{r}
-# Reading in education data
-educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv",
-                 skip = 1) %>%
-  clean_names() %>%
-  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)))
-
-hs_educ <- educ %>%
-  select(id, geographic_area_name, 
-         estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
-  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
-  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
-# column is called: Estimate!!Percent!!Population 25 years and over!!Population 35 to 44 years!!High school graduate or higher
-
-```
-
-
-```{r}
-# The fun part is merging these datasets -- I'm using inner join since all rows
-# should match up between different acs subsets
-pop_race <- inner_join(pop, race, by = "geographic_area_name")
-income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name") %>%
-  select(-id.y, -id.x) %>%
-  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
-
-income_pop_race_educ <- inner_join(income_pop_race, hs_educ, by = "geographic_area_name") %>%
-  select(-id)
-
-```
-
-
-```{r}
-# Merging FDIC and ACS data. We use left join to preserve all zip codes, even
-# those without banks
-
-acs_with_banking <- left_join(income_pop_race_educ, banks, 
-                              by = c("geographic_area_name" = "zip")) %>%
-  # replace no banks in a county with zero banks in a county
-  replace_na(replace = list(number = 0))
-
-acs_with_banking
-```
-
-
-```{r}
-
-ppp_150_newcol <- ppp_150 %>%
-  mutate(loan_amount = NA) %>%
-  mutate(loan_amount = as.character(loan_amount))
-
-ppp_total <- rbind(ppp_150_newcol, all_states2)
-
-
-ppp_with_demographics <- left_join(ppp_total, acs_with_banking, 
-                                   by = c("zip" = "geographic_area_name")) %>%
-  mutate(banks_per_pop = number/(estimate_total/10000)) %>%
-  mutate(high_school_pct = as.double(high_school_pct))
-```
-
-
-```{r}
-cut_ppp <- ppp_with_demographics %>%
-  mutate(cuts =  cut(percent_estimate_race_total_population_one_race_black_or_african_american,
-                   seq(0, 100, by = 10))) %>%
-  group_by(cuts) %>%
-  summarize(mean_days = mean(as.double(days_to_approval)))
-
-cut_ppp
-```
-
-
-```{r}
-test <- ppp_with_demographics %>%
-  drop_na(days_to_approval, estimate_median_income_dollars_families_families, high_school_pct) %>%
-  mutate(days_to_approval = as.double(days_to_approval))
-
-
-test2<- 
-  lm(test$days_to_approval ~ 1 + test$estimate_median_income_dollars_families_families +
-       test$percent_estimate_race_total_population_one_race_black_or_african_american +
-       test$percent_estimate_race_total_population_one_race_white + 
-       test$banks_per_pop + test$high_school_pct)
-
-summary(test2)
-```
-
-
 ```{r}
 sba_cleaning <- function(file) {
   x <- read_csv(file) %>%
@@ -204,13 +68,168 @@ for(i in 1:length(file.names2)) {
 all_states2 <- all_states %>%
   mutate(loan_range = "less than 150k", address = NA)
 
-all_states2
+```
+
+```{r}
+
+# Just pulling out household median income here
+# Apologies if file names overrun the 80 character line -- not something I can
+# do anything about unless I just go and change all the file names
+
+# This is ACS median income data for 2018. We do a couple things that are going
+# to be super common in other places too - converting ZIP code name so that we 
+# strip out the "ZCTA" prefix, converting some stuff after. I didn't use
+# col_types just because I didn't know what the columns were called lol.
+
+acs_income <- 
+  read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
+                       skip = 1) %>%
+  clean_names() %>%
+  select(id, geographic_area_name, 
+         estimate_median_income_dollars_families_families) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         estimate_median_income_dollars_families_families = 
+           as.double(estimate_median_income_dollars_families_families))
+```
+
+```{r}
+# FDIC data for bank locations by ZIP code, which is the only thing
+# that we care about at all. 
+
+banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
+  'ZIP' = col_character()))%>%
+  clean_names() %>%
+  select(zip) %>%
+  filter(zip != 0) %>%
+  
+  # FDIC data drops leading zeroes from zip codes, so we add them back!
+  
+  mutate(zip = str_pad(zip, width = 5, "left", "0")) %>%
+  mutate(zip = str_trim(zip, side = "both")) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+
+```
+
+```{r}
+# population data from the ACS. 
+
+pop <- read_csv("raw_data/acs_pop/ACSDT5Y2018.B01003_data_with_overlays_2020-10-06T100104.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  select(-margin_of_error_total)
 ```
 
 
 ```{r}
-glimpse(all_states2)
+# race data from the ACS. 
 
-glimpse(ppp_150)
+race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name,percent_estimate_race_total_population_one_race_white,
+         percent_estimate_race_total_population_one_race_black_or_african_american) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_race_total_population_one_race_white = 
+           as.double(percent_estimate_race_total_population_one_race_white),
+         percent_estimate_race_total_population_one_race_black_or_african_american = 
+           as.double(percent_estimate_race_total_population_one_race_black_or_african_american))
+```
+
+
+```{r}
+# Reading in education data from the ACS again -- we only care about high
+# school graduation rates. 
+
+educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv",
+                 skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)))
+
+hs_educ <- educ %>%
+  select(id, geographic_area_name, 
+         estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+# column is called: Estimate!!Percent!!Population 25 years and over!!Population 35 to 44 years!!High school graduate or higher
+
+```
+
+
+```{r}
+# The fun part is merging these datasets -- I'm using inner join since all rows
+# should match up between different acs subsets
+
+pop_race <- inner_join(pop, race, by = "geographic_area_name")
+income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name") %>%
+  select(-id.y, -id.x) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+income_pop_race_educ <- inner_join(income_pop_race, hs_educ, by = "geographic_area_name") %>%
+  select(-id)
+
+```
+
+
+```{r}
+# Merging FDIC and ACS data. We use left join to preserve all zip codes, even
+# those without banks
+
+acs_with_banking <- left_join(income_pop_race_educ, banks, 
+                              by = c("geographic_area_name" = "zip")) %>%
+  # replace no banks in a county with zero banks in a county
+  replace_na(replace = list(number = 0))
+
+acs_with_banking
+```
+
+
+```{r}
+# We want the two ppp things to match up. This means that we need to add
+# some columns to both to make sure they actually match. 
+
+ppp_150_newcol <- ppp_150 %>%
+  mutate(loan_amount = NA) %>%
+  mutate(loan_amount = as.character(loan_amount))
+
+ppp_total <- rbind(ppp_150_newcol, all_states2)
+
+
+ppp_with_demographics <- left_join(ppp_total, acs_with_banking, 
+                                   by = c("zip" = "geographic_area_name")) %>%
+  mutate(banks_per_pop = number/(estimate_total/10000)) %>%
+  mutate(high_school_pct = as.double(high_school_pct))
+```
+
+
+```{r}
+# cut_ppp <- ppp_with_demographics %>%
+#   mutate(cuts =  cut(percent_estimate_race_total_population_one_race_black_or_african_american,
+#                    seq(0, 100, by = 10))) %>%
+#   group_by(cuts) %>%
+#   summarize(mean_days = mean(as.double(days_to_approval)))
+# 
+# cut_ppp
+```
+
+
+```{r}
+# We're just dropping na from some stuff to make sure that everything works. 
+
+test <- ppp_with_demographics %>%
+  drop_na(days_to_approval, estimate_median_income_dollars_families_families, high_school_pct) %>%
+  mutate(days_to_approval = as.double(days_to_approval))
+
+
+# test2<- 
+#   lm(test$days_to_approval ~ 1 + test$estimate_median_income_dollars_families_families +
+#        test$percent_estimate_race_total_population_one_race_black_or_african_american +
+#        test$percent_estimate_race_total_population_one_race_white + 
+#        test$banks_per_pop + test$high_school_pct)
+# 
+# summary(test2)
+```
 ```
 

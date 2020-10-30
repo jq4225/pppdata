@@ -10,6 +10,11 @@ library(janitor)
 library(arsenal)
 library(readxl)
 
+# Note that this isn't relevant for Gov 50 at all: this is for my other
+# projects where I needed to make a bunch of descriptive statistics
+# for  everything in the regressions, so feel free to ignore this file entirely.
+# This is NOT part of my Gov 50 final project.
+
 #loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
 most_recent <- ppp_allvars_1027_crime
@@ -42,6 +47,7 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   drop_na(zip, jobs_reported) %>%
   
   # This calculates the date on which loans were approved vs. when apps opened.
+  
   mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),
          zip = as.character(zip))
@@ -50,15 +56,25 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 
 
 ```{r}
+# Calculates mean for everything
+
 sapply(most_recent, mean)
 ```
 
 ```{r}
+# SD for everything
+
 sapply(most_recent, sd)
 ```
 
 ```{r}
-acs_income <- read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
+# The following files read in the data sources one by one and then merge them
+# so we lose the least data possible, then take averages. This is what takes
+# up all the space. You can find most of the identical code and comments
+# in file 1-4. 
+
+acs_income <- 
+  read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
                        skip = 1) %>%
   clean_names() %>%
   select(id, geographic_area_name, 

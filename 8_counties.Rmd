@@ -15,6 +15,12 @@ library(lmtest)
 library(sandwich)
 
 #loan_only <- readRDS('ppp_loanonly_all_loans.rds')
+
+# For robustness we needed to make sure that county-level regressions hold too.
+# Again, this is a minor (if at all) part of my Gov 50 work and mostly for
+# the other classes that I'm working on, so feel free to ignore this one too.
+# Most of this is identical to files 1-5 except consolidated in one file
+# and with slightly different data sources on the county level.
 ```
 
 
@@ -640,7 +646,6 @@ summary(regression_2)
 #   drop_na(requirement) %>%
 #   mutate(preference = replace_na(preference, 0)) %>%
 #   select(-preference, -requirement)
->>>>>>> b87ab15503596cf8122a1c4a1997701c7e6f34fe
 
 ```
 

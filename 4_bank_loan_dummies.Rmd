@@ -10,6 +10,9 @@ library(tidyverse)
 library(readxl)
 #ppp_allvars_1024 <- readRDS('ppp_allvars_1024_notdone.rds')
 
+# Just note that loan_data is our most recent data after file 3, and old_data
+# is our data purely from combining loan data only from the SBA.
+
 loan_data <- ppp_covidadj
   #readRDS("ppp_covidadj.rds")
 old_data <- readRDS("ppp_loanonly_all_loans.rds")
@@ -18,35 +21,51 @@ old_data <- readRDS("ppp_loanonly_all_loans.rds")
 
 ```{r}
 # Don't run this anymore
-banks <- old_data %>%
-  select(lender) %>%
-  group_by(lender) %>%
-  summarize(number_of_loans = n(), .groups = "drop") %>%
-  ungroup() %>%
-  mutate(lender = tolower(lender))
-
-banks_gov_project <- loan_data %>%
-  select(lender) %>%
-  group_by(lender) %>%
-  summarize(number_of_loans = n(), .groups = "drop") %>%
-  filter(number_of_loans >= 1000)
+# banks <- old_data %>%
+#   select(lender) %>%
+#   group_by(lender) %>%
+#   summarize(number_of_loans = n(), .groups = "drop") %>%
+#   ungroup() %>%
+#   mutate(lender = tolower(lender))
+# 
+# banks_gov_project <- loan_data %>%
+#   select(lender) %>%
+#   group_by(lender) %>%
+#   summarize(number_of_loans = n(), .groups = "drop") %>%
+#   filter(number_of_loans >= 1000)
 ```
 
 
 ```{r}
-bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+# This is my hand-coded Excel file of bank lending policies for the PPP
+
+bank_ppp_policy_manual <- 
+  read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+  
+  # We do some minor cleaning of the business names, like by trimming
+  # and converting to common case.
+  
   mutate(sba_name = tolower(sba_name)) %>%
   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
   drop_na(preference, requirement)
 
+# We do this to the full dataset (so far) as well so names match.
+
 ppp_setup <- loan_data %>%
   mutate(lender = str_trim(lender, side = "both"), lender = tolower(lender))
 
+# Joining this, we also mutate some requirement data based on the fact that
+# credit unions have members, meaning that they definitionally only lend
+# to members-only, making the requirements value 1.
+
 ppp_allvars_1019_banking <- left_join(ppp_setup, bank_ppp_policy_manual,
                                       by = c("lender" = "sba_name")) %>%
-  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              requirement),
+         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              requirement),
+         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              requirement)) %>%
   drop_na(requirement) %>%
   mutate(preference = replace_na(preference, 0))
 ```
@@ -54,39 +73,53 @@ ppp_allvars_1019_banking <- left_join(ppp_setup, bank_ppp_policy_manual,
 
 ```{r}
 # Should I exclude credit unions? I'm matching credit unions and making them members only
-bank_loan_policies <- banks %>%
-  mutate(members_only = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 0),
-         members_only = ifelse(str_detect(lender, pattern = "\\scu$"), 1, members_only),
-         members_only = ifelse(str_detect(lender, pattern = "credit union"), 1, members_only))
+# bank_loan_policies <- banks %>%
+#   mutate(members_only = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 0),
+#          members_only = ifelse(str_detect(lender, pattern = "\\scu$"), 1, members_only),
+#          members_only = ifelse(str_detect(lender, pattern = "credit union"), 1, members_only))
 
 
 ```
 
 
 ```{r}
-# Counting the number of loans per bank
+# Counting the number of loans per bank -- we just take the old loan data and
+# do lots of counting!
+
 loan_numbers <- old_data %>%
   select(lender) %>%
   group_by(lender) %>%
   summarize(bank_ppp_issued = n(), .groups = "drop") %>%
   mutate(lender = tolower(lender))
 
-ppp_allvars_1024 <- left_join(ppp_allvars_1019_banking, loan_numbers, by = "lender") %>%
+# Here, we also do some renaming of variables based on my prior poor choices
+# and lack of changes in files 1-3.
+
+ppp_allvars_1024 <- left_join(ppp_allvars_1019_banking, 
+                              loan_numbers, by = "lender") %>%
   rename("cook_pvi" = "pct", 
          "black_percent" = "percent_estimate_race_total_population_one_race_black_or_african_american",
-         "white_percent" = "percent_estimate_race_total_population_one_race_white",
-         "median_family_income" = "estimate_median_income_dollars_families_families",
+         "white_percent" = 
+           "percent_estimate_race_total_population_one_race_white",
+         "median_family_income" = 
+           "estimate_median_income_dollars_families_families",
          "population" = "estimate_total") %>%
   select(-loan_range)
 ```
 
 
 ```{r}
-# Rural data dummy coding
+# Rural data dummy coding -- 1 if the ZIP code is rural, 0 if it isn't.
+
 rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
   clean_names() %>%
   select(-state) %>%
+  
+  # This only includes ZIP codes that are rural, so everything else isn't.
+  
   mutate(rural = 1)
+
+# Joining the rural data together.
 
 ppp_allvars_1024_rural <- left_join(ppp_allvars_1024, rural, by = "zip") %>%
   mutate(rural = replace_na(rural, 0)) %>%
@@ -95,14 +128,26 @@ ppp_allvars_1024_rural <- left_join(ppp_allvars_1024, rural, by = "zip") %>%
 
 
 ```{r}
-# Business counts coding
-biz_count <- read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlays_2020-10-19T095307.csv",
+# Business counts coding from the ZBP survey by the Census Bureau
+
+biz_count <- 
+  read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlays_2020-10-19T095307.csv",
                       skip = 1) %>%
   clean_names()  %>%
+  
+  # We do the same cleaning things that we did the last time in file 1.
+  
   mutate(geographic_area_name = substring(geographic_area_name, 5, 9)) %>%
-  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
+  mutate(geographic_area_name = 
+           str_trim(geographic_area_name, side = "both")) %>%
+  
+  # We only want total business counts.
+  
   filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
   select(geographic_area_name, number_of_establishments)
+
+# Join and do some drop_nas for due diligence so we don't end up with
+# empty rows.
 
 ppp_allvars_1024 <- left_join(ppp_allvars_1024_rural, biz_count, 
                               by = c("zip" = "geographic_area_name")) %>%
@@ -128,79 +173,87 @@ ppp_allvars_1024 <- left_join(ppp_allvars_1024_rural, biz_count,
 
 
 ```{r}
-ppp_logtest <- ppp_allvars_1019 %>%
-  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval)))
+# ppp_logtest <- ppp_allvars_1019 %>%
+#   mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval)))
 ```
 
 
 ```{r}
 # Deprecated code now
-ppp_allvars_1019_marital <- readRDS('ppp_allvars_1019_marital.rds') %>%
-  # Population weight the businesses -- I forgot to do this the first time
-  mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
-  select(-number_of_establishments)
+# ppp_allvars_1019_marital <- readRDS('ppp_allvars_1019_marital.rds') %>%
+#   # Population weight the businesses -- I forgot to do this the first time
+#   mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
+#   select(-number_of_establishments)
 ```
 
 
 ```{r}
 ppp_allvars_1024 <- ppp_allvars_1024  %>%
+  
   # Population weight the businesses -- I forgot to do this the first time
+  
   mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
   select(-number_of_establishments)
 
-test_regression <-
-  lm(ppp_allvars_1019_banking$days_to_approval ~ 1 + ppp_allvars_1019_banking$median_family_income +
-       ppp_allvars_1019_banking$black_percent +
-       ppp_allvars_1019_banking$white_percent + ppp_allvars_1019_banking$high_school_pct +
-       ppp_allvars_1019_banking$banks_per_pop + 
-       ppp_allvars_1019_banking$loan_350_1mil + ppp_allvars_1019_banking$loan_150_350 + 
-       ppp_allvars_1019_banking$loan_5mil_10mil +
-       ppp_allvars_1019_banking$loan_2mil_5mil + ppp_allvars_1019_banking$loan_1mil_2mil +
-       ppp_allvars_1019_banking$cook_pvi + ppp_allvars_1019_banking$mean_start_cases_weighted + 
-       ppp_allvars_1019_banking$mean_start_deaths_weighted + ppp_allvars_1019_banking$bank_ppp_issued +
-       ppp_allvars_1019_banking$rural + ppp_allvars_1019_banking$businesses_per_pop +
-       ppp_allvars_1019_banking$married_percent + ppp_allvars_1019_banking$preference +
-       ppp_allvars_1019_banking$requirement)
-
-summary(test_regression)
+# test_regression <-
+#   lm(ppp_allvars_1019_banking$days_to_approval ~ 1 + ppp_allvars_1019_banking$median_family_income +
+#        ppp_allvars_1019_banking$black_percent +
+#        ppp_allvars_1019_banking$white_percent + ppp_allvars_1019_banking$high_school_pct +
+#        ppp_allvars_1019_banking$banks_per_pop + 
+#        ppp_allvars_1019_banking$loan_350_1mil + ppp_allvars_1019_banking$loan_150_350 + 
+#        ppp_allvars_1019_banking$loan_5mil_10mil +
+#        ppp_allvars_1019_banking$loan_2mil_5mil + ppp_allvars_1019_banking$loan_1mil_2mil +
+#        ppp_allvars_1019_banking$cook_pvi + ppp_allvars_1019_banking$mean_start_cases_weighted + 
+#        ppp_allvars_1019_banking$mean_start_deaths_weighted + ppp_allvars_1019_banking$bank_ppp_issued +
+#        ppp_allvars_1019_banking$rural + ppp_allvars_1019_banking$businesses_per_pop +
+#        ppp_allvars_1019_banking$married_percent + ppp_allvars_1019_banking$preference +
+#        ppp_allvars_1019_banking$requirement)
+# 
+# summary(test_regression)
 ```
 
 
 ```{r}
-ppp_logtest <- ppp_allvars_1019_banking %>%
-  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
-  mutate(logbiz = ifelse(log(businesses_per_pop) == -Inf, 0, log(businesses_per_pop))) %>%
-  mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)))
-
-log_regression_test <- 
-    lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
-       ppp_logtest$black_percent +
-       ppp_logtest$white_percent + ppp_logtest$high_school_pct +
-       ppp_logtest$logbanks + 
-       ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
-       ppp_logtest$loan_5mil_10mil +
-       ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
-       ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
-       ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
-       ppp_logtest$rural + ppp_logtest$logbiz + 
-    ppp_logtest$married_percent + ppp_logtest$preference + 
-      ppp_logtest$preference * ppp_logtest$black_percent + 
-      ppp_logtest$requirement * ppp_logtest$black_percent +
-    ppp_logtest$requirement)
-
-summary(log_regression_test)
+# ppp_logtest <- ppp_allvars_1019_banking %>%
+#   mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
+#   mutate(logbiz = ifelse(log(businesses_per_pop) == -Inf, 0, log(businesses_per_pop))) %>%
+#   mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)))
+# 
+# log_regression_test <- 
+#     lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
+#        ppp_logtest$black_percent +
+#        ppp_logtest$white_percent + ppp_logtest$high_school_pct +
+#        ppp_logtest$logbanks + 
+#        ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
+#        ppp_logtest$loan_5mil_10mil +
+#        ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
+#        ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
+#        ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
+#        ppp_logtest$rural + ppp_logtest$logbiz + 
+#     ppp_logtest$married_percent + ppp_logtest$preference + 
+#       ppp_logtest$preference * ppp_logtest$black_percent + 
+#       ppp_logtest$requirement * ppp_logtest$black_percent +
+#     ppp_logtest$requirement)
+# 
+# summary(log_regression_test)
 ```
 
 ```{r}
 
-# Adding in marital status
-marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
+# Adding in marital status from the ACS again, doing the same cleaning we mostly
+# did in file 1! Then we join it together as we're already really used to now.
+
+marital <- 
+  read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
                     skip = 1) %>%
   clean_names() %>%
-  select(geographic_area_name, estimate_now_married_except_separated_population_15_years_and_over) %>%
+  select(geographic_area_name, e
+         stimate_now_married_except_separated_population_15_years_and_over) %>%
   mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
-         geographic_area_name = str_trim(geographic_area_name, side = "both")) %>%
-  rename("married_percent" = "estimate_now_married_except_separated_population_15_years_and_over")
+         geographic_area_name = 
+           str_trim(geographic_area_name, side = "both")) %>%
+  rename("married_percent" = 
+           "estimate_now_married_except_separated_population_15_years_and_over")
 
 ppp_allvars_1024_marital <- left_join(ppp_allvars_1024, marital, 
                                       by = c("zip" = "geographic_area_name")) %>%

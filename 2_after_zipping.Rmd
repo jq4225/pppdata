@@ -18,7 +18,11 @@ library(stringr)
 
 
 ```{r}
-# included in latest now -- this is just making dummies based on loan size
+# included in latest now -- this is just making dummies based on loan size 
+# (I actually rename these later but I've preserved this for now.)
+# I include these just to preserve the previous code.
+# this particular zip_data_wit
+
 zip_data_with_dummies <- test %>%
   mutate("350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
          "150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
@@ -27,15 +31,4 @@ zip_data_with_dummies <- test %>%
          "1mil_2mil" = ifelse(loan_range == "c $1-2 million", 1, 0),
          "150_less" = ifelse(loan_range == "less than 150k", 1, 0)
          )
-```
-
-
-```{r}
-# covid cases
-
-```
-
-
-```{r}
-# dummy for whether bank takes or doesn't take outside customers
 ```

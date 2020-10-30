@@ -15,12 +15,20 @@ library(sandwich)
 library(miceadds)
 library(estimatr)
 
+# I think the only stats packages I end up needing are openintro, lmtest,
+# and estimatr- some other packages were from previous attempts
+
 #ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
 ```
 
 
 ```{r creating covid case counts}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+# We did this in file 3 I think, but now we're including week-of loan approval
+# case counts -- this is very computationally intensive and I had to some in
+# Rstudio instead, which I indicated.
+
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio)
 
@@ -28,11 +36,16 @@ county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
   filter(date > as.Date("2020-03-27")) %>%
   select(-county, -state)
 
-weighted_cases_current <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips"))
+weighted_cases_current <- 
+  left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips"))
 ```
 
 
 ```{r creating covid case counts, after cleaning}
+
+# We're population weighting case counts and then taking what we need after
+# grouping by zip.
+
 weighted_cases_current_2 <- weighted_cases_current %>%
   mutate(weighted_cases = cases * res_ratio,
          weighted_deaths = deaths * res_ratio) %>%
@@ -41,19 +54,28 @@ weighted_cases_current_2 <- weighted_cases_current %>%
   summarize(weighted_cases = sum(weighted_cases),
             weighted_deaths = sum(weighted_deaths))
 
+# Filtering dates so it's only within the date range of the PPP, again to make
+# the computation a little easier.
+
 weighted_cases_current_3 <- weighted_cases_current_2 %>%
   filter(date <= as.Date("2020-08-08"), date >= as.Date("2020-03-27"))
 
 
-# Using distinct is so we don't get a memory overflow here -- it's necessary
+# Using distinct is so we don't get a memory overflow here -- it's necessary.
+# We just want every distinct zip-date combination instead of a bunch of repeats
+# note that ppp_allvars_1024_marital is the most recent file as of file 4.
+
 dates_approved <- ppp_allvars_1024_marital %>%
   select(zip, date_approved) %>%
   distinct()
 
+# This is code from when I took the above and just ran it all in Rstudio
+
 weighted_cases_current_3 <- readRDS('weighted_cases_current_3.rds')
 dates_approved <- readRDS('dates_approved.rds')
 
-# This still often causes a memory overflow :( Run in Rstudio Server if problem
+# This is what the code would be but I kept 
+# getting memory overflows.
 
 weighted_cases_current_4 <- left_join(dates_approved, weighted_cases_current_3,
                                       by = "zip")
@@ -64,6 +86,8 @@ weighted_cases_current_5 <- weighted_cases_current_4 %>%
   group_by(zip, date_approved) %>%
   filter(date <= date_approved, date > (date_approved - 7))
 
+# Taking some means to clean up the final data.
+
 weighted_cases_current_6 <- weighted_cases_current_5 %>%
   summarize(mean_end_cases_weighted = mean(weighted_cases),
             mean_end_deaths_weighted = mean(weighted_deaths), .groups = "drop")
@@ -72,10 +96,14 @@ weighted_cases_current_6 <- weighted_cases_current_5 %>%
 
 ```{r merging}
 
-# This was generated in Rstudio server
+# This was generated in Rstudio server again due to speed.
+
 weighted_cases_current_6 <- read_csv('weighted_cases_current_6.csv')
 
-ppp_allvars_1028 <- left_join(ppp_allvars_1024_marital, weighted_cases_current_6,
+# Joining everything together!
+
+ppp_allvars_1028 <- left_join(ppp_allvars_1024_marital, 
+                              weighted_cases_current_6,
                               by = c("zip", "date_approved")) %>%
   drop_na(mean_end_cases_weighted, mean_end_deaths_weighted)
 
@@ -85,10 +113,14 @@ ppp_allvars_1028 <- ppp_allvars_1028 %>%
 ```
 
 ```{r}
-# Now we want to include social distancing restrictions by state
+# Now we want to include social distancing restrictions by state. Note that
+# the read_excel spits out a ton of errors when it tries to process this
+# but gets the final numbers right anyway, so I just tolerate the errors.
+
 state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
                              sheet = "2020-06-22_Social Distancing Or", skip = 1,
-                             col_types = c("guess", "date", "date", "date", "date",
+                             col_types = c("guess", "date", "date", "date", 
+                                           "date",
                                            "date", "date", "guess", "date",
                                            "date", "date", "date", "date",
                                            "date")) %>%
@@ -98,13 +130,19 @@ state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
          non_essential_business_closure_end) %>%
   
   # We just make NAs some later date just so they don't mess up our inequalities
+  # In this case I just use January 2021 since this is outside the scope of the
+  # program.
   
-  mutate(stay_at_home_start = replace_na(stay_at_home_start, as.Date("2021-01-01")),
+  mutate(stay_at_home_start = 
+           replace_na(stay_at_home_start, as.Date("2021-01-01")),
          stay_at_home_end = replace_na(stay_at_home_end, as.Date("2021-01-01")),
          non_essential_business_closure_start = 
-           replace_na(non_essential_business_closure_start, as.Date("2021-01-01")),
+           replace_na(
+             non_essential_business_closure_start, as.Date("2021-01-01")),
          non_essential_business_closure_end = 
-           replace_na(non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
+           replace_na(
+             non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
+  
   mutate(stay_at_home_apr = ifelse(stay_at_home_start <= as.Date("2020-04-03"),
                                    1, 0),
          non_essential_closure_apr = 
@@ -113,10 +151,18 @@ state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
   mutate(stay_at_home_apr = replace_na(stay_at_home_apr, 0),
          non_essential_closure_apr = replace_na(non_essential_closure_apr, 0))
 
+# We use the congressional district names as a way to match restrictions by 
+# state -- this is why we needed the openintro package, since it includes a
+# function to convert state abbrevs into full state names with which
+# we can match to the Kaiser data on state level policy actions.
+
 states <- ppp_allvars_1028 %>%
   select(cd_name, date_approved) %>%
   mutate(state_abb = str_sub(cd_name, 1, 2)) %>%
   mutate(state = abbr2state(state_abb))
+
+# This codes the final dummies for whether states had stay at home
+# policies for the dates I care about -- i.e. approval dates.
 
 states_merged <- left_join(states, state_policies, by = "state") %>%
   mutate(stay_at_home_current = 
@@ -135,18 +181,26 @@ states_merged_cleaned <- states_merged %>%
 
 
 ```{r}
+# Bind cols is usually risky, but the functions we did before ensure that
+# each row in states_merged_cleaned matches exactly to the same row in the 
+# ppp data, allowing us to just bind these tibbles together by column.
+
 ppp_allvars_1028_lockdowns <- bind_cols(ppp_allvars_1028, states_merged_cleaned)
 ```
 
 
 ```{r}
-# Adding in some COVID-related unemployment data too!
+# Adding in some COVID-related unemployment data too! This is from the BLS
 
-# This is taken from earlier
+# This is taken from earlier when we needed to do county-zip weighting.
 
 county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio)
+
+# And this reads in the unemployment data. We combine the state and county
+# FIPS code so we can get a full FIPS code for the county, which is how we'll
+# do the crosswalking later on. 
 
 unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
   clean_names() %>%
@@ -155,7 +209,11 @@ unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
   mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
   drop_na(fips_code)
 
-# Weight this by population
+# Weight this by population, as we did with the COVID test. What this means 
+# here is that we multiply raw unemployment and labor force numbers by the 
+# residential ratio each ZIP code occupies as a proportion of county, and
+# then divide those new numbers (after summing across different counties for
+# zip codes in multiple) to get an estimate of the zip unemployment rate.
 
 unemploy_zip <- left_join(county_zip_crosswalk, unemploy,
                           by = c("county" = "fips_code")) %>%
@@ -166,7 +224,14 @@ unemploy_zip <- left_join(county_zip_crosswalk, unemploy,
   summarize(total_labor = sum(labor_force),
             total_unemployed = sum(unemployed), .groups = "drop") %>%
   mutate(unemployment_rate = total_unemployed * 100 / total_labor) %>%
+  
+  # Again ,we only care about unemployment in certain months.
+  
   filter(period %in% c("Apr-20", "May-20", "Jun-20", "Jul-20", "Aug-20 p"))
+
+# We convert the periods to dates which makes it
+# helpful for us, and then extract the month so we can do some matching with
+# when loans were approved!
 
 unemploy_zip_dates <- unemploy_zip %>%
   mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
@@ -176,12 +241,19 @@ unemploy_zip_dates <- unemploy_zip %>%
 
 
 ```{r}
-# Matching months
+# Matching months between the PPP data and our unemployment data
+
 ppp_months <- ppp_allvars_1028_lockdowns %>%
   mutate(month = month(date_approved))
 
+# This means that we have a variable for the unemployment rate in the ZIP code
+# that we estimated, based on the month the loan was approved.
+
 ppp_allvars_1028_unemploy <- left_join(ppp_months, unemploy_zip_dates, 
                                        by = c("zip", "month"))
+
+# Here we calculate the unemployment rate when the apps initially opened, which
+# is just the April unemployment rate, doing the same thing
 
 unemploy_apr <- unemploy_zip_dates %>%
   filter(month == 4) %>%
@@ -196,8 +268,11 @@ ppp_allvars_1028_unemploy_2 <- left_join(ppp_allvars_1028_unemploy,
 
 
 ```{r}
-# Adding in gini index
-inequality <- read_csv('raw_data/acs_gini/ACSDT5Y2018.B19083_data_with_overlays_2020-10-26T225918.csv',
+# Adding in gini index by ZIP code, using the same cleaning methods we've used
+# for every ACS dataset so far.
+
+inequality <- 
+  read_csv('raw_data/acs_gini/ACSDT5Y2018.B19083_data_with_overlays_2020-10-26T225918.csv',
                        skip = 1) %>%
   clean_names() %>%
   select(geographic_area_name, estimate_gini_index) %>%
@@ -233,7 +308,9 @@ county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx')
   clean_names() %>%
   select(county, zip, res_ratio)
 
-# Weighting by population
+# Weighting by population as usual. We do this the same way we did
+# unemployment, but we've kept the ACS population estimates so we can calculate
+# our own per-population crime rate estimates.
 
 crime_zip <- left_join(county_zip_crosswalk, crime, by = c("county" = "fips")) %>%
   mutate(annual_average_violent_crimes = annual_average_violent_crimes * res_ratio) %>%
@@ -253,139 +330,140 @@ ppp_allvars_1027_crime <- left_join(ppp_allvars_1027, crime_zip, by = "zip") %>%
 
 
 ```{r}
-ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
-test_regression <-
-  lm(ppp_allvars_1027_crime$days_to_approval ~ 1 + ppp_allvars_1027_crime$median_family_income +
-       ppp_allvars_1027_crime$black_percent +
-       I(ppp_allvars_1027_crime$black_percent ^ 2) +
-       ppp_allvars_1027_crime$white_percent + I(ppp_allvars_1027_crime$white_percent ^ 2) +
-       ppp_allvars_1027_crime$high_school_pct +
-       ppp_allvars_1027_crime$banks_per_pop + 
-       ppp_allvars_1027_crime$loan_350_1mil + ppp_allvars_1027_crime$loan_150_350 + 
-       ppp_allvars_1027_crime$loan_5mil_10mil +
-       ppp_allvars_1027_crime$loan_2mil_5mil + ppp_allvars_1027_crime$loan_1mil_2mil +
-       ppp_allvars_1027_crime$cook_pvi + ppp_allvars_1027_crime$mean_start_cases_weighted + 
-       ppp_allvars_1027_crime$mean_start_deaths_weighted + ppp_allvars_1027_crime$mean_end_cases_weighted +
-       ppp_allvars_1027_crime$mean_end_deaths_weighted + 
-       ppp_allvars_1027_crime$bank_ppp_issued +
-       ppp_allvars_1027_crime$rural + ppp_allvars_1027_crime$businesses_per_pop +
-       ppp_allvars_1027_crime$married_percent + ppp_allvars_1027_crime$preference +
-       ppp_allvars_1027_crime$requirement + 
-       ppp_allvars_1027_crime$stay_at_home_apr +
-       ppp_allvars_1027_crime$stay_at_home_current +
-       ppp_allvars_1027_crime$non_essential_closure_apr +
-       ppp_allvars_1027_crime$non_essential_closure_current + 
-       ppp_allvars_1027_crime$unemployment_rate + 
-       ppp_allvars_1027_crime$unemployment_rate_apr + 
-       ppp_allvars_1027_crime$estimate_gini_index +
-       ppp_allvars_1027_crime$violent_crime_rate +
-       ppp_allvars_1027_crime$jobs_reported +
-       
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$preference) +
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$requirement) + 
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_350_1mil) +
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_150_350) +
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_1mil_2mil) +
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_5mil_10mil) +
-       I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_5mil_10mil))
-
-summary(test_regression)
+# ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+# test_regression <-
+#   lm(ppp_allvars_1027_crime$days_to_approval ~ 1 + ppp_allvars_1027_crime$median_family_income +
+#        ppp_allvars_1027_crime$black_percent +
+#        I(ppp_allvars_1027_crime$black_percent ^ 2) +
+#        ppp_allvars_1027_crime$white_percent + I(ppp_allvars_1027_crime$white_percent ^ 2) +
+#        ppp_allvars_1027_crime$high_school_pct +
+#        ppp_allvars_1027_crime$banks_per_pop + 
+#        ppp_allvars_1027_crime$loan_350_1mil + ppp_allvars_1027_crime$loan_150_350 + 
+#        ppp_allvars_1027_crime$loan_5mil_10mil +
+#        ppp_allvars_1027_crime$loan_2mil_5mil + ppp_allvars_1027_crime$loan_1mil_2mil +
+#        ppp_allvars_1027_crime$cook_pvi + ppp_allvars_1027_crime$mean_start_cases_weighted + 
+#        ppp_allvars_1027_crime$mean_start_deaths_weighted + ppp_allvars_1027_crime$mean_end_cases_weighted +
+#        ppp_allvars_1027_crime$mean_end_deaths_weighted + 
+#        ppp_allvars_1027_crime$bank_ppp_issued +
+#        ppp_allvars_1027_crime$rural + ppp_allvars_1027_crime$businesses_per_pop +
+#        ppp_allvars_1027_crime$married_percent + ppp_allvars_1027_crime$preference +
+#        ppp_allvars_1027_crime$requirement + 
+#        ppp_allvars_1027_crime$stay_at_home_apr +
+#        ppp_allvars_1027_crime$stay_at_home_current +
+#        ppp_allvars_1027_crime$non_essential_closure_apr +
+#        ppp_allvars_1027_crime$non_essential_closure_current + 
+#        ppp_allvars_1027_crime$unemployment_rate + 
+#        ppp_allvars_1027_crime$unemployment_rate_apr + 
+#        ppp_allvars_1027_crime$estimate_gini_index +
+#        ppp_allvars_1027_crime$violent_crime_rate +
+#        ppp_allvars_1027_crime$jobs_reported +
+#        
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$preference) +
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$requirement) + 
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_350_1mil) +
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_150_350) +
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_1mil_2mil) +
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_5mil_10mil) +
+#        I(ppp_allvars_1027_crime$black_percent * ppp_allvars_1027_crime$loan_5mil_10mil))
+# 
+# summary(test_regression)
 ```
 
 
 ```{r}
-zip_regression_hetero <- coeftest(test_regression, vcov = vcovHC(test_regression, type = "HC0", cluster = "group"))
-
-zip_regression_hetero_tibble = tidy(zip_regression_hetero)
+# First attempt doing Eicher-White, but we do this all in file 9 instead.
+# zip_regression_hetero <- coeftest(test_regression, vcov = vcovHC(test_regression, type = "HC0", cluster = "group"))
+# 
+# zip_regression_hetero_tibble = tidy(zip_regression_hetero)
 ```
 
 
 ```{r}
-ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
-
-zip_regression_robuts <- lm_robust(days_to_approval ~ 1 + median_family_income +
-       black_percent +
-       I(black_percent ^ 2) +
-       white_percent + I(white_percent ^ 2) +
-       high_school_pct +
-       banks_per_pop + 
-       loan_350_1mil + loan_150_350 + 
-       loan_5mil_10mil +
-       loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
-       requirement + 
-       stay_at_home_apr +
-       stay_at_home_current +
-       non_essential_closure_apr +
-       non_essential_closure_current + 
-       unemployment_rate + 
-       unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
-       jobs_reported +
-       
-       I(black_percent * preference) +
-       I(black_percent * requirement) + 
-       I(black_percent * loan_350_1mil) +
-       I(black_percent * loan_150_350) +
-       I(black_percent * loan_1mil_2mil) +
-       I(black_percent * loan_5mil_10mil) +
-       I(black_percent * loan_5mil_10mil), 
-       ppp_allvars_1027_crime, clusters = zip, se_type = "CR0")
+# ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+# 
+# zip_regression_robuts <- lm_robust(days_to_approval ~ 1 + median_family_income +
+#        black_percent +
+#        I(black_percent ^ 2) +
+#        white_percent + I(white_percent ^ 2) +
+#        high_school_pct +
+#        banks_per_pop + 
+#        loan_350_1mil + loan_150_350 + 
+#        loan_5mil_10mil +
+#        loan_2mil_5mil + loan_1mil_2mil +
+#        cook_pvi + mean_start_cases_weighted + 
+#        mean_start_deaths_weighted + mean_end_cases_weighted +
+#        mean_end_deaths_weighted + 
+#        bank_ppp_issued +
+#        rural + businesses_per_pop +
+#        married_percent + preference +
+#        requirement + 
+#        stay_at_home_apr +
+#        stay_at_home_current +
+#        non_essential_closure_apr +
+#        non_essential_closure_current + 
+#        unemployment_rate + 
+#        unemployment_rate_apr + 
+#        estimate_gini_index +
+#        violent_crime_rate +
+#        jobs_reported +
+#        
+#        I(black_percent * preference) +
+#        I(black_percent * requirement) + 
+#        I(black_percent * loan_350_1mil) +
+#        I(black_percent * loan_150_350) +
+#        I(black_percent * loan_1mil_2mil) +
+#        I(black_percent * loan_5mil_10mil) +
+#        I(black_percent * loan_5mil_10mil), 
+#        ppp_allvars_1027_crime, clusters = zip, se_type = "CR0")
 
 
 ```
 
 ```{r}
-ppp_logtest <- ppp_allvars_1020_lockdowns %>%
-  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
-  mutate(logbiz = ifelse(log(number_of_establishments) == -Inf, 0, log(number_of_establishments))) %>%
-  mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)))
-
-log_regression_test <- 
-    lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
-       ppp_logtest$black_percent +
-       ppp_logtest$white_percent + ppp_logtest$high_school_pct +
-       ppp_logtest$logbanks + 
-       ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
-       ppp_logtest$loan_5mil_10mil +
-       ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
-       ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
-       ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
-       ppp_logtest$rural + ppp_logtest$logbiz + 
-       ppp_logtest$married_percent + ppp_logtest$preference + 
-       ppp_logtest$requirement +
-       ppp_logtest$stay_at_home_apr +
-       ppp_logtest$stay_at_home_current +
-       ppp_logtest$non_essential_closure_apr +
-       ppp_logtest$non_essential_closure_current +
-       
-       ppp_logtest$black_percent * ppp_logtest$preference +
-       ppp_logtest$black_percent * ppp_logtest$requirement + 
-       ppp_logtest$black_percent * ppp_logtest$loan_350_1mil +
-       ppp_logtest$black_percent * ppp_logtest$loan_150_350 +
-       ppp_logtest$black_percent * ppp_logtest$loan_1mil_2mil +
-       ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil +
-       ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil)
-summary(log_regression_test)
+# ppp_logtest <- ppp_allvars_1020_lockdowns %>%
+#   mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
+#   mutate(logbiz = ifelse(log(number_of_establishments) == -Inf, 0, log(number_of_establishments))) %>%
+#   mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)))
+# 
+# log_regression_test <- 
+#     lm(ppp_logtest$logdays ~ 1 + ppp_logtest$median_family_income +
+#        ppp_logtest$black_percent +
+#        ppp_logtest$white_percent + ppp_logtest$high_school_pct +
+#        ppp_logtest$logbanks + 
+#        ppp_logtest$loan_350_1mil + ppp_logtest$loan_150_350 + 
+#        ppp_logtest$loan_5mil_10mil +
+#        ppp_logtest$loan_2mil_5mil + ppp_logtest$loan_1mil_2mil +
+#        ppp_logtest$cook_pvi + ppp_logtest$mean_start_cases_weighted + 
+#        ppp_logtest$mean_start_deaths_weighted + ppp_logtest$bank_ppp_issued +
+#        ppp_logtest$rural + ppp_logtest$logbiz + 
+#        ppp_logtest$married_percent + ppp_logtest$preference + 
+#        ppp_logtest$requirement +
+#        ppp_logtest$stay_at_home_apr +
+#        ppp_logtest$stay_at_home_current +
+#        ppp_logtest$non_essential_closure_apr +
+#        ppp_logtest$non_essential_closure_current +
+#        
+#        ppp_logtest$black_percent * ppp_logtest$preference +
+#        ppp_logtest$black_percent * ppp_logtest$requirement + 
+#        ppp_logtest$black_percent * ppp_logtest$loan_350_1mil +
+#        ppp_logtest$black_percent * ppp_logtest$loan_150_350 +
+#        ppp_logtest$black_percent * ppp_logtest$loan_1mil_2mil +
+#        ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil +
+#        ppp_logtest$black_percent * ppp_logtest$loan_5mil_10mil)
+# summary(log_regression_test)
 ```
 
 
 ```{r}
-test_regression <- readRDS('zip_regression1.rds')
-ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
-residuals <- resid(test_regression)
-ggplot(ppp_allvars_1027_crime, mapping = aes(x = days_to_approval, y = residuals)) + 
-  geom_jitter(alpha = 0.3, fill = "dodgerblue") +
-  ylim(-250, 500) + 
-  labs(x = "Days to Approval", y = "Residuals", title = "Waiting Time vs. Residuals")
+# test_regression <- readRDS('zip_regression1.rds')
+# ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+# residuals <- resid(test_regression)
+# ggplot(ppp_allvars_1027_crime, mapping = aes(x = days_to_approval, y = residuals)) + 
+#   geom_jitter(alpha = 0.3, fill = "dodgerblue") +
+#   ylim(-250, 500) + 
+#   labs(x = "Days to Approval", y = "Residuals", title = "Waiting Time vs. Residuals")
 ```
 ```{r}
-bptest(test_regression)
+# bptest(test_regression)
 ```
 

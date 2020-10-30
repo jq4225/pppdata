@@ -8,44 +8,64 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
 library(readxl)
-#ppp_allstates <- readRDS(file = "zip_ppp_allstates_1018_dummy.rds")
 
-ppp_allstates <- zip_data_with_dummies
+# I would read in a file for the results of file 2, but the names changed
+# so assume this is there. Just note that what what I've done so far is called
+# ppp_allstates initially
+
+# ppp_allstates <- readRDS(file = "zip_ppp_allstates_1018_dummy.rds")
+
+#ppp_allstates <- zip_data_with_dummies
 
 # Everything in this file as of 5 pm 10/17 is already in the ppp_acs_pvi_covid rds file
 ```
 
 ```{r creating a zip to CD crosswalk}
-zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", skip = 1) %>%
+
+# We're reading in a crosswalk table between zips and congressionals
+# districts to conver the cook PVI data. For simplicity I de-duplicate
+# ZIPs as I explain later.
+
+zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", 
+                             skip = 1) %>%
   clean_names() %>%
-  mutate(x116th_congressional_district = ifelse(x116th_congressional_district == "00",
-                                                "AL", x116th_congressional_district)) %>%
-  mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, sep = "-")) %>%
+  mutate(x116th_congressional_district = 
+           ifelse(x116th_congressional_district == "00",
+                  "AL", x116th_congressional_district)) %>%
+  mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, 
+                         sep = "-")) %>%
   select(-state_code, -population_2010) %>%
   group_by(zip_census_tabulation_area) %>%
   
   # de-duplicate by assigning zips to only the CD where most of them are in
   
   arrange(cd116_to_zcta5_allocation_factor) %>%
-  mutate(zip_census_tabulation_area = str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
+  mutate(zip_census_tabulation_area = 
+           str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
   slice(1)
 ```
 
 
-```{r creating a zip to CD crosswalk2}
-
-```
-
 
 ```{r converting Cook Political Report}
+# This reads in Cook PVI data from the website, as downloaded
+
 cook_pvi <- read_csv(file = 'raw_data/cook_pvi/data-5vPn3.csv') %>%
   clean_names() %>%
   mutate(pvi_split = str_split(pvi, pattern = "\\+")) %>%
+  
+  # I split the party preferences here (e.g. D-10), which is the next sequence
+  # after str_splits
+  
   unnest(pvi_split) %>%
   group_by(dist) %>%
   mutate(col = seq_along(dist)) %>%
   spread(key = col, value = pvi_split) %>%
   rename(party = "1", pct = "2") %>%
+  
+  # After splitting I mutate the percentages to doubles and then convert
+  # democratic percentages to negatives.
+  
   mutate(pct = as.double(pct), dem_indicator = ifelse(party == "D", -1, 1)) %>%
   mutate(pct = pct * dem_indicator) %>%
   select(dist, party, pct)
@@ -53,6 +73,9 @@ cook_pvi <- read_csv(file = 'raw_data/cook_pvi/data-5vPn3.csv') %>%
 
 
 ```{r mapping zip to cd}
+
+# We're joining the cook_pvi stats to zip codes so we can match them ...
+
 zip_pvi <- left_join(zip_cd_crosswalk, cook_pvi, by = c("cd_name" = "dist")) %>%
   drop_na(pct) %>%
   select(zip_census_tabulation_area, cd_name, pct) %>%
@@ -61,15 +84,27 @@ zip_pvi <- left_join(zip_cd_crosswalk, cook_pvi, by = c("cd_name" = "dist")) %>%
 
 
 ```{r left_joining}
-ppp_allstates_pvi <- left_join(ppp_allstates, zip_pvi, by = c("zip" = "zip_census_tabulation_area")) %>%
+
+# Which we then do right here 
+
+ppp_allstates_pvi <- left_join(ppp_allstates, zip_pvi, 
+                               by = c("zip" = "zip_census_tabulation_area")) %>%
   drop_na(pct)
 ```
 
 
 ```{r county-zip_crosswalk}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+
+# Now we want to read in some county-level COVID data (reweighted by 
+# population ratios)
+
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio)
+
+# 3-27 is 1 week before April 3rd when apps opened so we filter here for
+# less computational need + b/c we only need 7-day averages
 
 county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
   filter(date > as.Date("2020-03-27")) %>%
@@ -78,14 +113,22 @@ county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
 
 
 ```{r county-zip_crosswalk}
-# 7 day rolling average cases and deaths around application start date 
+# 7 day rolling average cases and deaths around application start date for
+# every ZIP code
 
-weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips")) %>%
+weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, 
+                             by = c("county" = "fips")) %>%
   filter(date <= as.Date("2020-04-03")) %>%
   group_by(zip) %>%
-  mutate(mean_cases_app_start = mean(cases), mean_deaths_app_start = mean(deaths)) %>%
+  mutate(mean_cases_app_start = mean(cases), 
+         mean_deaths_app_start = mean(deaths)) %>%
   select(-cases, -deaths, -date) %>%
   distinct() %>%
+  
+  # To convert to zip code numbers we multiply by residential ratios
+  # of each zip code per county, meaning we get an estimated # of deaths
+  # assuming that deaths are equally distributed based on population.
+  
   mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
          mean_start_deaths_weighted = mean_deaths_app_start * res_ratio) %>%
   select(-mean_cases_app_start, -mean_deaths_app_start) %>%
@@ -98,33 +141,47 @@ weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, by = c("county"
 
 
 ```{r county-zip_crosswalk_2}
+# And then we join this all together.
+
 ppp_allstates_covid <- left_join(ppp_allstates_pvi, weighted_cases1, by = "zip")
 ```
 
 
 ```{r county-zip_crosswalk_3}
 # Didn't end up doing this -- just using covid cases in the beginning of April -- this is wayyy too computationally intensive. This is actually done better in latest_covid_cases.rmd
-dates_approved <- ppp_allstates_covid %>%
-  select(zip, date_approved) %>%
-  mutate(date_begin = date_approved - 6)
 
-
-weighted_cases2 <-left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips")) %>%
-  mutate(weighted_cases = cases * res_ratio, weighted_deaths = deaths * res_ratio) %>%
-  select(-res_ratio) %>%
-  group_by(zip, date) %>%
-  mutate(weighted_cases = sum(weighted_cases), weighted_deaths = sum(weighted_deaths)) %>% 
-  select(-county, -cases, -deaths)
-
-weighted_cases3 <- left_join(dates_approved, weighted_cases2, by = "zip")
+# dates_approved <- ppp_allstates_covid %>%
+#   select(zip, date_approved) %>%
+#   mutate(date_begin = date_approved - 6)
+# 
+# 
+# weighted_cases2 <-left_join(county_zip_crosswalk, county_covid, 
+#                             by = c("county" = "fips")) %>%
+#   mutate(weighted_cases = cases * res_ratio, 
+#          weighted_deaths = deaths * res_ratio) %>%
+#   select(-res_ratio) %>%
+#   group_by(zip, date) %>%
+#   mutate(weighted_cases = sum(weighted_cases), 
+#          weighted_deaths = sum(weighted_deaths)) %>% 
+#   select(-county, -cases, -deaths)
+# 
+# weighted_cases3 <- left_join(dates_approved, weighted_cases2, by = "zip")
 ```
 
 
 ```{r county-zip_crosswalk_4}
-# Dividing this for a case and death count per ten thousand people
+# Dividing this for a case and death count per ten thousand people so it's
+# nice and normalized
+
 ppp_covidadj <- ppp_allstates_covid %>%
-  mutate(mean_start_cases_weighted = mean_start_cases_weighted * 10000 / estimate_total,
-         mean_start_deaths_weighted = mean_start_deaths_weighted * 10000 / estimate_total) %>%
+  mutate(mean_start_cases_weighted = 
+           mean_start_cases_weighted * 10000 / estimate_total,
+         mean_start_deaths_weighted = 
+           mean_start_deaths_weighted * 10000 / estimate_total) %>%
+  
+  # And renaming the loan size dummies we did in file 2 so they're more
+  # palatable without having to use backticks
+  
   rename(loan_350_1mil = "350_1mil", loan_150_350 = "150-350",
          loan_5mil_10mil = "5mil_10mil", loan_2mil_5mil = "2mil_5mil",
          loan_1mil_2mil = "1mil_2mil", loan_150_less = "150_less")
@@ -132,21 +189,21 @@ ppp_covidadj <- ppp_allstates_covid %>%
 
 
 ```{r county-zip_crosswalk_4}
-test_regression <-
-  lm(ppp_covidadj$days_to_approval ~ 1 + ppp_covidadj$estimate_median_income_dollars_families_families +
-       ppp_covidadj$percent_estimate_race_total_population_one_race_black_or_african_american +
-       ppp_covidadj$percent_estimate_race_total_population_one_race_white + ppp_covidadj$high_school_pct +
-       ppp_covidadj$banks_per_pop + ppp_covidadj$loan_350_1mil + ppp_covidadj$loan_150_350 + 
-       ppp_covidadj$loan_5mil_10mil +ppp_covidadj$loan_2mil_5mil + ppp_covidadj$loan_1mil_2mil +
-       ppp_covidadj$pct + ppp_covidadj$mean_start_cases_weighted + 
-       ppp_covidadj$mean_start_deaths_weighted)
-
-summary(test_regression)
+# test_regression <-
+#   lm(ppp_covidadj$days_to_approval ~ 1 + ppp_covidadj$estimate_median_income_dollars_families_families +
+#        ppp_covidadj$percent_estimate_race_total_population_one_race_black_or_african_american +
+#        ppp_covidadj$percent_estimate_race_total_population_one_race_white + ppp_covidadj$high_school_pct +
+#        ppp_covidadj$banks_per_pop + ppp_covidadj$loan_350_1mil + ppp_covidadj$loan_150_350 + 
+#        ppp_covidadj$loan_5mil_10mil +ppp_covidadj$loan_2mil_5mil + ppp_covidadj$loan_1mil_2mil +
+#        ppp_covidadj$pct + ppp_covidadj$mean_start_cases_weighted + 
+#        ppp_covidadj$mean_start_deaths_weighted)
+# 
+# summary(test_regression)
 ```
 
 ```{r}
 # Exporting to CSV
-ppp_addresses <- ppp_allvars_1018 %>%
-  select(address, city, state, zip)
+# ppp_addresses <- ppp_allvars_1018 %>%
+#   select(address, city, state, zip)
 ```
 
