@@ -91,7 +91,7 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        estimate_gini_index +
        violent_crime_rate +
        jobs_reported,
-       most_recent, clusters = zip, se_type = "CR2")
+       most_recent, clusters = zip, se_type = "CR0")
 
 summary(all_linear_reg)
 
@@ -159,6 +159,86 @@ summary(all_linear_reg_c)
 tibble_all_linear_c <- tidy(all_linear_reg_c)
 ```
 
+```{r}
+# Trying out a log regression to see what happens
+
+log_reg <- most_recent %>%
+  mutate(log_days = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval)),
+         log_income = ifelse(log(median_family_income) == -Inf, 0, log(median_family_income)),
+         log_banks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop)),
+         log_startcases = ifelse(log(mean_start_cases_weighted) == -Inf, 0, log(mean_start_cases_weighted)),
+         log_endcases = ifelse(log(mean_end_cases_weighted) == -Inf, 0, log(mean_end_cases_weighted)),
+         log_startdeaths = ifelse(log(mean_start_deaths_weighted) == -Inf, 0, log(mean_start_deaths_weighted)),
+         log_enddeaths = ifelse(log(mean_end_deaths_weighted) == -Inf, 0, log(mean_end_deaths_weighted)),
+         log_jobs = ifelse(log(jobs_reported) == -Inf, 0, log(jobs_reported)),
+         log_loans = ifelse(log(bank_ppp_issued) == -Inf, 0, log(bank_ppp_issued)),
+         log_biz = ifelse(log(businesses_per_pop) == -Inf, 0, log(businesses_per_pop)),
+         log_crime = ifelse(log(violent_crime_rate) == -Inf, 0, log(violent_crime_rate)))
+
+zip_log_reg <- lm_robust(log_days ~ 1 + log_income + log_banks +
+       black_percent +
+       white_percent +
+       high_school_pct +
+       log_banks + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + 
+       log_startcases + 
+       log_startdeaths + log_endcases +
+       log_enddeaths + 
+       log_loans +
+       rural + log_biz +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       log_crime +
+       log_jobs,
+       log_reg, clusters = zip, se_type = "CR0")
+
+log_reg_zip_tibble <- tidy(zip_log_reg)
+```
+
+
+```{r}
+# log-linear
+log_linear_reg <- lm_robust(log_days ~ 1 + median_family_income +
+       black_percent +
+       white_percent +
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported,
+       log_reg, clusters = zip, se_type = "CR0")
+
+summary(log_linear_reg)
+
+log_linear_tibble <- tidy(log_linear_reg)
+
+```
 
 ```{r}
   
