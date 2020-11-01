@@ -70,9 +70,11 @@ indicators <- acm.disjonctif(current_bankindicators)
 
 
 ```{r}
-all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+baml_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        black_percent +
+       I(black_percent^2) +
        white_percent +
+       I(white_percent^2) + 
        high_school_pct +
        banks_per_pop + 
        loan_350_1mil + loan_150_350 + 
@@ -94,11 +96,194 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        estimate_gini_index +
        violent_crime_rate +
        jobs_reported + 
-       I(cook_pvi * black_percent), most_recent, clusters = zip, se_type = "CR0")
+       baml + I(baml * black_percent) + 
+       I(baml * median_family_income) +
+       I(baml * unemployment_rate), baml, clusters = zip, se_type = "CR0")
 
-summary(all_linear_reg)
+summary(baml_reg )
 
-tibble_all_linear <- tidy(all_linear_reg)
+tibble_baml <- tidy(baml_reg)
 
+write.csv(tibble_baml, file = "baml.csv")
+```
+
+
+```{r}
+jpm <- most_recent %>%
+  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
+                       1, 0))
+```
+
+
+```{r}
+jpm_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent +
+       I(black_percent^2) +
+       white_percent +
+       I(white_percent^2) + 
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported + 
+       jpm + I(jpm * black_percent) + 
+       I(jpm * median_family_income) +
+       I(jpm * unemployment_rate), jpm, clusters = zip, se_type = "CR0")
+
+summary(jpm_reg )
+
+tibble_jpm <- tidy(jpm_reg)
+
+write.csv(tibble_jpm, file = "jpm.csv")
+```
+
+
+```{r}
+citi <- most_recent %>%
+  mutate(citi = ifelse(lender == "citibank, n.a.",
+                       1, 0))
+
+citi_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent +
+       I(black_percent^2) +
+       white_percent +
+       I(white_percent^2) + 
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported + 
+       citi + I(citi * black_percent) + 
+       I(citi * median_family_income) +
+       I(citi * unemployment_rate), citi, clusters = zip, se_type = "CR0")
+
+summary(citi_reg )
+
+tibble_citi <- tidy(citi_reg)
+
+write.csv(tibble_citi, file = "citi.csv")
+```
+
+
+```{r}
+wells <- most_recent %>%
+  mutate(wells = ifelse(lender == "wells fargo bank, national association",
+                       1, 0))
+
+wells_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent +
+       I(black_percent^2) +
+       white_percent +
+       I(white_percent^2) + 
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported + 
+       wells + I(wells * black_percent) + 
+       I(wells * median_family_income) +
+       I(wells * unemployment_rate), wells, clusters = zip, se_type = "CR0")
+
+summary(wells_reg )
+
+tibble_wells <- tidy(wells_reg)
+
+write.csv(tibble_wells, file = "wells.csv")
+```
+
+
+```{r}
+capone <- most_recent %>%
+  mutate(capone = ifelse(lender == "capital one, national association",
+                       1, 0))
+
+capone_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent +
+       I(black_percent^2) +
+       white_percent +
+       I(white_percent^2) + 
+       high_school_pct +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + mean_start_cases_weighted + 
+       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_end_deaths_weighted + 
+       bank_ppp_issued +
+       rural + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + 
+       unemployment_rate_apr + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported + 
+       capone + I(capone * black_percent) + 
+       I(capone * median_family_income) +
+       I(capone * unemployment_rate), capone, clusters = zip, se_type = "CR0")
+
+summary(capone_reg )
+
+tibble_capone <- tidy(capone_reg)
+
+write.csv(tibble_capone, file = "capone.csv")
+```
+
+
+```{r}
+# Including number of
 ```
 
