@@ -9,6 +9,7 @@ library(estimatr)
 library(lmtest)
 library(sandwich)
 library(broom)
+library(tidyverse)
 
 # This is where I run all my regressions. Most of this again isn't super
 # necessary for gov 50. 
@@ -219,5 +220,37 @@ county_reg_b <- lm_robust(days_to_approval ~ 1 + median_income +
        most_recent_county, clusters = fips, se_type = "CR0")
 
 summary(county_reg_b)
+```
+
+
+```{r}
+county_reg_c <- lm_robust(days_to_approval ~ 1 + median_income +
+       black_percent + I(black_percent^2) +
+       white_percent + I(white_percent^2) +
+       high_school_pct +
+       banks_per_pop + I(banks_per_pop^2) +
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       republican_percent + mean_start_cases + I(mean_start_cases^2) +
+         mean_start_deaths + 
+         mean_end_cases +
+       mean_end_deaths + I(mean_end_deaths^2) + 
+       bank_ppp_issued + I(bank_ppp_issued^2) +
+       pop_den + businesses_per_pop +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr + 
+       non_essential_closure_apr + 
+       stay_at_home_current +
+       non_essential_closure_current + 
+       unemployment_rate_percent + I(unemployment_rate_percent^2) +
+       unemployment_rate_apr + I(unemployment_rate_apr^2) + 
+       estimate_gini_index +
+       violent_crime_rate +
+       jobs_reported + I(jobs_reported^2), 
+       most_recent_county, clusters = fips, se_type = "CR0")
+
+summary(county_reg_c)
 ```
 
