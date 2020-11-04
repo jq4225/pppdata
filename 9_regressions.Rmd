@@ -9,6 +9,7 @@ library(estimatr)
 library(lmtest)
 library(sandwich)
 library(broom)
+library(texreg)
 
 # This is where I run all my regressions. Most of this again isn't super
 # necessary for gov 50. 
@@ -70,37 +71,36 @@ most_recent_county <- readRDS('counties_all_1028.rds') %>%
 all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        black_percent +
        white_percent +
-       high_school_pct +
        banks_per_pop + 
        loan_350_1mil + loan_150_350 + 
        loan_5mil_10mil +
        loan_2mil_5mil + loan_1mil_2mil +
        cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
+       mean_start_deaths_weighted + 
+       mean_end_cases_weighted +
        mean_end_deaths_weighted + 
        bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
+       rural + businesses_per_pop + preference +
        requirement + 
        stay_at_home_apr +
        stay_at_home_current +
        non_essential_closure_apr +
        non_essential_closure_current + 
-       unemployment_rate + 
        unemployment_rate_apr + 
-       estimate_gini_index +
+      unemployment_rate + 
        violent_crime_rate +
        jobs_reported,
        most_recent, clusters = zip, se_type = "CR0")
 
-summary(all_linear_reg)
-
-tibble_all_linear <- tidy(all_linear_reg)
+# summary(all_linear_reg)
+# 
+# tibble_all_linear <- tidy(all_linear_reg)
 
 ```
 
 ```{r}
-all_linear_reg_b <- lm_robust(days_to_approval ~ 1 + median_family_income +
+all_linear_reg_b <- lm_robust(days_to_approval ~ 1 + 
+                                median_family_income +
        black_percent +
        white_percent +
        high_school_pct +
@@ -129,19 +129,17 @@ summary(all_linear_reg_b)
 all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
        black_percent + I(black_percent^2) +
        white_percent + I(white_percent^2) +
-       high_school_pct +
        banks_per_pop + 
        loan_350_1mil + loan_150_350 + 
        loan_5mil_10mil +
        loan_2mil_5mil + loan_1mil_2mil +
        cook_pvi + I(cook_pvi^2) +
-         mean_start_cases_weighted + I(mean_start_cases_weighted^2) +
+       mean_start_cases_weighted + I(mean_start_cases_weighted^2) +
        mean_start_deaths_weighted + I(mean_start_deaths_weighted^2) +
        mean_end_cases_weighted + I(mean_end_cases_weighted^2) +
        mean_end_deaths_weighted + I(mean_end_deaths_weighted^2) +
        bank_ppp_issued + I(bank_ppp_issued^2) +
-       rural + businesses_per_pop +
-       married_percent + preference +
+       rural + businesses_per_pop + preference +
        requirement + 
        stay_at_home_apr +
        stay_at_home_current +
@@ -149,7 +147,6 @@ all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
        non_essential_closure_current + 
        unemployment_rate + I(unemployment_rate^2)+
        unemployment_rate_apr + I(unemployment_rate_apr^2) +
-       estimate_gini_index +
        violent_crime_rate +
        jobs_reported + I(jobs_reported^2),
        most_recent, clusters = zip, se_type = "CR0")
@@ -157,6 +154,44 @@ all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
 summary(all_linear_reg_c)
 
 tibble_all_linear_c <- tidy(all_linear_reg_c)
+```
+
+
+```{r}
+# Adding in some interaction effects
+all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
+       black_percent + I(black_percent^2) +
+       white_percent + I(white_percent^2) +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       cook_pvi + I(cook_pvi^2) +
+       mean_start_cases_weighted + I(mean_start_cases_weighted^2) +
+       mean_start_deaths_weighted + I(mean_start_deaths_weighted^2) +
+       mean_end_cases_weighted + I(mean_end_cases_weighted^2) +
+       mean_end_deaths_weighted + I(mean_end_deaths_weighted^2) +
+       bank_ppp_issued +
+       rural + businesses_per_pop + preference +
+       requirement + 
+       stay_at_home_apr +
+       stay_at_home_current +
+       non_essential_closure_apr +
+       non_essential_closure_current + 
+       unemployment_rate + I(unemployment_rate^2)+
+       unemployment_rate_apr + I(unemployment_rate_apr^2) +
+       violent_crime_rate +
+       jobs_reported + I(jobs_reported^2) + 
+       I(black_percent * cook_pvi) + 
+       I(black_percent * rural) + 
+       I(black_percent * median_income) + 
+       I(black_percent * preference) +
+       I(black_percent * requirement) +
+       I(black_percent * unemployment_rate),
+       most_recent, clusters = zip, se_type = "CR0")
+
+summary(all_linear_reg_c)
+
 ```
 
 ```{r}
