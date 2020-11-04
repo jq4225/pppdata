@@ -184,7 +184,7 @@ all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
        jobs_reported + I(jobs_reported^2) + 
        I(black_percent * cook_pvi) + 
        I(black_percent * rural) + 
-       I(black_percent * median_income) + 
+       I(black_percent * median_family_income) + 
        I(black_percent * preference) +
        I(black_percent * requirement) +
        I(black_percent * unemployment_rate),
@@ -310,7 +310,6 @@ summary(county_reg_a)
 county_reg_b <- lm_robust(days_to_approval ~ 1 + median_income +
        black_percent +
        white_percent +
-       high_school_pct +
        banks_per_pop + 
        loan_350_1mil + loan_150_350 + 
        loan_5mil_10mil +
@@ -319,7 +318,6 @@ county_reg_b <- lm_robust(days_to_approval ~ 1 + median_income +
          mean_end_cases +
        mean_end_deaths + 
        bank_ppp_issued +
-       pop_den + businesses_per_pop +
        married_percent + preference +
        requirement + 
        stay_at_home_apr + 
@@ -328,11 +326,68 @@ county_reg_b <- lm_robust(days_to_approval ~ 1 + median_income +
        non_essential_closure_current + 
        unemployment_rate_percent + 
        unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
        jobs_reported,
        most_recent_county, clusters = fips, se_type = "CR0")
 
 summary(county_reg_b)
+```
+```{r}
+county_reg_b <- lm_robust(days_to_approval ~ 1 + median_income +
+       black_percent +
+       white_percent +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       republican_percent + mean_start_cases + mean_start_deaths + 
+         mean_end_cases +
+       mean_end_deaths + 
+       bank_ppp_issued +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr + 
+       non_essential_closure_apr + 
+       stay_at_home_current +
+       non_essential_closure_current + 
+       unemployment_rate_percent + 
+       unemployment_rate_apr + 
+       jobs_reported,
+       most_recent_county, clusters = fips, se_type = "CR0")
+
+summary(county_reg_b)
+```
+
+
+```{r}
+county_reg_c <- lm_robust(days_to_approval ~ 1 + median_income +
+       black_percent +
+       I(black_percent^2) +
+       white_percent +
+       I(white_percent^2) +
+       banks_per_pop + 
+       loan_350_1mil + loan_150_350 + 
+       loan_5mil_10mil +
+       loan_2mil_5mil + loan_1mil_2mil +
+       republican_percent + mean_start_cases + 
+       I(mean_start_cases^2) + mean_start_deaths + 
+       mean_end_cases +
+       mean_end_deaths + I(mean_end_deaths^2)+ 
+       bank_ppp_issued +
+       married_percent + preference +
+       requirement + 
+       stay_at_home_apr + 
+       non_essential_closure_apr + 
+       stay_at_home_current +
+       non_essential_closure_current + 
+       unemployment_rate_percent + 
+       unemployment_rate_apr + 
+       jobs_reported +
+       I(jobs_reported ^2) +
+       I(black_percent * median_income) +
+       I(black_percent * republican_percent) +
+       I(black_percent * unemployment_rate_percent) +
+       I(black_percent * preference) + 
+       I(black_percent * requirement),
+       most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
