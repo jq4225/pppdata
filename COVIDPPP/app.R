@@ -10,8 +10,11 @@
 library(shiny)
 library(tidyverse)
 library(shinythemes)
+library(gt)
 
 ppp <- readRDS('ppp_allvars_1020_lockdowns.rds')
+
+linear_reg <- readRDS('all_linear.rds')
 
 # Define UI for application that draws a histogram
 
@@ -20,7 +23,9 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                   tabPanel("Descriptives",
                            plotOutput("distPlot")),
                   tabPanel("Regressions",
-                           tableOutput('table')),
+                           fluidRow(
+                               gt_output("linear"))
+                           ),
                   tabPanel("About",
                            mainPanel(
                                h2("About"),
@@ -49,12 +54,11 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
-    output$distPlot <- renderPlot({
-        ppp %>%
-            ggplot(aes(x = black_percent, y = days_to_approval)) + geom_jitter()
+    output$linear <- render_gt({
+        linear_reg %>%
+          select(term, estimate, "std. error") %>%
+          gt()
     })
-    
-    output$table <- renderTable(ppp)
 }
 
 # Run the application 

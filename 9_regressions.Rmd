@@ -94,7 +94,7 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        jobs_reported,
        most_recent, clusters = zip, se_type = "CR0")
 
-summary(all_linear_reg)
+# summary(all_linear_reg)
 
 tibble_all_linear <- tidy(all_linear_reg)
 
