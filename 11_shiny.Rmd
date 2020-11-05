@@ -1,0 +1,27 @@
+---
+title: "shiny"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+```
+
+
+```{r}
+
+# Reading in the data
+
+most_recent <- readRDS('ppp_allvars_1028.rds')
+
+# Faceting by race
+
+cut_ppp <- most_recent %>%
+  mutate(cuts =  cut(black_percent,
+                   seq(0, 100, by = 10))) %>%
+  group_by(cuts) %>%
+  summarize(mean_days = mean(as.double(days_to_approval)), .groups = "drop")
+```
+

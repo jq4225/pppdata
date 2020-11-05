@@ -12,6 +12,12 @@ zip_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet1")
 
 county_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet2")
 
+race_days <- readRDS('race_days.rds')
+
+descriptives_orig <- read_excel('descriptives.xlsx', sheet = "Sheet1")
+
+descriptives_sample <- read_excel('descriptives.xlsx', sheet = "Sheet2")
+
 
 # Define UI for application that draws a histogram
 
@@ -25,10 +31,23 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                both the original loan locations and my sample are distributed similarly. I also provide
                                a table of descriptive statistics showing how loan originating ZIP codes average with respect to 
                                various demographic variables."),
+                             
                              tabsetPanel(type = "tabs",
                                          tabPanel("Full Loan Location Heatmap", img(src = "original_heatmap.png")),
                                          tabPanel("Sample Loan Location Heatmap", img(src = "new_heatmap.png")),
-                                         tabPanel("Sample Descriptives")
+                                         tabPanel("Waiting Times by Race", 
+                                                  fluidRow(
+                                                    p("We can see what looks to be a rough positive correlation between
+                                                      black populations and wait times without any controls."),
+                                                    plotOutput('race_simple')
+                                                  )),
+                                         tabPanel("Sample Descriptives",
+                                                  fluidRow(
+                                                    p("See the Regressions tab for a full explanation of what each
+                                                      regressor variable means."),
+                                                    column(6, gt_output('descriptives_orig')),
+                                                    column(6, gt_output('descriptives_sample'))
+                                                  ))
                            ))),
                   tabPanel("Regressions",
                            mainPanel(
@@ -84,11 +103,50 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
 
 # Define server logic 
 server <- function(input, output) {
+  
+    output$race_simple <- renderPlot(
+      race_days %>%
+        ggplot(aes(x = cuts, y = mean_days)) +
+          geom_col(fill = "darkblue") +
+          geom_hline(yintercept = 35.59, color = "red",
+                     linetype = "dashed",
+                     show.legend = TRUE) +
+          scale_x_discrete(name = "Black Percent",
+                           labels = c("0-10%",
+                                      "10-20%",
+                                      "20-30%",
+                                      "30-40%",
+                                      "40-50%",
+                                      "50-60%",
+                                      "60-70%",
+                                      "70-80%",
+                                      "80-90%",
+                                      "90-100%")) +
+        labs(title = "Mean Loan Waiting Time",
+             subtitle = 
+             "Dashed line indicates average across all loans.",
+             y = "Mean Waiting Time (days)")
+    )
+    
+    output$descriptives_orig <- render_gt({
+      descriptives_orig %>%
+        gt() %>%
+        tab_header(title = "Complete Dataset Descriptives") %>%
+        fmt_number(columns = 3:4, decimals = 2)
+    })
+    
+    output$descriptives_sample <- render_gt({
+      descriptives_sample %>%
+        gt() %>%
+        tab_header(title = "Final Sample Descriptives") %>%
+        fmt_number(columns = 3:4, decimals = 2)
+    })
     
     output$zip_defns <- render_gt({
       zip_regressors %>%
         gt() %>%
         tab_header(title = "ZIP Code Regressors")
+
     })
     
     output$county_defns <- render_gt({
@@ -96,6 +154,7 @@ server <- function(input, output) {
         gt() %>%
         tab_header(title = "County Regressors")
     })
+    
 }
 
 # Run the application 

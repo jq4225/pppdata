@@ -205,6 +205,7 @@ ppp_with_demographics <- left_join(ppp_total, acs_with_banking,
 
 
 ```{r}
+# This code generates the cut
 # cut_ppp <- ppp_with_demographics %>%
 #   mutate(cuts =  cut(percent_estimate_race_total_population_one_race_black_or_african_american,
 #                    seq(0, 100, by = 10))) %>%
