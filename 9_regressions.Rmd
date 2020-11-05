@@ -141,7 +141,7 @@ all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
        mean_start_deaths_weighted + I(mean_start_deaths_weighted^2) +
        mean_end_cases_weighted + I(mean_end_cases_weighted^2) +
        mean_end_deaths_weighted + I(mean_end_deaths_weighted^2) +
-       bank_ppp_issued + I(bank_ppp_issued^2) +
+       bank_ppp_issued  +
        rural + preference +
        requirement + 
        stay_at_home_apr +
@@ -151,7 +151,13 @@ all_linear_reg_c <- lm_robust(days_to_approval ~ 1 + median_family_income +
        unemployment_rate + I(unemployment_rate^2)+
        unemployment_rate_apr + I(unemployment_rate_apr^2) +
        violent_crime_rate +
-       jobs_reported + I(jobs_reported^2),
+       jobs_reported + I(jobs_reported^2) +
+       I(black_percent * cook_pvi) +
+       I(black_percent * rural) +
+       I(black_percent * median_family_income) +
+       I(black_percent * preference) +
+       I(black_percent * requirement) +
+       I(black_percent * unemployment_rate),
        most_recent, clusters = zip, se_type = "CR0")
 
 summary(all_linear_reg_c)
@@ -382,8 +388,8 @@ county_reg_c <- lm_robust(days_to_approval ~ 1 + median_income +
        non_essential_closure_apr + 
        stay_at_home_current +
        non_essential_closure_current + 
-       unemployment_rate_percent + 
-       unemployment_rate_apr + 
+       unemployment_rate_percent + I(unemployment_rate_percent^2) +
+       unemployment_rate_apr + I(unemployment_rate_apr^2) +
        jobs_reported +
        I(jobs_reported ^2) +
        I(black_percent * median_income) +
