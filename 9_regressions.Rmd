@@ -19,11 +19,12 @@ library(texreg)
 ```{r}
 # most recent data
 
-most_recent <- readRDS('ppp_allvars_1028.rds') %>%
+most_recent <- readRDS('ppp_allvars_1105.rds') %>%
   mutate(median_family_income = median_family_income / 1000,
          bank_ppp_issued = bank_ppp_issued / 1000,
          businesses_per_pop = businesses_per_pop / 100,
-         violent_crime_rate = violent_crime_rate / 10) %>%
+         violent_crime_rate = violent_crime_rate / 10,
+         payroll = payroll / 1000) %>%
   mutate(zip = as.factor(zip))
 ```
 
@@ -57,7 +58,8 @@ most_recent_county <- readRDS('counties_all_1028.rds') %>%
          violent_crime_rate = violent_crime_rate / 10,
          pop_den = pop_den / 100,
          black_percent = black_percent * 100,
-         white_percent = white_percent * 100) %>%
+         white_percent = white_percent * 100,
+         gdp = gdp / 1000) %>%
   
   # We make this a factor to let lm_robust work faster when it calculates
   # clustered SEs

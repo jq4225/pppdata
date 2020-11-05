@@ -427,225 +427,23 @@ county_crime <- left_join(income_inequality, crime, by = "fips") %>%
   drop_na(violent_crime_rate)
 ```
 
-
 ```{r}
-test_regression <-
-  lm(county_crime$days_to_approval ~ 1 + county_crime$median_income +
-       county_crime$black_percent +
-       county_crime$white_percent + county_crime$high_school_pct +
-       county_crime$banks_per_pop + 
-       county_crime$loan_350_1mil + county_crime$loan_150_350 + 
-       county_crime$loan_5mil_10mil +
-       county_crime$loan_2mil_5mil + county_crime$loan_1mil_2mil +
-       county_crime$republican_percent + county_crime$mean_start_cases + 
-       county_crime$mean_start_deaths + county_crime$mean_end_cases +
-       county_crime$mean_end_deaths + 
-       county_crime$bank_ppp_issued +
-       county_crime$pop_den + county_crime$businesses_per_pop +
-       county_crime$married_percent + county_crime$preference +
-       county_crime$requirement + 
-       county_crime$stay_at_home_apr +
-       county_crime$stay_at_home_current +
-       county_crime$non_essential_closure_apr +
-       county_crime$non_essential_closure_current + 
-       county_crime$unemployment_rate_percent + 
-       county_crime$unemployment_rate_apr + 
-       county_crime$estimate_gini_index +
-       county_crime$violent_crime_rate +
-       county_crime$jobs_reported +
-       
-       county_crime$black_percent * county_crime$preference +
-       county_crime$black_percent * county_crime$requirement + 
-       county_crime$black_percent * county_crime$loan_350_1mil +
-       county_crime$black_percent * county_crime$loan_150_350 +
-       county_crime$black_percent * county_crime$loan_1mil_2mil +
-       county_crime$black_percent * county_crime$loan_5mil_10mil +
-       county_crime$black_percent * county_crime$loan_5mil_10mil)
+# If you ran this continuously you'd add this to county crime
 
-summary(test_regression)
+county_crime <- readRDS('counties_all_1028.rds.')
+
+gdp <- read_csv('raw_data/gdp/CAGDP2__ALL_AREAS_2001_2018.csv') %>%
+  clean_names() %>%
+  filter(industry_classification == "All industry total") %>%
+  select(geo_fips, x2017) %>%
+  mutate(fips = str_sub(geo_fips, 1, 5),
+         x2017 = as.double(x2017)) %>%
+  rename("gdp" = "x2017")
+
+county_gdp <- left_join(county_crime, gdp, by = "fips") %>%
+  drop_na(gdp) %>%
+  select(-geo_fips)
 ```
 
 
-```{r}
-county_log <- county_crime %>%
-  mutate(logdays = ifelse(log(days_to_approval) == -Inf, 0, log(days_to_approval))) %>%
-  mutate(logbiz = ifelse(log(businesses_per_pop) == -Inf, 0, log(businesses_per_pop))) %>%
-  mutate(logbanks = ifelse(log(banks_per_pop) == -Inf, 0, log(banks_per_pop))) %>%
-  mutate(logloans = ifelse(log(bank_ppp_issued) == -Inf, 0, log(bank_ppp_issued)))
-
-log_regression <-
-  lm(county_log$logdays ~ 1 + county_log$median_income +
-       county_log$black_percent +
-       county_log$white_percent + county_log$high_school_pct +
-       county_log$banks_per_pop + 
-       county_log$loan_350_1mil + county_log$loan_150_350 + 
-       county_log$loan_5mil_10mil +
-       county_log$loan_2mil_5mil + county_log$loan_1mil_2mil +
-       county_log$republican_percent + county_log$mean_start_cases + 
-       county_log$mean_start_deaths + county_log$mean_end_cases +
-       county_log$mean_end_deaths + 
-       county_log$logloans +
-       county_log$pop_den + county_log$businesses_per_pop +
-       county_log$married_percent + county_log$preference +
-       county_log$requirement + 
-       county_log$stay_at_home_apr +
-       county_log$stay_at_home_current +
-       county_log$non_essential_closure_apr +
-       county_log$non_essential_closure_current + 
-       county_log$unemployment_rate_percent + 
-       county_log$unemployment_rate_apr + 
-       county_log$estimate_gini_index +
-       county_log$violent_crime_rate +
-       
-       county_log$black_percent * county_log$preference +
-       county_log$black_percent * county_log$requirement + 
-       county_log$black_percent * county_log$loan_350_1mil +
-       county_log$black_percent * county_log$loan_150_350 +
-       county_log$black_percent * county_log$loan_1mil_2mil +
-       county_log$black_percent * county_log$loan_5mil_10mil +
-       county_log$black_percent * county_log$loan_5mil_10mil)
-
-summary(log_regression)
-```
-
-```{r}
-# Eicker-White heteroscedasticity-consistent standard errors!!!
-# coeftest(test_regression, vcov = vcovHC(test_regression, type = "HC0"))
-```
-
-
-```{r}
-regression_2 <-   lm(county_crime$days_to_approval ~ 1 + county_crime$median_income +
-       county_crime$black_percent +
-       I(county_crime$black_percent^2) +
-       county_crime$white_percent + I(county_crime$white_percent^2) +
-       county_crime$high_school_pct +
-       county_crime$banks_per_pop + I(county_crime$banks_per_pop^2) +
-       county_crime$loan_350_1mil + county_crime$loan_150_350 + 
-       county_crime$loan_5mil_10mil +
-       county_crime$loan_2mil_5mil + county_crime$loan_1mil_2mil +
-       county_crime$republican_percent + 
-       county_crime$mean_start_cases + I(county_crime$mean_start_cases^2) +
-       county_crime$mean_start_deaths + I(county_crime$mean_start_deaths^2) +
-       county_crime$mean_end_cases + I(county_crime$mean_end_cases^2) +
-       county_crime$mean_end_deaths + I(county_crime$mean_end_deaths^2) +
-       county_crime$bank_ppp_issued + I(county_crime$bank_ppp_issued^2) +
-       county_crime$pop_den + county_crime$businesses_per_pop +
-       county_crime$married_percent + county_crime$preference +
-       county_crime$requirement + 
-       county_crime$stay_at_home_apr +
-       county_crime$stay_at_home_current +
-       county_crime$non_essential_closure_apr +
-       county_crime$non_essential_closure_current + 
-       county_crime$unemployment_rate_percent + 
-       county_crime$unemployment_rate_apr + 
-       county_crime$estimate_gini_index +
-       county_crime$violent_crime_rate +
-       
-       county_crime$black_percent * county_crime$preference +
-       county_crime$black_percent * county_crime$requirement + 
-       county_crime$black_percent * county_crime$loan_350_1mil +
-       county_crime$black_percent * county_crime$loan_150_350 +
-       county_crime$black_percent * county_crime$loan_1mil_2mil +
-       county_crime$black_percent * county_crime$loan_5mil_10mil +
-       county_crime$black_percent * county_crime$loan_5mil_10mil)
-
-summary(regression_2)
-```
-```{r}
-# Adding in jobs created because I'm dumb
-
-# ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
-#   clean_names() %>%
-#   select(zip, date_approved, lender, address, city, state, jobs_reported) %>%
-#   drop_na(zip, jobs_reported) %>%
-#   
-#   # This calculates the date on which loans were approved vs. when apps opened.
-#   mutate(date_approved = mdy(date_approved), 
-#          days_to_approval = date_approved - mdy("04/03/2020"),
-#          zip = as.character(zip), 
-#          lender = tolower(lender))
-# 
-# sba_cleaning <- function(file) {
-#   x <- read_csv(file) %>%
-#     clean_names() %>%
-#     select(loan_amount, zip, date_approved, lender, city, state, jobs_reported) %>%
-#     drop_na(zip) %>%
-#     mutate(date_approved = mdy(date_approved), 
-#          days_to_approval = date_approved - mdy("04/03/2020"),
-#          zip = as.character(zip),
-#          lender = tolower(lender))
-# }
-# 
-# # run for Mac
-# file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
-# 
-# # run for Windows
-# file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
-# 
-# all_states<- tibble()
-# 
-# for(i in 1:length(file.names2)) {
-#   file <- sba_cleaning(paste("raw_data/sba/states/",file.names2[i], sep = ""))
-#   all_states <- rbind(all_states, file)
-# }
-# 
-# all_states2 <- all_states %>%
-#   mutate(address = NA)
-# 
-# ppp_150_newcol <- ppp_150 %>%
-#   mutate(loan_amount = NA) %>%
-#   mutate(loan_amount = as.character(loan_amount))
-# 
-# ppp_total <- rbind(ppp_150_newcol, all_states2) %>%
-#   mutate(days_to_approval = as.double(days_to_approval))
-```
-
-
-```{r}
-
-# Let's try joining
-
-# First let's clean this up by doing lender matching
-
-# county_jobs <- left_join(county_crime, jobs_matched, by = c("zip", "date_approved", "lender",
-#                                                          "address", "city", "state"))
-# 
-# # Don't have to run this again if you don't need
-# bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
-#   mutate(sba_name = tolower(sba_name)) %>%
-#   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
-#   drop_na(preference, requirement)
-# 
-# jobs_matched <- left_join(ppp_total, bank_ppp_policy_manual,
-#                                       by = c("lender" = "sba_name")) %>%
-#   mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
-#          requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
-#          requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
-#   drop_na(requirement) %>%
-#   mutate(preference = replace_na(preference, 0)) %>%
-#   select(-preference, -requirement)
-# # Let's try joining
-# 
-# # First let's clean this up by doing lender matching
-# 
-# county_jobs <- left_join(county_crime, jobs_matched, by = c("zip", "date_approved", "lender",
-#                                                          "address"))
-# 
-# # Don't have to run this again if you don't need
-# bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
-#   mutate(sba_name = tolower(sba_name)) %>%
-#   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
-#   drop_na(preference, requirement)
-# 
-# jobs_matched <- left_join(ppp_total, bank_ppp_policy_manual,
-#                                       by = c("lender" = "sba_name")) %>%
-#   mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
-#          requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
-#          requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
-#   drop_na(requirement) %>%
-#   mutate(preference = replace_na(preference, 0)) %>%
-#   select(-preference, -requirement)
-
-```
 

@@ -10,10 +10,6 @@ library(janitor)
 library(readxl)
 library(openintro)
 library(zoo)
-library(lmtest)
-library(sandwich)
-library(miceadds)
-library(estimatr)
 
 # I think the only stats packages I end up needing are openintro, lmtest,
 # and estimatr- some other packages were from previous attempts
@@ -324,8 +320,28 @@ ppp_allvars_1027_crime <- left_join(ppp_allvars_1027, crime_zip, by = "zip") %>%
   select(-total_crime)
   
 #ppp_allvars_1027_crime %>% summarize(mean = mean(violent_crime_rate), sd = sd(violent_crime_rate))
+```
 
 
+```{r}
+# Including payroll numbers by zip
+
+ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+
+payroll <- 
+  read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
+           skip = 1) %>%
+  clean_names() %>%
+  filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
+  select(geographic_area_name, annual_payroll_1_000) %>%
+  mutate(zip = str_sub(geographic_area_name, 5, 9),
+         annual_payroll_1_000 = as.double(annual_payroll_1_000)) %>%
+  rename("payroll" = "annual_payroll_1_000") %>%
+  drop_na(payroll) %>%
+  select(-geographic_area_name)
+
+ppp_allvars_1105 <- left_join(ppp_allvars_1027_crime, payroll, by = "zip") %>%
+  drop_na(payroll)
 ```
 
 

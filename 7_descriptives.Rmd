@@ -15,10 +15,10 @@ library(readxl)
 # for  everything in the regressions, so feel free to ignore this file entirely.
 # This is NOT part of my Gov 50 final project.
 
-#loan_only <- readRDS('ppp_loanonly_all_loans.rds')
+loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
-most_recent <- ppp_allvars_1027_crime
-  #readRDS('ppp_allvars_1028.rds')
+#most_recent <- ppp_allvars_1027_crime
+  #readRDS('ppp_allvars_1105.rds')
 ```
 
 ```{r}
@@ -415,6 +415,28 @@ temp16 <- left_join(ppp_pop, crime_zip, by = "zip") %>%
   select(-total_crime)
   
 temp16 %>% summarize(n = n(), mean = mean(violent_crime_rate), sd = sd(violent_crime_rate))
+```
+
+
+```{r}
+# Calculating for business patterns
+payroll <- 
+  read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
+           skip = 1) %>%
+  clean_names() %>%
+  filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
+  select(geographic_area_name, annual_payroll_1_000) %>%
+  mutate(zip = str_sub(geographic_area_name, 5, 9),
+         annual_payroll_1_000 = as.double(annual_payroll_1_000)) %>%
+  rename("payroll" = "annual_payroll_1_000") %>%
+  drop_na(payroll) %>%
+  select(-geographic_area_name)
+
+temp17 <- left_join(loan_only, payroll, by = "zip") %>%
+  drop_na(payroll)
+
+temp17 %>%
+  summarize(n = n(), mean = mean(payroll), sd = sd(payroll))
 ```
 
 
