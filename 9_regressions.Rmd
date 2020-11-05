@@ -82,7 +82,7 @@ all_linear_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
        mean_end_cases_weighted +
        mean_end_deaths_weighted + 
        bank_ppp_issued +
-       rural + businesses_per_pop + preference +
+       rural + preference +
        requirement + 
        stay_at_home_apr +
        stay_at_home_current +
@@ -113,7 +113,8 @@ all_linear_reg_b <- lm_robust(days_to_approval ~ 1 +
        mean_end_deaths_weighted + 
        bank_ppp_issued +
        rural +
-       married_percent + preference +
+       married_percent + 
+       businesses_per_pop + preference +
        requirement + 
        stay_at_home_current +
        non_essential_closure_current + 
