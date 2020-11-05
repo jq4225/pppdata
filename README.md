@@ -24,4 +24,4 @@ Rurality: ZIP code level from the Health Resources and Services Administration, 
 
 Crosswalk tables were from the University of Missouri's Census Data Center and the Department of Housing and Urban Development.
 
-You can find the raw data here: https://drive.google.com/drive/folders/1mV1hjK3G3ry3jNubcdDZoHZ6Sqb54rhn?usp=sharing 
+You can find a full version of the folder & raw data here: https://drive.google.com/drive/folders/1dkYQuBmXw8ABQvfe1N6oZR3m6xAomRWv?usp=sharing
