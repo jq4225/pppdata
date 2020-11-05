@@ -22,7 +22,7 @@ descriptives_orig <- read_excel('descriptives.xlsx', sheet = "Sheet1")
 descriptives_sample <- read_excel('descriptives.xlsx', sheet = "Sheet2")
 
 
-# Define UI for application that draws a histogram
+# Define UI 
 
 ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                   theme = shinytheme("lumen"),
