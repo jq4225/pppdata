@@ -43,19 +43,11 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                                     p("Nationally, there is a slightly positive correlation between
                                                       black populations and wait times without any controls. You
                                                       can see state-level visualizations here."),
-                                                    sidebarLayout(
-                                                      sidebarPanel(width = 2, 
-                                                                   selectizeInput("stateInput", "State",
-                                                                                             choices = state.abb,  
-                                                                                             selected ="AK", multiple =FALSE)),
-                                                      
-                                                      mainPanel(
-                                                        fluidRow(
-                                                          column(6, plotOutput("natPlot")),
-                                                          column(6, plotOutput("statePlot"))
-                                                        )
-                                                      )
-                                                    )
+                                                    selectizeInput("stateInput", "State",
+                                                                   choices = state.abb,  
+                                                                   selected ="AK", multiple = FALSE),
+                                                    column(6, plotOutput("statePlot")),
+                                                    column(6, plotOutput("natPlot"))
                                                   )),
                                          tabPanel("Sample Descriptives",
                                                   fluidRow(
@@ -152,7 +144,7 @@ server <- function(input, output) {
         group_by(cuts) %>%
         summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
         ggplot(aes(x = cuts, y = mean_days)) +
-          geom_col(fill = "dodgerblue4") +
+          geom_col(fill = "darkblue") +
           geom_hline(yintercept = 35.59, color = "red",
                      linetype = "dashed") +
           scale_x_discrete(name = "Black Percent",
