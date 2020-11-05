@@ -12,7 +12,10 @@ zip_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet1")
 
 county_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet2")
 
-race_days <- readRDS('race_days.rds')
+#race_days <- readRDS('race_days.rds')
+
+race_days <- readRDS('race_days2.rds') %>%
+  mutate(state = toupper(state))
 
 descriptives_orig <- read_excel('descriptives.xlsx', sheet = "Sheet1")
 
@@ -37,9 +40,22 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                          tabPanel("Sample Loan Location Heatmap", img(src = "new_heatmap.png")),
                                          tabPanel("Waiting Times by Race", 
                                                   fluidRow(
-                                                    p("We can see what looks to be a rough positive correlation between
-                                                      black populations and wait times without any controls."),
-                                                    plotOutput('race_simple')
+                                                    p("Nationally, there is a slightly positive correlation between
+                                                      black populations and wait times without any controls. You
+                                                      can see state-level visualizations here."),
+                                                    sidebarLayout(
+                                                      sidebarPanel(width = 2, 
+                                                                   selectizeInput("stateInput", "State",
+                                                                                             choices = state.abb,  
+                                                                                             selected ="AK", multiple =FALSE)),
+                                                      
+                                                      mainPanel(
+                                                        fluidRow(
+                                                          column(6, plotOutput("natPlot")),
+                                                          column(6, plotOutput("statePlot"))
+                                                        )
+                                                      )
+                                                    )
                                                   )),
                                          tabPanel("Sample Descriptives",
                                                   fluidRow(
@@ -103,14 +119,42 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
 
 # Define server logic 
 server <- function(input, output) {
-  
-    output$race_simple <- renderPlot(
+    
+    
+    output$natPlot <- renderPlot({
       race_days %>%
+        group_by(cuts) %>%
+        summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
         ggplot(aes(x = cuts, y = mean_days)) +
-          geom_col(fill = "darkblue") +
+        geom_col(fill = "darkblue") +
+        geom_hline(yintercept = 35.59, color = "red",
+                   linetype = "dashed") +
+        scale_x_discrete(name = "Black Percent",
+                         labels = c("0-10%",
+                                    "10-20%",
+                                    "20-30%",
+                                    "30-40%",
+                                    "40-50%",
+                                    "50-60%",
+                                    "60-70%",
+                                    "70-80%",
+                                    "80-90%",
+                                    "90-100%")) +
+        labs(title = "Mean Loan Waiting Time, National",
+             subtitle = 
+               "Dashed line indicates national average.",
+             y = "Mean Waiting Time (days)")
+    })
+    
+    output$statePlot <- renderPlot({
+      race_days %>%
+        filter(state == input$stateInput) %>%
+        group_by(cuts) %>%
+        summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
+        ggplot(aes(x = cuts, y = mean_days)) +
+          geom_col(fill = "dodgerblue4") +
           geom_hline(yintercept = 35.59, color = "red",
-                     linetype = "dashed",
-                     show.legend = TRUE) +
+                     linetype = "dashed") +
           scale_x_discrete(name = "Black Percent",
                            labels = c("0-10%",
                                       "10-20%",
@@ -122,11 +166,11 @@ server <- function(input, output) {
                                       "70-80%",
                                       "80-90%",
                                       "90-100%")) +
-        labs(title = "Mean Loan Waiting Time",
+        labs(title = paste("Mean Loan Waiting Time,", input$stateInput),
              subtitle = 
-             "Dashed line indicates average across all loans.",
+             "Dashed line indicates national average.",
              y = "Mean Waiting Time (days)")
-    )
+    })
     
     output$descriptives_orig <- render_gt({
       descriptives_orig %>%

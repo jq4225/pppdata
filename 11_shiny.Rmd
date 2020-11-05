@@ -22,6 +22,9 @@ cut_ppp <- most_recent %>%
   mutate(cuts =  cut(black_percent,
                    seq(0, 100, by = 10))) %>%
   group_by(cuts) %>%
-  summarize(mean_days = mean(as.double(days_to_approval)), .groups = "drop")
+  select(state, cuts, days_to_approval) %>%
+  drop_na(state)
+
+
 ```
 
