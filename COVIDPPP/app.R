@@ -1,3 +1,8 @@
+# To do: add dropdown in the regression tables for simplified and non-simplified
+# Add introduction page
+# Change theme
+# Add data sources more systematically in the About page, include my Linkedin
+
 library(shiny)
 library(tidyverse)
 library(shinythemes)
@@ -173,15 +178,13 @@ server <- function(input, output) {
     output$descriptives_orig <- render_gt({
       descriptives_orig %>%
         gt() %>%
-        tab_header(title = "Complete Dataset Descriptives") %>%
-        fmt_number(columns = 3:4, decimals = 2)
+        tab_header(title = "Complete Dataset Descriptives")
     })
     
     output$descriptives_sample <- render_gt({
       descriptives_sample %>%
         gt() %>%
-        tab_header(title = "Final Sample Descriptives") %>%
-        fmt_number(columns = 3:4, decimals = 2)
+        tab_header(title = "Final Sample Descriptives")
     })
     
     output$zip_regression <- render_gt({
@@ -201,14 +204,34 @@ server <- function(input, output) {
     output$zip_defns <- render_gt({
       zip_regressors %>%
         gt() %>%
-        tab_header(title = "ZIP Code Regressors")
+        tab_header(title = "ZIP Code Regressors") %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_style(
+          style = cell_text(weight = "bold"),
+          locations = cells_body(
+            columns = vars(`Variable name`),
+            rows = `Variable name` %in% c("Demographic Variables",
+                                          "Loan-specific Variables",
+                                          "Economic Variables",
+                                          "COVID-19 Variables"))
 
+        )
     })
     
     output$county_defns <- render_gt({
       county_regressors %>%
         gt() %>%
-        tab_header(title = "County Regressors")
+        tab_header(title = "County Regressors") %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_style(
+          style = cell_text(weight = "bold"),
+          locations = cells_body(
+            columns = vars(`Variable name`),
+            rows = `Variable name` %in% c("Demographic Variables",
+                                          "Loan-specific Variables",
+                                          "Economic Variables",
+                                          "COVID-19 Variables"))
+        )
     })
     
 }
