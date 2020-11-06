@@ -4,15 +4,13 @@ library(shinythemes)
 library(gt)
 library(readxl)
 
-#ppp <- readRDS('ppp_allvars_1028.rds')
-
-#linear_reg <- readRDS('all_linear.rds')
-
 zip_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet1")
 
-county_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet2")
+zip_regression <- read_excel('zip_table.xlsx', sheet = "Sheet2")
 
-#race_days <- readRDS('race_days.rds')
+county_regression <- read_excel('zip_table.xlsx', sheet = "Sheet3")
+
+county_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet2")
 
 race_days <- readRDS('race_days2.rds') %>%
   mutate(state = toupper(state))
@@ -64,14 +62,22 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                provides a visual indicator of heteroskedasticity in the sample. To correct for this, all standard errors
                                are heteroskedasticity- and clustering-robust."),
                              tabsetPanel(type = "tabs",
-                                         tabPanel("ZIP Code Regressions"),
-                                         tabPanel("County Regressions"),
+                                         tabPanel("ZIP Code Regressions", gt_output('zip_regression')),
+                                         tabPanel("County Regressions", gt_output('county_regression')),
                                          tabPanel("Regression Coefficient Definitions",
                                                   fluidRow(
                                                     column(6, gt_output('zip_defns')),
                                                     column(6, gt_output('county_defns'))
                                                   )),
-                                         tabPanel("Residuals", img(src = "residuals_zipregression.png")))
+                                         tabPanel("Residuals", 
+                                                  fluidRow(
+                                                    img(src = "residuals_zipregression.png"),
+                                                    p("This displays a plot of the residuals against the outcome variable
+                                                      for the ZIP code regression, Model 4. We can see that there is
+                                                      some more propensity for error at the upper ranges
+                                                      of the days_approved variable. The big gap in the days_approved
+                                                      is when Congress ran out of money for the program and it had to be renewed
+                                                      several weeks later, rather than a problem with my data cleaning."))))
                            )),
                   tabPanel("About",
                            mainPanel(
@@ -176,6 +182,20 @@ server <- function(input, output) {
         gt() %>%
         tab_header(title = "Final Sample Descriptives") %>%
         fmt_number(columns = 3:4, decimals = 2)
+    })
+    
+    output$zip_regression <- render_gt({
+      zip_regression %>%
+        gt() %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
+    })
+    
+    output$county_regression <- render_gt({
+      county_regression %>%
+        gt() %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
     
     output$zip_defns <- render_gt({
