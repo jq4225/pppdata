@@ -20,7 +20,9 @@ most_recent <- readRDS('ppp_allvars_1105.rds') %>%
          bank_ppp_issued = bank_ppp_issued / 1000,
          businesses_per_pop = businesses_per_pop / 100,
          violent_crime_rate = violent_crime_rate / 10,
-         payroll = payroll / 1000) %>%
+         payroll = payroll / 1000,
+         minority_percent = 100 - white_percent) %>%
+  select(-black_percent) %>%
   mutate(zip = as.factor(zip))
 
 most_recent_county <- readRDS('counties_all_1105.rds') %>%
@@ -37,6 +39,8 @@ most_recent_county <- readRDS('counties_all_1105.rds') %>%
          black_percent = black_percent * 100,
          white_percent = white_percent * 100,
          gdp = gdp / 1000) %>%
+  mutate(minority_percent = 100 - white_percent) %>%
+  select(-black_percent) %>%
   
   # We make this a factor to let lm_robust work faster when it calculates
   # clustered SEs
@@ -51,8 +55,7 @@ most_recent_county <- readRDS('counties_all_1105.rds') %>%
 demographics <- lm_robust(
   days_to_approval ~ 1 + 
     median_family_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
     high_school_pct + 
     married_percent + 
     cook_pvi + 
@@ -69,8 +72,7 @@ demographics <- lm_robust(
 loan_spec <- lm_robust(
   days_to_approval ~ 1 + 
     median_family_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
     high_school_pct + 
     married_percent + 
     cook_pvi + 
@@ -96,8 +98,7 @@ loan_spec <- lm_robust(
 econ <- lm_robust(
   days_to_approval ~ 1 + 
     median_family_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
     high_school_pct + 
     married_percent + 
     cook_pvi + 
@@ -128,8 +129,7 @@ econ <- lm_robust(
 covid <- lm_robust(
   days_to_approval ~ 1 + 
     median_family_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
     high_school_pct + 
     married_percent + 
     cook_pvi + 
@@ -166,8 +166,7 @@ covid <- lm_robust(
 interactions <- lm_robust(
   days_to_approval ~ 1 + 
     median_family_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
     high_school_pct + 
     married_percent + 
     cook_pvi + 
@@ -196,13 +195,12 @@ interactions <- lm_robust(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current +
-    I(black_percent^2) + 
-    I(white_percent^2) + 
-    I(black_percent * median_family_income) +
-    I(black_percent * cook_pvi) +
-    I(black_percent * rural) + 
-    I(black_percent * estimate_gini_index) +
-    I(black_percent * violent_crime_rate),
+    I(minority_percent^2) + 
+    I(minority_percent * median_family_income) +
+    I(minority_percent * cook_pvi) +
+    I(minority_percent * rural) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * violent_crime_rate),
   most_recent, clusters = zip, se_type = "CR0")
 ```
 
@@ -213,8 +211,8 @@ interactions <- lm_robust(
 county_dems <- lm_robust(
   days_to_approval ~ 1 + 
     median_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
+    
     high_school_pct + 
     married_percent + 
     republican_percent + 
@@ -229,8 +227,8 @@ county_dems <- lm_robust(
 county_loan <- lm_robust(
   days_to_approval ~ 1 + 
     median_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
+    
     high_school_pct + 
     married_percent + 
     republican_percent + 
@@ -254,8 +252,8 @@ county_loan <- lm_robust(
 county_econ <- lm_robust(
   days_to_approval ~ 1 + 
     median_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
+    
     high_school_pct + 
     married_percent + 
     republican_percent + 
@@ -284,8 +282,8 @@ county_econ <- lm_robust(
 county_covid <- lm_robust(
   days_to_approval ~ 1 + 
     median_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
+    
     high_school_pct + 
     married_percent + 
     republican_percent + 
@@ -322,8 +320,8 @@ county_covid <- lm_robust(
 county_interactions <- lm_robust(
   days_to_approval ~ 1 + 
     median_income + 
-    black_percent +
-    white_percent +
+    minority_percent +
+    
     high_school_pct + 
     married_percent + 
     republican_percent + 
@@ -352,13 +350,12 @@ county_interactions <- lm_robust(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current +
-    I(black_percent^2) + 
-    I(white_percent^2) + 
-    I(black_percent * median_income) +
-    I(black_percent * republican_percent) +
-    I(black_percent * pop_den) + 
-    I(black_percent * estimate_gini_index) +
-    I(black_percent * violent_crime_rate),
+    I(minority_percent^2) + 
+    I(minority_percent * median_income) +
+    I(minority_percent * republican_percent) +
+    I(minority_percent * pop_den) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * violent_crime_rate),
   most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
