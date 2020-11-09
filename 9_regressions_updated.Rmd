@@ -22,6 +22,7 @@ most_recent <- readRDS('ppp_allvars_1105.rds') %>%
          violent_crime_rate = violent_crime_rate / 10,
          payroll = payroll / 1000,
          minority_percent = 100 - white_percent) %>%
+  mutate(dummy = ifelse(date_approved > as.Date("2020-04-16"), 1, 0)) %>%
   select(-black_percent) %>%
   mutate(zip = as.factor(zip))
 

@@ -9,33 +9,16 @@ library(tidyverse)
 library(janitor)
 library(broom)
 library(estimatr)
-library(ade4)
+library(texreg)
 #library(readxl)
 ```
 
 ```{r}
 # Load up the data for most recent stuff, as usual
 
-most_recent <- readRDS('ppp_allvars_1028.rds') %>%
-  mutate(median_family_income = median_family_income / 1000,
-         bank_ppp_issued = bank_ppp_issued / 1000,
-         businesses_per_pop = businesses_per_pop / 100,
-         violent_crime_rate = violent_crime_rate / 10,
-         lender = as.factor(lender))
+most_recent <- readRDS('most_recent_zip.rds')
 
-most_recent_county <- readRDS('counties_all_1028.rds') %>%
-   mutate(median_income = median_income / 1000,
-         bank_ppp_issued = bank_ppp_issued / 1000,
-         
-         # This is b/c we didn't do per 10,000 people before, but we want 
-         # hundreds of businesses 
-         # per 10,000 people, or 100
-         
-         businesses_per_pop = businesses_per_pop * 100,
-         violent_crime_rate = violent_crime_rate / 10,
-         pop_den = pop_den / 100,
-         black_percent = black_percent * 100,
-         white_percent = white_percent * 100)
+most_recent_county <- readRDS('most_recent_county.rds')
 
 baml <- most_recent %>%
   mutate(baml = ifelse(lender == "bank of america, national association",
@@ -68,6 +51,10 @@ current_bankindicators <- most_recent %>%
 indicators <- acm.disjonctif(current_bankindicators)
 ```
 
+```{r}
+
+
+```
 
 ```{r}
 baml_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +

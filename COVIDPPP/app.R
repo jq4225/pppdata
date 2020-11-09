@@ -9,13 +9,13 @@ library(shinythemes)
 library(gt)
 library(readxl)
 
-zip_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet1")
+zip_regressors <- read_excel('regressors.xlsx', sheet = "Sheet1")
 
 zip_regression <- read_excel('zip_table.xlsx', sheet = "Sheet2")
 
 county_regression <- read_excel('zip_table.xlsx', sheet = "Sheet3")
 
-county_regressors <- read_excel('Zipregressors.xlsx', sheet = "Sheet2")
+county_regressors <- read_excel('regressors.xlsx', sheet = "Sheet2")
 
 race_days <- readRDS('race_days2.rds') %>%
   mutate(state = toupper(state))
@@ -31,8 +31,32 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                   theme = shinytheme("sandstone"),
                   tabPanel("Introduction",
                            mainPanel(
-                             h2("Introduction")
-                           )),
+                             fluidRow(
+                             h2("Introduction"),
+                             p("The COVID-19 pandemic triggered an unprecedented economic shock. Social distancing measures
+                               such as stay-at-home orders and mandatory business closures, combined with the fear of the
+                               pandemic, cratered consumption, especially harming small businesses with no access
+                               to public financial markets. According to some estimates, over 40 percent of small
+                               businesses closed because of the pandemic, many of whom had saved just two weeks' of
+                               operating costs. Without a safety net for small businesses, US policymakers passed the
+                               Coronavirus Aid, Relief, and Economic Security (CARES) Act, which included a novel
+                               Paycheck Protection Program (PPP) loan program."),
+                             p("However, substantial evidence indicates that borrowers from minority communities
+                               face systematic discrimination when accessing loans. For example, black borrowers are more likely
+                               to be turned down for mortgages with equivalent credit scores. Here, I try to estimate
+                               how much coming from a locality with higher minority populations influences
+                               waiting times for loans. I aggregate lending by both ZIP and county and match loan-level
+                               data with demographics, such as political preferences, income and race."),
+                             p("Unlike other loan programs, the PPP is government guaranteed. Banks face no credit risk
+                               in lending, and anyone should qualify for a loan if they run a qualifying small business. 
+                               Therefore, differences in loan waiting times should be a reflection of taste-based discrimination,
+                               rather than statistical justifications based on racial disparities in default rates or 
+                               socioeconomic status."),
+                             p("I use ordinary least squares (OLS) regression, controlling for a variety of background
+                               variables, to test the impact of increasing the percentage of racial minorities in a local
+                               population on loan waiting times, defined as the time between loan applications opening
+                               and the loan approval date.")
+                           ))),
                   tabPanel("Descriptives",
                            mainPanel(
                              h2("Descriptives"),
