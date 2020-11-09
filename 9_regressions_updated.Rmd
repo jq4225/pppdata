@@ -221,7 +221,7 @@ county_dems <- lm_robust(
     pop_den +
     estimate_gini_index +
     violent_crime_rate,
-  most_recent_county, clusters = zip, se_type = "CR0")
+  most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
 
@@ -246,7 +246,7 @@ county_loan <- lm_robust(
     requirement + 
     bank_ppp_issued + 
     jobs_reported,
-  most_recent_county, clusters = zip, se_type = "CR0")
+  most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
 
@@ -276,7 +276,7 @@ county_econ <- lm_robust(
     gdp +
     unemployment_rate_apr + 
     unemployment_rate_percent,
-  most_recent_county, clusters = zip, se_type = "CR0")
+  most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
 
@@ -314,7 +314,7 @@ county_covid <- lm_robust(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current,
-  most_recent_county, clusters = zip, se_type = "CR0")
+  most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
 
@@ -359,7 +359,109 @@ county_interactions <- lm_robust(
     I(black_percent * pop_den) + 
     I(black_percent * estimate_gini_index) +
     I(black_percent * violent_crime_rate),
-  most_recent_county, clusters = zip, se_type = "CR0")
+  most_recent_county, clusters = fips, se_type = "CR0")
+```
 
+
+```{r}
+# Trying log-linear using log(x+1) to avoid the zeroes problem
+
+most_recent_log <- most_recent %>%
+  mutate(log_days = log(days_to_approval + 1)) %>%
+  mutate(sqrt_days = sqrt(days_to_approval))
+
+most_recent_county_log <- most_recent_county %>%
+  mutate(log_days = log(days_to_approval + 1)) %>%
+  mutate(sqrt_days = sqrt(days_to_approval))
+```
+
+
+```{r}
+interactions_sqrt <- lm_robust(
+  sqrt_days ~ 1 + 
+    median_family_income + 
+    black_percent +
+    white_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    I(black_percent^2) + 
+    I(white_percent^2) + 
+    I(black_percent * median_family_income) +
+    I(black_percent * cook_pvi) +
+    I(black_percent * rural) + 
+    I(black_percent * estimate_gini_index) +
+    I(black_percent * violent_crime_rate),
+  most_recent_log, clusters = zip, se_type = "CR0")
+```
+
+
+```{r}
+county_interactions_sqrt <- lm_robust(
+  sqrt_days ~ 1 + 
+    median_income + 
+    black_percent +
+    white_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths +
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    I(black_percent^2) + 
+    I(white_percent^2) + 
+    I(black_percent * median_income) +
+    I(black_percent * republican_percent) +
+    I(black_percent * pop_den) + 
+    I(black_percent * estimate_gini_index) +
+    I(black_percent * violent_crime_rate),
+  most_recent_county_log, clusters = fips, se_type = "CR0")
 ```
 

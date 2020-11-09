@@ -28,7 +28,11 @@ descriptives_sample <- read_excel('descriptives.xlsx', sheet = "Sheet2")
 # Define UI 
 
 ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
-                  theme = shinytheme("lumen"),
+                  theme = shinytheme("sandstone"),
+                  tabPanel("Introduction",
+                           mainPanel(
+                             h2("Introduction")
+                           )),
                   tabPanel("Descriptives",
                            mainPanel(
                              h2("Descriptives"),
@@ -87,36 +91,68 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                   tabPanel("About",
                            mainPanel(
                                h2("About"),
-                               tags$a(href="https://github.com/jq4225/pppdata", 
-                                      "Github repo here!"),
-                               
-                               p("The COVID-19 pandemic triggered an unprecedented economic shock. To 
-                                 help small businesses without access to public financial markets survive,
-                                 Congress passed the CARES Act in March 2020, which included a small business
-                                 lending program called the Paycheck Protection Program. Here, I analyze
-                                 the SBA's dataset on all PPP loans to find whether background demographic
-                                 factors like race predict decreases in loan time."),
-                               
-                               p("I am using a couple main sources of data for my project.
-                                  First, I'm using the American Community Survey's 2018 projections,
-                                  which include racial, demographic, and income breakdowns for 
-                                 every ZIP code in the US."),
-                               
-                               p("I'm also using an FDIC list of all the 
-                                 banking locations in the US broken down by ZIP code. Finally,
-                                 I'm using the SBA's dataset on Paycheck Protection Loans of more 
-                                 than $150,000 given this year, as of August 8th."),
-                               
-                               p("PPP program data itself comes from the Small Business Administration."),
-                               
-                               p("Additional data comes from the 2014 ZIP Code Business Survey 
-                                 and hand-coded data on bank policies, collected manually."),
-                               
-                               p("All COVID case data comes from the New York Times, and the 
-                                 data on COVID policy responses comes from the Kaiser Family Foundation."),
-                               
-                               p("Crime rate and inequality data are sourced from both the ACS and the
-                                 County Health Rankings project.")
+                               fluidRow(
+                                 column(6,
+                                        list(
+                                          h3("Me"),
+                                          p("Hi, my name's Justin. I'm a junior in Winthrop House studying Applied
+                                            Math and Economics with a secondary in Government. 
+                                            This is a final project for Gov 50, a data science course at Harvard University."),
+                                          p("If you'd like to get in touch with me, you can reach me at ",
+                                            a(href = "mailto: qij@college.harvard.edu", "qij@college.harvard.edu", .noWS = "outside"),
+                                            " or my ", a(href = "https://www.linkedin.com/in/justin-qi/", "LinkedIn", .noWS = "outside"), 
+                                            ". Please contact me for access to the original data files, which
+                                            were too large to upload to Github. Thanks for stopping by!"))
+                                        ),
+                                 column(6, 
+                                        list(
+                                          h3("Data"),
+                                          tags$a(href="https://github.com/jq4225/pppdata", 
+                                                 "Github repo here!"),
+                                          p(strong("Loan level data: "), "All loan microdata came from the SBA's website, with 
+                                            loans through August 8, 2020, when the PPP program closed"),
+                                          
+                                          p(strong("Demographic data: "), "Most demographic data (median income, race, 
+                                            marital status, education, and income inequality) came from the 2018
+                                            American Community Survey 5-year esimates."),
+                                          
+                                          p(strong("Political preferences: "), "On the ZIP code level, I used data from the
+                                                   Cook Political Report's Partisan Voting Index, reported on the Congressional
+                                                   District level and crosswalked over to ZIP codes. On the county level,
+                                                   I used the MIT Election Data Science Lab's dataset of the percent of each
+                                                   county's voters that voted Republican in the 2016 presidential election."),
+                                          
+                                          p(strong("Business data: "), "Data on aggregate business activity (business counts and payroll) 
+                                          came from the 2014 and 2016 ZIP Code Business Patterns Survey and the 2016 County Business
+                                            Patterns Survey by the Census Bureau."),
+                                          
+                                          p(strong("GDP: "), "County GDP statistics came from the Bureau of Economic Analysis's public
+                                            figures on estimated 2017 county GDP."),
+                                          
+                                          p(strong("COVID-19 cases and deaths: "), "COVID case data came from the New York Times' 
+                                            county-level tracking of cases and deaths. On the ZIP level, I weighted ZIP codes by the
+                                            proportion of residential addresses in each county to calculate estimates for cases."),
+                                          
+                                          p(strong("COVID-19 policy responses: "), "State policy responses to COVID-19 and their
+                                            implementation/rollback dates came from the Kaiser Family Foundation's State Policy
+                                            Tracker, last updated on July 30, 2020."),
+                                          
+                                          p(strong("Bank lending policies: "), "Bank lending policies were hand collected from
+                                            individual bank websites and lending associations that provided lists of different
+                                            banks' requirements for accessing a PPP loan."),
+                                          
+                                          p(strong("Unemployment: "), "Unemployment data came from the Bureau of Labor Statistics' 
+                                            monthly county-level unemployment figures. As with COVID data, I created estimates
+                                            for ZIP code unemployment rates by weighting these figures by the proportion of residential
+                                            addresses of each ZIP code that reside in a particular county."),
+                                          
+                                          p(strong("Population density: "), "Rural/urban ZIP code data came from the Health Resources
+                                            and Services Administration. Population density data came from the 2010 US Census."),
+                                          
+                                          p(strong("Crime: "), "Crime rates were sourced from the County Health Rankings report as of
+                                            2019. These statistics were aggregated from the FBI Uniform Crime Report.")
+                                        ))
+                               )
                            ))
 )
 
