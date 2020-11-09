@@ -11,10 +11,21 @@ library(sandwich)
 library(broom)
 library(tidyverse)
 library(texreg)
+library(bizdays)
+
+# holidays <- federalHolidays(2020, board = F, businessOnly = T)
+
+cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```
 
 
 ```{r}
+
+# One flaw I realized is that my previous days_to_approval count included
+# weekends, which is why I exclude them here. There are only 1 or 2 public
+# holidays and I had trouble making the biz_days function work with them,
+# so those shouldn't throw off the count too much.
+
 most_recent <- readRDS('ppp_allvars_1105.rds') %>%
   mutate(median_family_income = median_family_income / 1000,
          bank_ppp_issued = bank_ppp_issued / 1000,
@@ -22,8 +33,10 @@ most_recent <- readRDS('ppp_allvars_1105.rds') %>%
          violent_crime_rate = violent_crime_rate / 10,
          payroll = payroll / 1000,
          minority_percent = 100 - white_percent) %>%
-  mutate(dummy = ifelse(date_approved > as.Date("2020-04-16"), 1, 0)) %>%
-  select(-black_percent) %>%
+  mutate(delay = ifelse(date_approved > as.Date("2020-04-16"), 1, 0),
+         business_days = bizdays(as.Date("2020-04-03"), date_approved, 
+                                 'mycal')) %>%
+  select(-black_percent, -white_percent) %>%
   mutate(zip = as.factor(zip))
 
 most_recent_county <- readRDS('counties_all_1105.rds') %>%
@@ -40,6 +53,9 @@ most_recent_county <- readRDS('counties_all_1105.rds') %>%
          black_percent = black_percent * 100,
          white_percent = white_percent * 100,
          gdp = gdp / 1000) %>%
+  mutate(delay = ifelse(date_approved > as.Date("2020-04-16"), 1, 0),
+         business_days = bizdays(as.Date("2020-04-03"), date_approved, 
+                                 'mycal')) %>%
   mutate(minority_percent = 100 - white_percent) %>%
   select(-black_percent) %>%
   
@@ -54,7 +70,7 @@ most_recent_county <- readRDS('counties_all_1105.rds') %>%
 # Regression 1: Demographics Only
 
 demographics <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -71,7 +87,7 @@ demographics <- lm_robust(
 # Regression 2: Demographics and Loan-Specific
 
 loan_spec <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -80,6 +96,7 @@ loan_spec <- lm_robust(
     rural +
     estimate_gini_index +
     violent_crime_rate + 
+    delay + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -97,7 +114,7 @@ loan_spec <- lm_robust(
 # Regression 3: Including economics
 
 econ <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -111,6 +128,7 @@ econ <- lm_robust(
     loan_1mil_2mil +
     loan_2mil_5mil + 
     loan_5mil_10mil + 
+    delay +
     preference + 
     requirement + 
     bank_ppp_issued + 
@@ -128,7 +146,7 @@ econ <- lm_robust(
 # Regression 4: Including COVID
 
 covid <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -137,6 +155,7 @@ covid <- lm_robust(
     rural +
     estimate_gini_index +
     violent_crime_rate + 
+    delay +
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -165,7 +184,7 @@ covid <- lm_robust(
 
 ```{r}
 interactions <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -174,6 +193,7 @@ interactions <- lm_robust(
     rural +
     estimate_gini_index +
     violent_crime_rate + 
+    delay +
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -207,10 +227,20 @@ interactions <- lm_robust(
 
 
 ```{r}
+ggplot(data = most_recent, mapping = aes(x = business_days, 
+                                         y = (abs(business_days - interactions$fitted.values)))) +
+  geom_jitter(alpha = 0.3, color = "dodgerblue") +
+  ylim(0, 150) +
+  labs(x = "Days to Approval", y = "Residuals", title = "Waiting Time vs. Residuals") +
+  theme_classic()
+```
+
+
+```{r}
 # County level
 
 county_dems <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_income + 
     minority_percent +
     
@@ -226,7 +256,7 @@ county_dems <- lm_robust(
 
 ```{r}
 county_loan <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_income + 
     minority_percent +
     
@@ -236,6 +266,7 @@ county_loan <- lm_robust(
     pop_den +
     estimate_gini_index +
     violent_crime_rate + 
+    delay +
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -251,7 +282,7 @@ county_loan <- lm_robust(
 
 ```{r}
 county_econ <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_income + 
     minority_percent +
     
@@ -261,6 +292,7 @@ county_econ <- lm_robust(
     pop_den +
     estimate_gini_index +
     violent_crime_rate + 
+    delay + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -281,7 +313,7 @@ county_econ <- lm_robust(
 
 ```{r}
 county_covid <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_income + 
     minority_percent +
     
@@ -291,6 +323,7 @@ county_covid <- lm_robust(
     pop_den +
     estimate_gini_index +
     violent_crime_rate + 
+    delay + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -319,7 +352,7 @@ county_covid <- lm_robust(
 
 ```{r}
 county_interactions <- lm_robust(
-  days_to_approval ~ 1 + 
+  business_days ~ 1 + 
     median_income + 
     minority_percent +
     
@@ -329,6 +362,7 @@ county_interactions <- lm_robust(
     pop_den +
     estimate_gini_index +
     violent_crime_rate + 
+    delay + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +

@@ -7,8 +7,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
-library(arsenal)
 library(readxl)
+library(bizdays)
 
 # Note that this isn't relevant for Gov 50 at all: this is for my other
 # projects where I needed to make a bunch of descriptive statistics
@@ -19,23 +19,29 @@ loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
 #most_recent <- ppp_allvars_1027_crime
   #readRDS('ppp_allvars_1105.rds')
+
+cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```
 
 ```{r}
 loan_only %>%
-  mutate(days_to_approval = as.double(days_to_approval)) %>%
+  mutate(business_days = bizdays(as.Date("2020-04-03"), date_approved, 
+                                 'mycal')) %>%
   summarize(n = n(),
-            mean = mean(days_to_approval),
-            std = sd(days_to_approval),
-            min = min(days_to_approval),
-            max = max(days_to_approval))
+            mean = mean(business_days),
+            std = sd(business_days))
+
+loan_only %>% 
+  mutate(delay = ifelse(date_approved > as.Date("2020-04-16"), 1, 0)) %>%
+  summarize(mean = mean(delay), std = sd(delay))
 
 most_recent %>%
     summarize(n = n(),
-            mean = mean(days_to_approval),
-            std = sd(days_to_approval),
-            min = min(days_to_approval),
-            max = max(days_to_approval))
+            mean = mean(business_days),
+            std = sd(business_days))
+
+most_recent %>%
+  summarize(n = n(), mean = mean(delay), sd = sd(delay))
 ```
 
 
