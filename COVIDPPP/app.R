@@ -23,6 +23,10 @@ descriptives_orig <- read_excel('descriptives.xlsx', sheet = "Sheet1")
 
 descriptives_sample <- read_excel('descriptives.xlsx', sheet = "Sheet2")
 
+zip_banks <- read_excel('bankbybank.xlsx', sheet = "zip")
+
+county_banks <- read_excel('bankbybank.xlsx', sheet = "county")
+
 
 # Define UI 
 
@@ -53,8 +57,10 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                socioeconomic status."),
                              p("I use ordinary least squares (OLS) regression, controlling for a variety of background
                                variables, to test the impact of increasing the percentage of racial minorities in a local
-                               population on loan waiting times, defined as the time between loan applications opening
-                               and the loan approval date.")
+                               population on loan waiting times, defined as the business days between loan applications opening
+                               and the loan approval date."),
+                             p("Later, I also attempt to disaggregate these results by individual banks and bank type, using the 
+                               bank names provided in the SBA's dataset.")
                            ))),
                   tabPanel("Descriptives",
                            mainPanel(
@@ -82,7 +88,7 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                          tabPanel("Sample Descriptives",
                                                   fluidRow(
                                                     p("These are descriptive statistics for the loans aggregated by ZIP code.
-                                                    See the Regressions tab for a full explanation of what each
+                                                    See the Results tab for a full explanation of what each
                                                       regressor variable means."),
                                                     column(6, gt_output('descriptives_orig')),
                                                     column(6, gt_output('descriptives_sample'))
@@ -95,9 +101,9 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                provides a visual indicator of heteroskedasticity in the sample. To correct for this, all standard errors
                                are heteroskedasticity- and clustering-robust."),
                              tabsetPanel(type = "tabs",
-                                         tabPanel("ZIP Code Regressions"),
-                                         tabPanel("County Regressions"),
-                                         tabPanel("Full Regression Tables", 
+                                         tabPanel("ZIP Codes"),
+                                         tabPanel("Counties"),
+                                         tabPanel("Full Tables", 
                                                   fluidRow(
                                                     p("These are the full regression tables for the ZIP and county level. You can see
                                                       which variables are defined as economic, loan-specific, etc. by looking at the 
@@ -105,7 +111,21 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                                     column(6, gt_output('zip_regression')),
                                                     column(6, gt_output('county_regression'))
                                                   )),
-                                         tabPanel("Regression Coefficient Definitions",
+                                         tabPanel("Bank Type Comparisons",
+                                                  fluidRow(
+                                                    p("I also try to disaggregate racial disparities by type of bank. Here, I provide
+                                                      regressions for a couple of the country's largest banks to see if applying to
+                                                      these banks is positively associated with more racial disparities. I also break
+                                                      loan applications down by two types of banks I can easily identify in the dataset:
+                                                      large national banks, which are identified by the words 'national association' or
+                                                      'n.a.' in their names in the datset, and credit unions. All of these regressions
+                                                      exclude interaction terms between minority_percent and other variables, but
+                                                      include all of the background variables, as in Model 4 in the ZIP and county 
+                                                      regressions."),
+                                                    column(6, gt_output('zip_banks')),
+                                                    column(6, gt_output('county_banks'))
+                                                  )),
+                                         tabPanel("Coefficient Definitions",
                                                   fluidRow(
                                                     column(6, gt_output('zip_defns')),
                                                     column(6, gt_output('county_defns'))
@@ -123,9 +143,7 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                   tabPanel("About",
                            mainPanel(
                                h2("About"),
-                               fluidRow(
-                                 column(6,
-                                        list(
+                                 
                                           h3("Me"),
                                           p("Hi, my name's Justin. I'm a junior in Winthrop House studying Applied
                                             Math and Economics with a secondary in Government. 
@@ -134,13 +152,12 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                             a(href = "mailto: qij@college.harvard.edu", "qij@college.harvard.edu", .noWS = "outside"),
                                             " or my ", a(href = "https://www.linkedin.com/in/justin-qi/", "LinkedIn", .noWS = "outside"), 
                                             ". Please contact me for access to the original data files, which
-                                            were too large to upload to Github. Thanks for stopping by!"))
-                                        ),
+                                            were too large to upload to Github. Thanks for stopping by!"),
+                                        
                                  
                                  # Just listing sources for everything I've done here. 
                                  
-                                 column(6, 
-                                        list(
+                                 
                                           h3("Data"),
                                           tags$a(href="https://github.com/jq4225/pppdata", 
                                                  "Github repo here!"),
@@ -186,9 +203,8 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                           
                                           p(strong("Crime: "), "Crime rates were sourced from the County Health Rankings report as of
                                             2019. These statistics were aggregated from the FBI Uniform Crime Report.")
-                                        ))
                                )
-                           ))
+                           )
 )
 
 # Define server logic 
@@ -272,6 +288,22 @@ server <- function(input, output) {
     
     output$county_regression <- render_gt({
       county_regression %>%
+        gt() %>%
+        tab_header(title = "Counties") %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
+    })
+    
+    output$zip_banks <- render_gt({
+      zip_banks %>%
+        gt() %>%
+        tab_header(title = "ZIP Codes") %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
+    })
+    
+    output$county_banks <- render_gt({
+      county_banks %>%
         gt() %>%
         tab_header(title = "Counties") %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
