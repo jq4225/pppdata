@@ -57,41 +57,44 @@ indicators <- acm.disjonctif(current_bankindicators)
 ```
 
 ```{r}
-baml_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
-       black_percent +
-       I(black_percent^2) +
-       white_percent +
-       I(white_percent^2) + 
-       high_school_pct +
-       banks_per_pop + 
-       loan_350_1mil + loan_150_350 + 
-       loan_5mil_10mil +
-       loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
-       requirement + 
-       stay_at_home_apr +
-       stay_at_home_current +
-       non_essential_closure_apr +
-       non_essential_closure_current + 
-       unemployment_rate + 
-       unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
-       jobs_reported + 
-       baml + I(baml * black_percent) + 
+baml_reg <- lm_robust(
+       business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       baml + I(baml * minority_percent) + 
        I(baml * median_family_income) +
        I(baml * unemployment_rate), baml, clusters = zip, se_type = "CR0")
 
 summary(baml_reg )
-
-tibble_baml <- tidy(baml_reg)
-
-write.csv(tibble_baml, file = "baml.csv")
 ```
 
 
@@ -103,41 +106,44 @@ jpm <- most_recent %>%
 
 
 ```{r}
-jpm_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
-       black_percent +
-       I(black_percent^2) +
-       white_percent +
-       I(white_percent^2) + 
-       high_school_pct +
-       banks_per_pop + 
-       loan_350_1mil + loan_150_350 + 
-       loan_5mil_10mil +
-       loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
-       requirement + 
-       stay_at_home_apr +
-       stay_at_home_current +
-       non_essential_closure_apr +
-       non_essential_closure_current + 
-       unemployment_rate + 
-       unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
-       jobs_reported + 
-       jpm + I(jpm * black_percent) + 
+jpm_reg <- lm_robust(
+       business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       jpm + I(jpm * minority_percent) + 
        I(jpm * median_family_income) +
        I(jpm * unemployment_rate), jpm, clusters = zip, se_type = "CR0")
 
 summary(jpm_reg )
-
-tibble_jpm <- tidy(jpm_reg)
-
-write.csv(tibble_jpm, file = "jpm.csv")
 ```
 
 
@@ -146,41 +152,44 @@ citi <- most_recent %>%
   mutate(citi = ifelse(lender == "citibank, n.a.",
                        1, 0))
 
-citi_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
-       black_percent +
-       I(black_percent^2) +
-       white_percent +
-       I(white_percent^2) + 
-       high_school_pct +
-       banks_per_pop + 
-       loan_350_1mil + loan_150_350 + 
-       loan_5mil_10mil +
-       loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
-       requirement + 
-       stay_at_home_apr +
-       stay_at_home_current +
-       non_essential_closure_apr +
-       non_essential_closure_current + 
-       unemployment_rate + 
-       unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
-       jobs_reported + 
-       citi + I(citi * black_percent) + 
+citi_reg <- lm_robust(
+       business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       citi + I(citi * minority_percent) + 
        I(citi * median_family_income) +
        I(citi * unemployment_rate), citi, clusters = zip, se_type = "CR0")
 
 summary(citi_reg )
-
-tibble_citi <- tidy(citi_reg)
-
-write.csv(tibble_citi, file = "citi.csv")
 ```
 
 
@@ -189,88 +198,310 @@ wells <- most_recent %>%
   mutate(wells = ifelse(lender == "wells fargo bank, national association",
                        1, 0))
 
-wells_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
-       black_percent +
-       I(black_percent^2) +
-       white_percent +
-       I(white_percent^2) + 
-       high_school_pct +
-       banks_per_pop + 
-       loan_350_1mil + loan_150_350 + 
-       loan_5mil_10mil +
-       loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
-       requirement + 
-       stay_at_home_apr +
-       stay_at_home_current +
-       non_essential_closure_apr +
-       non_essential_closure_current + 
-       unemployment_rate + 
-       unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
-       jobs_reported + 
-       wells + I(wells * black_percent) + 
+wells_reg <- lm_robust(
+       business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       wells + I(wells * minority_percent) + 
        I(wells * median_family_income) +
        I(wells * unemployment_rate), wells, clusters = zip, se_type = "CR0")
 
 summary(wells_reg )
-
-tibble_wells <- tidy(wells_reg)
-
-write.csv(tibble_wells, file = "wells.csv")
 ```
 
 
 ```{r}
-capone <- most_recent %>%
-  mutate(capone = ifelse(lender == "capital one, national association",
-                       1, 0))
+# Dummy coding for wells fargo
+credit_union <- most_recent %>%
+    mutate(cu = 0) %>%
+    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
 
-capone_reg <- lm_robust(days_to_approval ~ 1 + median_family_income +
-       black_percent +
-       I(black_percent^2) +
-       white_percent +
-       I(white_percent^2) + 
-       high_school_pct +
-       banks_per_pop + 
-       loan_350_1mil + loan_150_350 + 
-       loan_5mil_10mil +
-       loan_2mil_5mil + loan_1mil_2mil +
-       cook_pvi + mean_start_cases_weighted + 
-       mean_start_deaths_weighted + mean_end_cases_weighted +
-       mean_end_deaths_weighted + 
-       bank_ppp_issued +
-       rural + businesses_per_pop +
-       married_percent + preference +
-       requirement + 
-       stay_at_home_apr +
-       stay_at_home_current +
-       non_essential_closure_apr +
-       non_essential_closure_current + 
-       unemployment_rate + 
-       unemployment_rate_apr + 
-       estimate_gini_index +
-       violent_crime_rate +
-       jobs_reported + 
-       capone + I(capone * black_percent) + 
-       I(capone * median_family_income) +
-       I(capone * unemployment_rate), capone, clusters = zip, se_type = "CR0")
+credit_union_reg <- lm_robust(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       cu + I(cu * minority_percent) + 
+       I(cu * median_family_income) +
+       I(cu * unemployment_rate), credit_union, clusters = zip, se_type = "CR0")
 
-summary(capone_reg )
-
-tibble_capone <- tidy(capone_reg)
-
-write.csv(tibble_capone, file = "capone.csv")
+summary(credit_union_reg )
 ```
 
 
 ```{r}
-# Including number of
+# COUNTIES indicator variables
+
+banks_county <- most_recent_county %>%
+  mutate(baml = ifelse(lender == "bank of america, national association",
+                       1, 0)) %>%
+  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
+                       1, 0)) %>%
+  mutate(citi = ifelse(lender == "citibank, n.a.",
+                       1, 0)) %>%
+  mutate(wells = ifelse(lender == "wells fargo bank, national association",
+                       1, 0)) %>%
+    mutate(cu = 0) %>%
+    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
+```
+
+
+```{r}
+
+baml_reg_county <- lm_robust(
+       business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       baml + I(baml * minority_percent) + 
+       I(baml * median_income) +
+       I(baml * unemployment_rate_percent), banks_county, 
+    clusters = fips, se_type = "CR0")
+
+
+citi_reg_county <- lm_robust(
+       business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       citi + I(citi * minority_percent) + 
+       I(citi * median_income) +
+       I(citi * unemployment_rate_percent), banks_county, 
+    clusters = fips, se_type = "CR0")
+
+jpm_reg_county <- lm_robust(
+       business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       jpm + I(jpm * minority_percent) + 
+       I(jpm * median_income) +
+       I(jpm * unemployment_rate_percent), 
+    banks_county, clusters = fips, se_type = "CR0")
+
+wells_reg_county <- lm_robust(
+       business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       wells + I(wells * minority_percent) + 
+       I(wells * median_income) +
+       I(wells * unemployment_rate_percent), banks_county, 
+    clusters = fips, se_type = "CR0")
+
+credit_union_reg <- lm_robust(business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       cu + I(cu * minority_percent) + 
+       I(cu * median_income) +
+       I(cu * unemployment_rate_percent), 
+    banks_county, clusters = fips, se_type = "CR0")
 ```
 
