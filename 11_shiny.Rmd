@@ -6,16 +6,118 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-library(janitor)
+library(ggeffects)
 ```
 
 
 ```{r}
+# Reading in the data. I"m just doing this so I can use ggeffect later
 
-# Reading in the data
+most_recent <- readRDS('most_recent_zip.rds') %>%
+  mutate(minority_percent_sq = minority_percent^2)
 
-most_recent <- readRDS('most_recent_zip.rds')
-
-
+most_recent_county <- readRDS('most_recent_county.rds') %>%
+  mutate(minority_percent_sq = minority_percent^2)
 ```
+
+
+```{r}
+interactions <- lm_robust(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    minority_percent_sq + 
+    I(minority_percent * median_family_income) +
+    I(minority_percent * cook_pvi) +
+    I(minority_percent * rural) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * violent_crime_rate),
+  most_recent, clusters = zip, se_type = "CR0")
+```
+
+```{r}
+marginal_race_2 <- ggeffect(interactions, 
+                             terms = c("minority_percent"))
+```
+
+
+```{r}
+county_interactions <- lm_robust(
+  business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths +
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    minority_percent_sq + 
+    I(minority_percent * median_income) +
+    I(minority_percent * republican_percent) +
+    I(minority_percent * pop_den) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * violent_crime_rate),
+  most_recent_county, clusters = fips, se_type = "CR0")
+```
+
+
+```{r}
+marginal_race_sq_county <- ggeffect(county_interactions, 
+                                    terms = c("minority_percent", "minority_percent_sq"))
+```
+
 

@@ -22,6 +22,8 @@ cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```{r}
 most_recent <- readRDS('most_recent_zip.rds')
 
+most_recent_county <- readRDS('most_recent_county.rds')
+
 ```
 
 
@@ -189,6 +191,10 @@ covid <- lm_robust(
 
 
 ```{r}
+
+# Generating ggeffects dataframes to plot this in Shiny -- not relevant
+# for other classes
+
 marginal_race <- ggeffect(covid, terms = "minority_percent")
 ```
 
@@ -234,6 +240,11 @@ interactions <- lm_robust(
     I(minority_percent * estimate_gini_index) +
     I(minority_percent * violent_crime_rate),
   most_recent, clusters = zip, se_type = "CR0")
+```
+
+
+```{r}
+# marginal_race_sq <- ggeffect(interactions, terms = c("minority_percent", "I(minority_percent^2)"))
 ```
 
 
@@ -358,6 +369,15 @@ county_covid <- lm_robust(
     non_essential_closure_apr + 
     non_essential_closure_current,
   most_recent_county, clusters = fips, se_type = "CR0")
+```
+
+
+```{r}
+
+# Generating ggeffects dataframes to plot this in Shiny -- not relevant
+# for other classes
+
+marginal_race_county <- ggeffect(county_covid, terms = "minority_percent")
 ```
 
 
