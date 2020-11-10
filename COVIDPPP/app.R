@@ -1,6 +1,4 @@
 # To do: add dropdown in the regression tables for simplified and non-simplified
-# Add introduction page
-# Change theme
 # Add data sources more systematically in the About page, include my Linkedin
 
 library(shiny)
@@ -27,7 +25,7 @@ descriptives_sample <- read_excel('descriptives.xlsx', sheet = "Sheet2")
 
 # Define UI 
 
-ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
+ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                   theme = shinytheme("sandstone"),
                   tabPanel("Introduction",
                            mainPanel(
@@ -95,8 +93,13 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                provides a visual indicator of heteroskedasticity in the sample. To correct for this, all standard errors
                                are heteroskedasticity- and clustering-robust."),
                              tabsetPanel(type = "tabs",
-                                         tabPanel("ZIP Code Regressions", gt_output('zip_regression')),
-                                         tabPanel("County Regressions", gt_output('county_regression')),
+                                         tabPanel("ZIP Code Regressions"),
+                                         tabPanel("County Regressions"),
+                                         tabPanel("Full Regression Tables", 
+                                                  fluidRow(
+                                                    column(6, gt_output('zip_regression')),
+                                                    column(6, gt_output('county_regression'))
+                                                  )),
                                          tabPanel("Regression Coefficient Definitions",
                                                   fluidRow(
                                                     column(6, gt_output('zip_defns')),
@@ -104,7 +107,7 @@ ui <<- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                                   )),
                                          tabPanel("Residuals", 
                                                   fluidRow(
-                                                    img(src = "residuals_zipregression.png"),
+                                                    img(src = "residuals_abs.png"),
                                                     p("This displays a plot of the residuals against the outcome variable
                                                       for the ZIP code regression, Model 4. We can see that there is
                                                       some more propensity for error at the upper ranges
@@ -250,6 +253,7 @@ server <- function(input, output) {
     output$zip_regression <- render_gt({
       zip_regression %>%
         gt() %>%
+        tab_header(title = "ZIP Codes") %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
@@ -257,6 +261,7 @@ server <- function(input, output) {
     output$county_regression <- render_gt({
       county_regression %>%
         gt() %>%
+        tab_header(title = "Counties") %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
