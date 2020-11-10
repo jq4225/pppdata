@@ -12,10 +12,16 @@ library(broom)
 library(tidyverse)
 library(texreg)
 library(bizdays)
+library(ggeffects)
 
 # holidays <- federalHolidays(2020, board = F, businessOnly = T)
 
 cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+```
+
+```{r}
+most_recent <- readRDS('most_recent_zip.rds')
+
 ```
 
 
@@ -179,6 +185,11 @@ covid <- lm_robust(
     non_essential_closure_apr + 
     non_essential_closure_current,
   most_recent, clusters = zip, se_type = "CR0")
+```
+
+
+```{r}
+marginal_race <- ggeffect(covid, terms = "minority_percent")
 ```
 
 

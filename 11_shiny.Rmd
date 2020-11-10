@@ -14,16 +14,7 @@ library(janitor)
 
 # Reading in the data
 
-most_recent <- readRDS('ppp_allvars_1028.rds')
-
-# Faceting by race
-
-cut_ppp <- most_recent %>%
-  mutate(cuts =  cut(black_percent,
-                   seq(0, 100, by = 10))) %>%
-  group_by(cuts) %>%
-  select(state, cuts, days_to_approval) %>%
-  drop_na(state)
+most_recent <- readRDS('most_recent_zip.rds')
 
 
 ```
