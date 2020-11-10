@@ -16,44 +16,18 @@ library(texreg)
 ```{r}
 # Load up the data for most recent stuff, as usual
 
-most_recent <- readRDS('most_recent_zip.rds')
+most_recent <- readRDS('most_recent_zip.rds') %>%
+  mutate(national = 0) %>%
+    mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national))
 
 most_recent_county <- readRDS('most_recent_county.rds')
 
 baml <- most_recent %>%
   mutate(baml = ifelse(lender == "bank of america, national association",
                        1, 0))
-```
-
-
-```{r}
-# Zip code level -- let's look at some banks
-
-# bank_ppp_policy_manual <- 
-#   read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
-#   
-#   # We do some minor cleaning of the business names, like by trimming
-#   # and converting to common case.
-#   
-#   mutate(sba_name = tolower(sba_name)) %>%
-#   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
-#   drop_na(preference, requirement)
-```
-
-
-```{r}
-# Let's see if we can make the indicators all at once -- this uses the 
-# ade4 package as here: https://stackoverflow.com/questions/5048638/automatically-expanding-an-r-factor-into-a-collection-of-1-0-indicator-variables
-
-current_bankindicators <- most_recent %>%
-  select(lender)
-
-indicators <- acm.disjonctif(current_bankindicators)
-```
-
-```{r}
-
-
 ```
 
 ```{r}
@@ -94,7 +68,6 @@ baml_reg <- lm_robust(
        I(baml * median_family_income) +
        I(baml * unemployment_rate), baml, clusters = zip, se_type = "CR0")
 
-summary(baml_reg )
 ```
 
 
@@ -143,7 +116,6 @@ jpm_reg <- lm_robust(
        I(jpm * median_family_income) +
        I(jpm * unemployment_rate), jpm, clusters = zip, se_type = "CR0")
 
-summary(jpm_reg )
 ```
 
 
@@ -188,8 +160,6 @@ citi_reg <- lm_robust(
        citi + I(citi * minority_percent) + 
        I(citi * median_family_income) +
        I(citi * unemployment_rate), citi, clusters = zip, se_type = "CR0")
-
-summary(citi_reg )
 ```
 
 
@@ -240,7 +210,7 @@ summary(wells_reg )
 
 
 ```{r}
-# Dummy coding for wells fargo
+# Dummy coding for credit union
 credit_union <- most_recent %>%
     mutate(cu = 0) %>%
     mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
@@ -288,6 +258,47 @@ credit_union_reg <- lm_robust(business_days ~ 1 +
 
 summary(credit_union_reg )
 ```
+```{r}
+# Doing national banks reg
+
+national_reg <- lm_robust(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national+ I(national* minority_percent) + 
+       I(national* median_family_income) +
+       I(national* unemployment_rate), 
+    most_recent, clusters = zip, se_type = "CR0")
+
+```
 
 
 ```{r}
@@ -308,7 +319,12 @@ banks_county <- most_recent_county %>%
          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
                               cu),
          cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
-                              cu))
+                              cu)) %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national))
 ```
 
 
@@ -502,6 +518,43 @@ credit_union_reg <- lm_robust(business_days ~ 1 +
        cu + I(cu * minority_percent) + 
        I(cu * median_income) +
        I(cu * unemployment_rate_percent), 
+    banks_county, clusters = fips, se_type = "CR0")
+
+national_reg <- lm_robust(business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national+ I(national* minority_percent) + 
+       I(national* median_income) +
+       I(national* unemployment_rate_percent), 
     banks_county, clusters = fips, se_type = "CR0")
 ```
 

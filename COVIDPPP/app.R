@@ -1,11 +1,12 @@
-# To do: add dropdown in the regression tables for simplified and non-simplified
-# Add data sources more systematically in the About page, include my Linkedin
-
 library(shiny)
 library(tidyverse)
 library(shinythemes)
 library(gt)
 library(readxl)
+
+# Reading in files here: most of these are excel files converted from 
+# htmlreg and other functions b/c I made tables for the papers I'm writing
+# before I did anything with this.
 
 zip_regressors <- read_excel('regressors.xlsx', sheet = "Sheet1")
 
@@ -80,13 +81,14 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                                   )),
                                          tabPanel("Sample Descriptives",
                                                   fluidRow(
-                                                    p("See the Regressions tab for a full explanation of what each
+                                                    p("These are descriptive statistics for the loans aggregated by ZIP code.
+                                                    See the Regressions tab for a full explanation of what each
                                                       regressor variable means."),
                                                     column(6, gt_output('descriptives_orig')),
                                                     column(6, gt_output('descriptives_sample'))
                                                   ))
                            ))),
-                  tabPanel("Regressions",
+                  tabPanel("Results",
                            mainPanel(
                              h2("Regression Results"),
                              p("Click the tabs to view the results of regressions on the ZIP and county level. The residuals tab
@@ -97,6 +99,9 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                          tabPanel("County Regressions"),
                                          tabPanel("Full Regression Tables", 
                                                   fluidRow(
+                                                    p("These are the full regression tables for the ZIP and county level. You can see
+                                                      which variables are defined as economic, loan-specific, etc. by looking at the 
+                                                      regressor definitions."),
                                                     column(6, gt_output('zip_regression')),
                                                     column(6, gt_output('county_regression'))
                                                   )),
@@ -131,6 +136,9 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                             ". Please contact me for access to the original data files, which
                                             were too large to upload to Github. Thanks for stopping by!"))
                                         ),
+                                 
+                                 # Just listing sources for everything I've done here. 
+                                 
                                  column(6, 
                                         list(
                                           h3("Data"),
@@ -209,7 +217,9 @@ server <- function(input, output) {
         labs(title = "Mean Loan Waiting Time, National",
              subtitle = 
                "Dashed line indicates national average.",
-             y = "Mean Waiting Time (days)")
+             y = "Mean Waiting Time (days)") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
     
     output$statePlot <- renderPlot({
@@ -235,7 +245,9 @@ server <- function(input, output) {
         labs(title = paste("Mean Loan Waiting Time,", input$stateInput),
              subtitle = 
              "Dashed line indicates national average.",
-             y = "Mean Waiting Time (days)")
+             y = "Mean Waiting Time (days)") +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
     
     output$descriptives_orig <- render_gt({
