@@ -2,7 +2,7 @@ library(shiny)
 library(tidyverse)
 library(shinythemes)
 library(gt)
-library(readxl)
+library(readxl) 
 
 # Reading in files here: most of these are excel files converted from 
 # htmlreg and other functions b/c I made tables for the papers I'm writing
