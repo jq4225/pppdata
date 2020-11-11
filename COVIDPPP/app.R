@@ -46,7 +46,7 @@ national_banks_county <- readRDS('national_bank_graph_county.rds')
 
 # Define UI 
 
-ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
+ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?",
                   theme = shinytheme("sandstone"),
                   tabPanel("Introduction",
                            mainPanel(
