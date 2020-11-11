@@ -35,6 +35,10 @@ zip_race_graph <- readRDS('marginalrace_nointeractions.rds')
 
 county_race_graph <- readRDS('marginalrace_county.rds')
 
+zip_racesq_graph <- readRDS('marginal_race_sq_zip.rds')
+
+county_racesq_graph <- readRDS('marginal_race_sq_county.rds')
+
 national_banks_zip <- readRDS('national_bank_graph.rds')
 
 national_banks_county <- readRDS('national_bank_graph_county.rds')
@@ -119,7 +123,8 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                              tabsetPanel(type = "tabs",
                                          tabPanel("ZIP Codes",
                                                   fluidRow(
-                                                    plotOutput('marginalRace1'),
+                                                    column(6, plotOutput('marginalRace1')),
+                                                    column(6, plotOutput('marginalRace2')),
                                                     p("As you can see, there is a positive and significant relationship between the percentage of
                                                       minorities in a community and the predicted waiting times, holding constant other demographic,
                                                       economic, loan-specific, and COVID-19-related variables. This relationship remains significant
@@ -128,10 +133,12 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                                   )),
                                          tabPanel("Counties",
                                                   fluidRow(
-                                                    plotOutput('marginalRace2'),
+                                                    column(6, plotOutput('marginalRace3')),
+                                                    column(6, plotOutput('marginalRace4')),
                                                     p("On the county leve, the relationship between race and waiting times becomes insignificant after COVID-19 variables
                                                       are included. However, including additional interaction terms suggests that the relationship between race
-                                                      and waiting times is significant and nonlinear, as you can see in the abbreviated regression table below."),
+                                                      and waiting times is significant and nonlinear, as you can see in the abbreviated regression table below. It appears that
+                                                      the effect of having a higher minority percentage tapers off at higher levels of minority populations."),
                                                     gt_output('county_simple')
                                                   )),
                                          tabPanel("Full Tables", 
@@ -331,10 +338,23 @@ server <- function(input, output) {
           geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
           labs(x = "Minority Proportion of Population (Percent)", 
                y = "Predicted Wait Time (Business Days)",
-               title = "Predicted Effect of Racial Minority Presence on Wait Times
+               title = "Linear Predicted Effect of Racial Minority Presence on Wait Times
                (Grouping by ZIP Codes)") +
           xlim(0, 100) +
           theme_classic()
+    })
+    
+    output$marginalRace2 <- renderPlot({
+      zip_racesq_graph %>%
+        ggplot(aes(x = x, y = predicted)) +
+        geom_line(color = "darkblue") +
+        geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
+        labs(x = "Minority Proportion of Population (Percent)", 
+             y = "Predicted Wait Time (Business Days)",
+             title = "Quadratic Predicted Effect of Racial Minority Presence on Wait Times
+               (Grouping by ZIP Codes)") +
+        xlim(0, 100) +
+        theme_classic()
     })
     
     output$zip_simple <- render_gt({
@@ -344,14 +364,27 @@ server <- function(input, output) {
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
     
-    output$marginalRace2 <- renderPlot({
+    output$marginalRace3 <- renderPlot({
       county_race_graph %>%
         ggplot(aes(x = x, y = predicted)) +
         geom_line(color = "darkblue") +
         geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
         labs(x = "Minority Proportion of Population (Percent)", 
              y = "Predicted Wait Time (Business Days)",
-             title = "Predicted Effect of Racial Minority Presence on Wait Times
+             title = "Linear Predicted Effect of Racial Minority Presence on Wait Times
+               (Grouping by Counties)") +
+        xlim(0, 100) +
+        theme_classic()
+    })
+    
+    output$marginalRace4 <- renderPlot({
+      county_racesq_graph %>%
+        ggplot(aes(x = x, y = predicted)) +
+        geom_line(color = "darkblue") +
+        geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
+        labs(x = "Minority Proportion of Population (Percent)", 
+             y = "Predicted Wait Time (Business Days)",
+             title = "Quadratic Predicted Effect of Racial Minority Presence on Wait Times
                (Grouping by Counties)") +
         xlim(0, 100) +
         theme_classic()

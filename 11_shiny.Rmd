@@ -13,11 +13,9 @@ library(ggeffects)
 ```{r}
 # Reading in the data. I"m just doing this so I can use ggeffect later
 
-most_recent <- readRDS('most_recent_zip.rds') %>%
-  mutate(minority_percent_sq = minority_percent^2)
+most_recent <- readRDS('most_recent_zip.rds')
 
-most_recent_county <- readRDS('most_recent_county.rds') %>%
-  mutate(minority_percent_sq = minority_percent^2)
+most_recent_county <- readRDS('most_recent_county.rds')
 ```
 
 
@@ -55,17 +53,12 @@ interactions <- lm_robust(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current +
-    minority_percent_sq + 
-    I(minority_percent * median_family_income) +
-    I(minority_percent * cook_pvi) +
-    I(minority_percent * rural) + 
-    I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate),
+    I(minority_percent^2),
   most_recent, clusters = zip, se_type = "CR0")
 ```
 
 ```{r}
-marginal_race_2 <- ggeffect(interactions, 
+marginal_race_sq <- ggeffect(interactions, 
                              terms = c("minority_percent"))
 ```
 
@@ -105,19 +98,14 @@ county_interactions <- lm_robust(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current +
-    minority_percent_sq + 
-    I(minority_percent * median_income) +
-    I(minority_percent * republican_percent) +
-    I(minority_percent * pop_den) + 
-    I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate),
+    I(minority_percent^2),
   most_recent_county, clusters = fips, se_type = "CR0")
 ```
 
 
 ```{r}
 marginal_race_sq_county <- ggeffect(county_interactions, 
-                                    terms = c("minority_percent", "minority_percent_sq"))
+                                    terms = c("minority_percent"))
 ```
 
 Writing equation:
