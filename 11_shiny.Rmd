@@ -120,4 +120,6 @@ marginal_race_sq_county <- ggeffect(county_interactions,
                                     terms = c("minority_percent", "minority_percent_sq"))
 ```
 
+Writing equation:
 
+$$y_i = \alpha_{locality} + \beta minority + X'_i\gamma + \epsilon_i$$

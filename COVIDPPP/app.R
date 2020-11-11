@@ -72,7 +72,11 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                population on loan waiting times, defined as the business days between loan applications opening
                                and the loan approval date."),
                              p("Later, I also attempt to disaggregate these results by individual banks and bank type, using the 
-                               bank names provided in the SBA's dataset.")
+                               bank names provided in the SBA's dataset."),
+                             p("The basic OLS setup is as follows: "),
+                             uiOutput('OLS1'),
+                             
+                             p("Later, I add in additional interaction terms between race and other demographic variables.")
                            ))),
                   tabPanel("Descriptives",
                            mainPanel(
@@ -244,13 +248,21 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
 # Define server logic 
 server <- function(input, output) {
     
+    output$OLS1 <- renderUI({
+      withMathJax(
+        "$$y_i = \\alpha_{locality} + \\beta minority + X'_i \\gamma + \\epsilon_i$$
+        Where \\(y_i\\) is the number of business days until the loan is approved, 
+                 \\(\\alpha_{locality}\\) are locality fixed effects (either ZIP or county), 
+                 \\(minority\\) is the percent of the locality's population that is non-white, 
+                 and \\(X_i\\) is a vector of loan-specific controls (e.g. loan size).")
+    })
     
     output$natPlot <- renderPlot({
       race_days %>%
         group_by(cuts) %>%
         summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
         ggplot(aes(x = cuts, y = mean_days)) +
-        geom_col(fill = "darkblue") +
+        geom_col(fill = "lightblue3") +
         geom_hline(yintercept = 35.59, color = "red",
                    linetype = "dashed") +
         scale_x_discrete(name = "Black Percent",
@@ -268,7 +280,7 @@ server <- function(input, output) {
              subtitle = 
                "Dashed line indicates national average.",
              y = "Mean Waiting Time (days)") +
-        theme_bw() +
+        theme_classic() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
     
@@ -278,7 +290,7 @@ server <- function(input, output) {
         group_by(cuts) %>%
         summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
         ggplot(aes(x = cuts, y = mean_days)) +
-          geom_col(fill = "darkblue") +
+          geom_col(fill = "lightblue3") +
           geom_hline(yintercept = 35.59, color = "red",
                      linetype = "dashed") +
           scale_x_discrete(name = "Black Percent",
@@ -296,7 +308,7 @@ server <- function(input, output) {
              subtitle = 
              "Dashed line indicates national average.",
              y = "Mean Waiting Time (days)") +
-        theme_bw() +
+        theme_classic() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
     
@@ -322,7 +334,7 @@ server <- function(input, output) {
                title = "Predicted Effect of Racial Minority Presence on Wait Times
                (Grouping by ZIP Codes)") +
           xlim(0, 100) +
-          theme_bw()
+          theme_classic()
     })
     
     output$zip_simple <- render_gt({
@@ -342,7 +354,7 @@ server <- function(input, output) {
              title = "Predicted Effect of Racial Minority Presence on Wait Times
                (Grouping by Counties)") +
         xlim(0, 100) +
-        theme_bw()
+        theme_classic()
     })
     
     output$county_simple <- render_gt({
@@ -379,7 +391,7 @@ server <- function(input, output) {
                             labels = c("25th Percentile", "50th Percentile",
                                        "75th Percentile")) +
           scale_x_discrete(labels = c("False", "True")) +
-          theme_bw()
+          theme_classic()
     })
     
     output$zip_banks <- render_gt({
@@ -401,7 +413,7 @@ server <- function(input, output) {
                           labels = c("25th Percentile", "50th Percentile",
                                      "75th Percentile")) +
         scale_x_discrete(labels = c("False", "True")) +
-        theme_bw()
+        theme_classic()
     })
     
     output$county_banks <- render_gt({
