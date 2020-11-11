@@ -10,6 +10,7 @@ library(janitor)
 library(broom)
 library(estimatr)
 library(texreg)
+library(ggeffects)
 #library(readxl)
 ```
 
@@ -256,7 +257,6 @@ credit_union_reg <- lm_robust(business_days ~ 1 +
        I(cu * median_family_income) +
        I(cu * unemployment_rate), credit_union, clusters = zip, se_type = "CR0")
 
-summary(credit_union_reg )
 ```
 ```{r}
 # Doing national banks reg
@@ -297,7 +297,11 @@ national_reg <- lm_robust(business_days ~ 1 +
        I(national* median_family_income) +
        I(national* unemployment_rate), 
     most_recent, clusters = zip, se_type = "CR0")
+```
 
+
+```{r}
+national_bank_graph <- ggeffect(national_reg, terms = c("national", "minority_percent"))
 ```
 
 
@@ -329,7 +333,6 @@ banks_county <- most_recent_county %>%
 
 
 ```{r}
-
 baml_reg_county <- lm_robust(
        business_days ~ 1 + 
     median_income + 
@@ -556,5 +559,12 @@ national_reg <- lm_robust(business_days ~ 1 +
        I(national* median_income) +
        I(national* unemployment_rate_percent), 
     banks_county, clusters = fips, se_type = "CR0")
+```
+
+
+```{r}
+national_bank_graph_county <- ggeffect(national_reg, 
+                                       terms = c("national", "minority_percent"))
+
 ```
 

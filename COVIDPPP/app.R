@@ -35,6 +35,10 @@ zip_race_graph <- readRDS('marginalrace_nointeractions.rds')
 
 county_race_graph <- readRDS('marginalrace_county.rds')
 
+national_banks_zip <- readRDS('national_bank_graph.rds')
+
+national_banks_county <- readRDS('national_bank_graph_county.rds')
+
 
 # Define UI 
 
@@ -145,6 +149,13 @@ ui <- navbarPage("What Determines Paycheck Protection Program Waiting Times?",
                                                       exclude interaction terms between minority_percent and other variables, but
                                                       include all of the background variables, as in Model 4 in the ZIP and county 
                                                       regressions."),
+                                                    column(6, plotOutput('zip_banks_graph')),
+                                                    column(6, plotOutput("county_banks_graph")),
+                                                    p("As you can see, aggregating by both ZIPs and counties indicates that large, national
+                                                      banks are likely to grant loans to high-minority localities faster, holding constant 
+                                                      all of the variables identified in Model 4. The absolute advantage of going to a
+                                                      national bank is larger at higher minority percentages. The abbreviated regression
+                                                      tables for both individual banks and bank types are shown below."),
                                                     column(6, gt_output('zip_banks')),
                                                     column(6, gt_output('county_banks'))
                                                   )),
@@ -357,12 +368,40 @@ server <- function(input, output) {
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
     
+    output$zip_banks_graph <- renderPlot({
+      national_banks_zip %>%
+        mutate(x = as.factor(x)) %>%
+        ggplot(aes(x = x, y = predicted, fill = group)) + 
+          geom_col(position = "dodge") +
+          labs(x = "National Bank", y = "Predicted Wait Time (Days)",
+               title = "ZIP Codes") +
+          scale_fill_brewer(palette = "Pastel1", name = "Minority Percent",
+                            labels = c("25th Percentile", "50th Percentile",
+                                       "75th Percentile")) +
+          scale_x_discrete(labels = c("False", "True")) +
+          theme_bw()
+    })
+    
     output$zip_banks <- render_gt({
       zip_banks %>%
         gt() %>%
         tab_header(title = "ZIP Codes") %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
+    })
+    
+    output$county_banks_graph <- renderPlot({
+      national_banks_county %>%
+        mutate(x = as.factor(x)) %>%
+        ggplot(aes(x = x, y = predicted, fill = group)) + 
+        geom_col(position = "dodge") +
+        labs(x = "National Bank", y = "Predicted Wait Time (Days)",
+             title = "Counties") +
+        scale_fill_brewer(palette = "Pastel1", name = "Minority Percent",
+                          labels = c("25th Percentile", "50th Percentile",
+                                     "75th Percentile")) +
+        scale_x_discrete(labels = c("False", "True")) +
+        theme_bw()
     })
     
     output$county_banks <- render_gt({
