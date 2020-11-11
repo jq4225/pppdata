@@ -22,7 +22,21 @@ most_recent <- readRDS('most_recent_zip.rds') %>%
     mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
          national = ifelse(str_detect(lender, pattern = "n.a."),
-                           1, national))
+                           1, national)) %>%
+   mutate(cu = 0) %>%
+    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu)) %>%
+  mutate(business_roundtable = ifelse(lender %in%
+                                        c("bank of america, national association",
+                                          "citibank, n.a.",
+                                          "keybank national association",
+                                          "jpmorgan chase bank, national association",
+                                          "wells fargo bank, national association"),
+                                      1, 0))
 
 most_recent_county <- readRDS('most_recent_county.rds')
 
@@ -302,6 +316,12 @@ national_reg <- lm_robust(business_days ~ 1 +
 
 ```{r}
 national_bank_graph <- ggeffect(national_reg, terms = c("national", "minority_percent"))
+```
+
+```{r}
+# Business roundtable effect
+
+
 ```
 
 
