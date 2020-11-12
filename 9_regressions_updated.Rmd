@@ -199,6 +199,12 @@ marginal_race <- ggeffect(covid, terms = "minority_percent")
 
 
 ```{r}
+# Just trying something
+# most_recent <- most_recent %>%
+#   group_by(zip) %>%
+#   mutate(zip_loans = n()) %>%
+#   ungroup()
+
 interactions <- lm_robust(
   business_days ~ 1 + 
     median_family_income + 
