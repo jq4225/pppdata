@@ -19,9 +19,33 @@ cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```
 
 ```{r}
-most_recent <- readRDS('most_recent_zip.rds')
+most_recent <- readRDS('most_recent_zip_1111.rds') %>%
+   mutate(national = 0) %>%
+    mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+   mutate(cu = 0) %>%
+    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
 
-most_recent_county <- readRDS('most_recent_county.rds')
+most_recent_county <- readRDS('most_recent_county_1111.rds') %>%
+   mutate(national = 0) %>%
+    mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+   mutate(cu = 0) %>%
+    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
 
 ```
 
@@ -111,6 +135,8 @@ loan_spec <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported,
   most_recent, clusters = zip, se_type = "CR0")
@@ -138,6 +164,8 @@ econ <- lm_robust(
     delay +
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
@@ -170,6 +198,8 @@ covid <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
@@ -223,6 +253,8 @@ interactions <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
@@ -301,6 +333,8 @@ county_loan <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported,
   most_recent_county, clusters = fips, se_type = "CR0")
@@ -327,6 +361,8 @@ county_econ <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
@@ -358,6 +394,8 @@ county_covid <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
@@ -406,6 +444,8 @@ county_interactions <- lm_robust(
     loan_5mil_10mil + 
     preference + 
     requirement + 
+    national +
+    cu +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
