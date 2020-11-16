@@ -446,4 +446,26 @@ county_gdp <- left_join(county_crime, gdp, by = "fips") %>%
 ```
 
 
+```{r}
+
+most_recent_county <- readRDS('most_recent_county_1114.rds')
+
+# Trying to add gender data because we forgot it last time
+
+gender <- 
+  read_csv('raw_data/county/ACSDP5Y2018.DP05_data_with_overlays_2020-11-12T203338.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id,
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male) %>%
+  rename("male_percent" =
+           "percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male") %>%
+  mutate(male_percent = as.double(male_percent)) %>%
+  mutate(fips = map_chr(id, ~ substring(., 10))) %>%
+  select(-id)
+
+most_recent_county_2 <- left_join(most_recent_county, gender, by = "fips") %>%
+  drop_na(male_percent)
+```
+
+
 

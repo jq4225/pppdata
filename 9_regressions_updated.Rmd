@@ -105,7 +105,8 @@ demographics <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
+    male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -122,7 +123,7 @@ loan_spec <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -151,7 +152,7 @@ econ <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -185,7 +186,7 @@ covid <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -240,7 +241,7 @@ interactions <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -304,7 +305,7 @@ county_dems <- lm_robust(
     minority_percent +
     
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -320,7 +321,7 @@ county_loan <- lm_robust(
     minority_percent +
     
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -348,7 +349,7 @@ county_econ <- lm_robust(
     minority_percent +
     
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -381,7 +382,7 @@ county_covid <- lm_robust(
     minority_percent +
     
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -431,7 +432,7 @@ county_interactions <- lm_robust(
     minority_percent +
     
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -496,7 +497,7 @@ marginal_race_county_sq <- ggeffect(county_interactions, terms = c("minority_per
 #     black_percent +
 #     white_percent +
 #     high_school_pct + 
-#     married_percent + 
+#     married_percent + male_percent + 
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
@@ -541,7 +542,7 @@ marginal_race_county_sq <- ggeffect(county_interactions, terms = c("minority_per
 #     black_percent +
 #     white_percent +
 #     high_school_pct + 
-#     married_percent + 
+#     married_percent + male_percent + 
 #     republican_percent + 
 #     pop_den +
 #     estimate_gini_index +

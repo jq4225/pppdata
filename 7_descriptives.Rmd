@@ -465,6 +465,31 @@ loan_only %>%
             mean2 = mean(cu), sd2 = sd(cu))
 ```
 
+```{r}
+
+# Calculating gender
+
+gender <- 
+  read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, 
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male = 
+           as.double(percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+temp17 <- left_join(loan_only, gender, 
+                    by = c("zip" = "geographic_area_name")) %>%
+  rename("male_percent" = 
+           "percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male") %>%
+  drop_na(male_percent) %>%
+  summarize(n = n(), mean = mean(male_percent), sd = sd(male_percent))
+
+```
+
+
 
 ```{r}
 ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%

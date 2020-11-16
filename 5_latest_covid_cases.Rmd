@@ -326,7 +326,7 @@ ppp_allvars_1027_crime <- left_join(ppp_allvars_1027, crime_zip, by = "zip") %>%
 ```{r}
 # Including payroll numbers by zip
 
-ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
+# ppp_allvars_1027_crime <- readRDS('ppp_allvars_1028.rds')
 
 payroll <- 
   read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
@@ -342,6 +342,29 @@ payroll <-
 
 ppp_allvars_1105 <- left_join(ppp_allvars_1027_crime, payroll, by = "zip") %>%
   drop_na(payroll)
+```
+
+
+```{r}
+most_recent <- readRDS('most_recent_zip_1114.rds')
+
+# Adding in gender data since I forgot to do it earlier
+
+gender <- 
+  read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, 
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male = 
+           as.double(percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+most_recent_2 <- left_join(most_recent, gender, by = c("zip" = "geographic_area_name")) %>%
+  rename("male_percent" = 
+           "percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male") %>%
+  drop_na(male_percent)
 ```
 
 

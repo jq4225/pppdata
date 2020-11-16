@@ -257,10 +257,10 @@ server <- function(input, output) {
     
     output$OLS1 <- renderUI({
       withMathJax(
-        "$$y_i = \\alpha_{locality} + \\beta minority + X'_i \\gamma + \\epsilon_i$$
+        "$$y_i = \\alpha_{locality} + \\beta minority_{locality} + X'_i \\gamma + \\epsilon_i$$
         Where \\(y_i\\) is the number of business days until the loan is approved, 
                  \\(\\alpha_{locality}\\) are locality fixed effects (either ZIP or county), 
-                 \\(minority\\) is the percent of the locality's population that is non-white, 
+                 \\(minority_{locality}\\) is the percent of the locality's population that is non-white, 
                  and \\(X_i\\) is a vector of loan-specific controls (e.g. loan size).")
     })
     
