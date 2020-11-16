@@ -17,14 +17,14 @@ library(ggeffects)
 ```{r}
 # Load up the data for most recent stuff, as usual
 
-most_recent <- readRDS('most_recent_zip.rds') %>%
+most_recent <- readRDS('most_recent_zip_1115.rds') %>%
   mutate(national = 0) %>%
-    mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
          national = ifelse(str_detect(lender, pattern = "n.a."),
                            1, national)) %>%
    mutate(cu = 0) %>%
-    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
                               cu),
          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
                               cu),
@@ -36,13 +36,18 @@ most_recent <- readRDS('most_recent_zip.rds') %>%
                                           "keybank national association",
                                           "jpmorgan chase bank, national association",
                                           "wells fargo bank, national association"),
-                                      1, 0))
-
-most_recent_county <- readRDS('most_recent_county.rds')
-
-baml <- most_recent %>%
+                                      1, 0)) %>%
   mutate(baml = ifelse(lender == "bank of america, national association",
+                       1, 0)) %>%
+  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
+                       1, 0)) %>%
+  mutate(citi = ifelse(lender == "citibank, n.a.",
+                       1, 0)) %>%
+  mutate(wells = ifelse(lender == "wells fargo bank, national association",
                        1, 0))
+  
+
+most_recent_county <- readRDS('most_recent_county_1115.rds')
 ```
 
 ```{r}
@@ -51,7 +56,7 @@ baml_reg <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent +
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -81,17 +86,9 @@ baml_reg <- lm_robust(
     non_essential_closure_current + 
        baml + I(baml * minority_percent) + 
        I(baml * median_family_income) +
-       I(baml * unemployment_rate), baml, clusters = zip, se_type = "CR0")
+       I(baml * unemployment_rate), most_recent, clusters = zip, se_type = "CR0")
 
 ```
-
-
-```{r}
-jpm <- most_recent %>%
-  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
-                       1, 0))
-```
-
 
 ```{r}
 jpm_reg <- lm_robust(
@@ -99,7 +96,7 @@ jpm_reg <- lm_robust(
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -129,22 +126,22 @@ jpm_reg <- lm_robust(
     non_essential_closure_current + 
        jpm + I(jpm * minority_percent) + 
        I(jpm * median_family_income) +
-       I(jpm * unemployment_rate), jpm, clusters = zip, se_type = "CR0")
+       I(jpm * unemployment_rate), most_recent, clusters = zip, se_type = "CR0")
 
 ```
 
 
 ```{r}
-citi <- most_recent %>%
-  mutate(citi = ifelse(lender == "citibank, n.a.",
-                       1, 0))
+# citi <- most_recent %>%
+#   mutate(citi = ifelse(lender == "citibank, n.a.",
+#                        1, 0))
 
 citi_reg <- lm_robust(
        business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -174,21 +171,21 @@ citi_reg <- lm_robust(
     non_essential_closure_current + 
        citi + I(citi * minority_percent) + 
        I(citi * median_family_income) +
-       I(citi * unemployment_rate), citi, clusters = zip, se_type = "CR0")
+       I(citi * unemployment_rate), most_recent, clusters = zip, se_type = "CR0")
 ```
 
 
 ```{r}
-wells <- most_recent %>%
-  mutate(wells = ifelse(lender == "wells fargo bank, national association",
-                       1, 0))
+# wells <- most_recent %>%
+#   mutate(wells = ifelse(lender == "wells fargo bank, national association",
+#                        1, 0))
 
 wells_reg <- lm_robust(
        business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -218,28 +215,26 @@ wells_reg <- lm_robust(
     non_essential_closure_current + 
        wells + I(wells * minority_percent) + 
        I(wells * median_family_income) +
-       I(wells * unemployment_rate), wells, clusters = zip, se_type = "CR0")
-
-summary(wells_reg )
+       I(wells * unemployment_rate), most_recent, clusters = zip, se_type = "CR0")
 ```
 
 
 ```{r}
 # Dummy coding for credit union
-credit_union <- most_recent %>%
-    mutate(cu = 0) %>%
-    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
-                              cu),
-         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
-                              cu),
-         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
-                              cu))
+# credit_union <- most_recent %>%
+#     mutate(cu = 0) %>%
+#     mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+#                               cu),
+#          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+#                               cu),
+#          cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+#                               cu))
 
 credit_union_reg <- lm_robust(business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -269,7 +264,7 @@ credit_union_reg <- lm_robust(business_days ~ 1 +
     non_essential_closure_current + 
        cu + I(cu * minority_percent) + 
        I(cu * median_family_income) +
-       I(cu * unemployment_rate), credit_union, clusters = zip, se_type = "CR0")
+       I(cu * unemployment_rate), most_recent, clusters = zip, se_type = "CR0")
 
 ```
 ```{r}
@@ -279,7 +274,7 @@ national_reg <- lm_robust(business_days ~ 1 +
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -320,11 +315,12 @@ national_bank_graph <- ggeffect(national_reg, terms = c("national", "minority_pe
 
 ```{r}
 # Business roundtable effect
+
 roundtable_reg <- lm_robust(business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -403,7 +399,7 @@ baml_reg_county <- lm_robust(
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -442,7 +438,7 @@ citi_reg_county <- lm_robust(
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -480,7 +476,7 @@ jpm_reg_county <- lm_robust(
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -518,7 +514,7 @@ wells_reg_county <- lm_robust(
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -555,7 +551,7 @@ credit_union_reg <- lm_robust(business_days ~ 1 +
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -592,7 +588,7 @@ national_reg <- lm_robust(business_days ~ 1 +
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
@@ -633,7 +629,7 @@ county_roundtable_reg <- lm_robust(business_days ~ 1 +
     median_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     republican_percent + 
     pop_den +
     estimate_gini_index +
