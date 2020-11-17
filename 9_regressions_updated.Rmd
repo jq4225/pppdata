@@ -12,10 +12,30 @@ library(tidyverse)
 library(texreg)
 library(bizdays)
 library(ggeffects)
+library(readxl)
+library(janitor)
+
 
 # holidays <- federalHolidays(2020, board = F, businessOnly = T)
 
-cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+```
+
+```{r}
+most_recent <- readRDS('most_recent_zip_1115.rds')
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio) %>%
+  group_by(zip) %>%
+  arrange(desc(res_ratio)) %>%
+  slice(1) %>%
+  select(-res_ratio)
+
+most_recent_2 <- left_join(most_recent, county_zip_crosswalk, by = "zip") %>%
+  drop_na(county) %>%
+  rename('fips' = 'county')
+
 ```
 
 ```{r}
@@ -111,35 +131,6 @@ demographics <- lm_robust(
     rural +
     estimate_gini_index +
     violent_crime_rate,
-  most_recent, clusters = zip, se_type = "CR0")
-```
-
-
-```{r}
-# Regression 2: Demographics and Loan-Specific
-
-loan_spec <- lm_robust(
-  business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent + 
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    violent_crime_rate + 
-    delay + 
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    national +
-    cu +
-    bank_ppp_issued + 
-    jobs_reported,
   most_recent, clusters = zip, se_type = "CR0")
 ```
 
@@ -293,6 +284,163 @@ ggplot(data = most_recent, mapping = aes(x = business_days,
   ylim(0, 150) +
   labs(x = "Days to Approval", y = "Residuals", title = "Waiting Time vs. Residuals") +
   theme_classic()
+```
+
+```{r}
+# Zip with fixed effects
+
+# Regression 1
+
+demographics <- felm(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate|fips|0|zip, data = most_recent)
+
+# Regression 2: Demographics and Loan-Specific
+
+loan_spec <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported|fips|0|zip, data = most_recent)
+
+# Regression 3: economics
+
+econ <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    delay +
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate|fips|0|zip, data = most_recent)
+
+# Regression 4: COVID 
+
+covid <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|fips|0|zip,
+  data = most_recent)
+
+# Regression 5: interactions
+
+interactions <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    I(minority_percent^2) + 
+    I(minority_percent * median_family_income) +
+    I(minority_percent * cook_pvi) +
+    I(minority_percent * rural) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * violent_crime_rate)|fips|0|zip,
+  data = most_recent)
+
 ```
 
 
