@@ -355,7 +355,51 @@ roundtable_reg <- lm_robust(business_days ~ 1 +
       I(business_roundtable * median_family_income) +
       I(business_roundtable * unemployment_rate),
     most_recent, clusters = zip, se_type = "CR0")
+```
 
+
+```{r}
+
+# including both interaction terms
+
+roundtable_reg_2 <- lm_robust(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national +
+      cu +
+      business_roundtable +
+      I(national * minority_percent) + 
+      I(business_roundtable * minority_percent),
+    most_recent, clusters = zip, se_type = "CR0")
 ```
 
 
@@ -663,7 +707,51 @@ county_roundtable_reg <- lm_robust(business_days ~ 1 +
        I(business_roundtable* median_income) +
        I(business_roundtable* unemployment_rate_percent), 
     banks_county, clusters = fips, se_type = "CR0")
+```
 
+
+```{r}
+
+# Adding in both interaction terms at once
+
+county_roundtable_reg_2 <- lm_robust(business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+      national +
+      cu +
+       business_roundtable + 
+      I(business_roundtable * minority_percent) + 
+      I(national * minority_percent), 
+    banks_county, clusters = fips, se_type = "CR0")
 ```
 
 
