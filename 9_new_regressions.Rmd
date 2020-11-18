@@ -16,6 +16,92 @@ library(texreg)
 most_recent <- readRDS('most_recent_zip_1117.rds')
 ```
 
+
+```{r}
+# adding in county level data to the ZIP for robustness check
+
+# Crime
+
+crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+                    skip = 1) %>%
+  clean_names() %>%
+  rename("county_crime_rate" = "violent_crime_rate") %>%
+  select(fips, county_crime_rate)
+
+ppp_crime <- left_join(most_recent, crime, by = "fips") %>%
+  drop_na(county_crime_rate)
+
+# unemployment
+
+unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
+  clean_names() %>%
+  select(state_fips_code, county_fips_code, period, 
+         unemployed, labor_force, unemployment_rate_percent) %>%
+  mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
+  drop_na(fips_code) %>%
+  filter(period %in% c("Apr-20", "May-20", "Jun-20", "Jul-20", "Aug-20 p")) %>%
+  mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
+  mutate(period = as.Date(paste("01", period, sep="-"), "%d-%b-%y")) %>%
+  mutate(month = month(period)) %>%
+  rename("county_unemployment_rate" = "unemployment_rate_percent")
+
+ppp_months <- ppp_crime %>%
+  mutate(month = month(date_approved))
+
+combined_unemploy <- left_join(ppp_months, unemploy, 
+                                       by = c("fips" = "fips_code", "month"))
+
+unemploy_apr <- unemploy %>%
+  filter(month == 4) %>%
+  select(-period, -unemployed, -labor_force, -state_fips_code,
+         -county_fips_code) %>%
+  rename("county_unemployment_rate_apr" = "county_unemployment_rate")
+
+combined_unemploy2 <- left_join(combined_unemploy,
+                                         unemploy_apr, 
+                                by = c("fips" = "fips_code")) %>%
+  drop_na(county_unemployment_rate, county_unemployment_rate_apr) %>%
+  select(-period, -unemployed, -labor_force, -state_fips_code,
+         -county_fips_code)
+
+```
+
+```{r}
+# covid -- app open
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date > as.Date("2020-03-27")) %>%
+  select(date, fips, cases, deaths)
+
+current_cases <- county_covid %>%
+  filter(date <= as.Date("2020-04-03")) %>%
+  group_by(fips) %>%
+  summarize(cases = mean(cases), deaths = mean(deaths), .groups = "drop")
+
+combined_covid_curr <- left_join(combined_unemploy2, current_cases, by = "fips") %>%
+  mutate(mean_start_cases = cases * 10000/population,
+         mean_start_deaths = deaths * 10000/population) %>%
+  select(-cases, -deaths) %>%
+  drop_na(mean_start_cases, mean_start_deaths)
+
+dates_approved <- combined_covid_curr %>%
+  select(date_approved, fips) %>%
+  distinct()
+
+temp <- left_join(dates_approved, county_covid, by = "fips") %>%
+  filter(date >= date_approved - 6, date <= date_approved) %>%
+  group_by(fips) %>%
+  summarize(mean_end_cases = mean(cases), mean_end_deaths = mean(deaths),
+            .groups = "drop")
+
+combined_covid <- left_join(combined_covid_curr, temp, by = "fips") %>%
+  drop_na(mean_end_cases, mean_end_deaths) %>%
+  mutate(mean_end_cases = mean_end_cases * 10000/population, 
+         mean_end_deaths = mean_end_deaths * 10000/population)
+
+```
+
+
 ```{r}
 # Zip with fixed effects
 
@@ -172,6 +258,162 @@ interactions <- felm(
   data = most_recent)
 
 ```
+
+```{r}
+
+# Robustness check -- rerunning regressions with the lovely local data
+
+demographics_check <- felm(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    county_crime_rate|fips|0|zip, data = most_recent_both)
+
+# Regression 2: Demographics and Loan-Specific
+
+loan_spec_check <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    county_crime_rate + 
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported|fips|0|zip, data = most_recent_both)
+
+# Regression 3: economics
+
+econ_check <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    county_crime_rate + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    delay +
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    county_unemployment_rate_apr + 
+    county_unemployment_rate|fips|0|zip, data = most_recent_both)
+
+# Regression 4: COVID 
+
+covid_check <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    county_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    county_unemployment_rate_apr + 
+    county_unemployment_rate + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|fips|0|zip,
+  data = most_recent_both)
+
+# Regression 5: interactions
+
+interactions_check <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    county_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    national +
+    cu +
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    county_unemployment_rate_apr + 
+    county_unemployment_rate + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    I(minority_percent^2) + 
+    I(minority_percent * median_family_income) +
+    I(minority_percent * cook_pvi) +
+    I(minority_percent * rural) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * county_crime_rate)|fips|0|zip,
+  data = most_recent_both)
+```
+
 
 ```{r}
 
