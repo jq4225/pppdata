@@ -10,9 +10,11 @@ library(readxl)
 
 zip_regressors <- read_excel('regressors.xlsx', sheet = "Sheet1")
 
-zip_regression <- read_excel('zip_table.xlsx', sheet = "Sheet2")
+zip_regression <- read_excel('zip_table.xlsx', sheet = "Sheet1")
 
-zip_simple <- read_excel('simple_regression2.xlsx', sheet = "zip")
+zip_simple <- read_excel('simple_regression2.xlsx', sheet = "zip2")
+
+zip_simple_nointeractions <- read_excel('simple_regression2.xlsx', sheet = "zip")
 
 county_regression <- read_excel('zip_table.xlsx', sheet = "Sheet3")
 
@@ -129,7 +131,8 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                       minorities in a community and the predicted waiting times, holding constant other demographic,
                                                       economic, loan-specific, and COVID-19-related variables. This relationship remains significant
                                                       after including additional interaction terms."),
-                                                    gt_output('zip_simple')
+                                                    column(6, gt_output('zip_simple')),
+                                                    column(6, gt_output("zip_simple_nointeractions"))
                                                   )),
                                          tabPanel("Counties",
                                                   fluidRow(
@@ -360,7 +363,16 @@ server <- function(input, output) {
       zip_simple %>%
         gt() %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
-        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
+        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05") %>%
+        tab_header(title = "With County Fixed Effects")
+    })
+    
+    output$zip_simple_nointeractions <- render_gt({
+      zip_simple_nointeractions %>%
+        gt() %>%
+        fmt_missing(columns = everything(), missing_text = "") %>%
+        tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05") %>%
+        tab_header(title = "Without County Fixed Effects")
     })
     
     output$marginalRace3 <- renderPlot({
