@@ -97,7 +97,6 @@ ppp_allstates_pvi <- left_join(ppp_allstates, zip_pvi,
 
 # Now we want to read in some county-level COVID data (reweighted by 
 # population ratios)
-
 county_zip_crosswalk <- 
   read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%

@@ -1,0 +1,542 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(openintro)
+library(zoo)
+library(bizdays)
+library(readxl)
+library(lubridate)
+
+cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+```
+
+```{r}
+# no_banks <- readRDS('old_data/ppp_allvars_1018_rural.rds')
+```
+
+
+```{r}
+loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
+```
+
+
+```{r}
+acs_income <- 
+  read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
+                       skip = 1) %>%
+  clean_names() %>%
+  select(id, geographic_area_name, 
+         estimate_median_income_dollars_families_families) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         estimate_median_income_dollars_families_families = 
+           as.double(estimate_median_income_dollars_families_families))
+
+banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
+  'ZIP' = col_character()))%>%
+  clean_names() %>%
+  select(zip) %>%
+  filter(zip != 0) %>%
+  
+  # FDIC data drops leading zeroes from zip codes, so we add them back!
+  
+  mutate(zip = str_pad(zip, width = 5, "left", "0")) %>%
+  mutate(zip = str_trim(zip, side = "both")) %>%
+  group_by(zip) %>%
+  summarize(number = n(), .groups = "drop")
+
+pop <- read_csv("raw_data/acs_pop/ACSDT5Y2018.B01003_data_with_overlays_2020-10-06T100104.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  select(-margin_of_error_total)
+
+race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name,percent_estimate_race_total_population_one_race_white) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_race_total_population_one_race_white = 
+           as.double(percent_estimate_race_total_population_one_race_white))
+
+educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv",
+                 skip = 1) %>%
+  clean_names() %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)))
+
+hs_educ <- educ %>%
+  select(id, geographic_area_name, 
+         estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+```
+```{r}
+pop_race <- inner_join(pop, race, by = "geographic_area_name")
+income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name") %>%
+  select(-id.y, -id.x) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+income_pop_race_educ <- inner_join(income_pop_race, hs_educ, by = "geographic_area_name") %>%
+  select(-id)
+
+acs_with_banking <- left_join(income_pop_race_educ, banks, 
+                              by = c("geographic_area_name" = "zip")) %>%
+  # replace no banks in a county with zero banks in a county
+  replace_na(replace = list(number = 0))
+
+ppp_with_demographics <- left_join(loan_only, acs_with_banking,  
+                                   by = c("zip" = "geographic_area_name")) %>%
+  mutate(banks_per_pop = number/(estimate_total/10000)) %>%
+  mutate(high_school_pct = as.double(high_school_pct)) %>%
+  drop_na(high_school_pct)
+```
+```{r}
+zip_data_with_dummies <- ppp_with_demographics %>%
+  mutate("loan_350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
+         "loan_150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
+         "loan_5mil_10mil" = ifelse(loan_range == "a $5-10 million", 1, 0),
+         "loan_2mil_5mil" = ifelse(loan_range == "b $2-5 million", 1, 0),
+         "loan_1mil_2mil" = ifelse(loan_range == "c $1-2 million", 1, 0),
+         "loan_150_less" = ifelse(loan_range == "less than 150k", 1, 0)
+         )
+```
+
+
+```{r}
+zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", 
+                             skip = 1) %>%
+  clean_names() %>%
+  mutate(x116th_congressional_district = 
+           ifelse(x116th_congressional_district == "00",
+                  "AL", x116th_congressional_district)) %>%
+  mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, 
+                         sep = "-")) %>%
+  select(-state_code, -population_2010) %>%
+  group_by(zip_census_tabulation_area) %>%
+  
+  # de-duplicate by assigning zips to only the CD where most of them are in
+  
+  arrange(cd116_to_zcta5_allocation_factor) %>%
+  mutate(zip_census_tabulation_area = 
+           str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
+  slice(1)
+
+cook_pvi <- read_csv(file = 'raw_data/cook_pvi/data-5vPn3.csv') %>%
+  clean_names() %>%
+  mutate(pvi_split = str_split(pvi, pattern = "\\+")) %>%
+  
+  # I split the party preferences here (e.g. D-10), which is the next sequence
+  # after str_splits
+  
+  unnest(pvi_split) %>%
+  group_by(dist) %>%
+  mutate(col = seq_along(dist)) %>%
+  spread(key = col, value = pvi_split) %>%
+  rename(party = "1", pct = "2") %>%
+  
+  # After splitting I mutate the percentages to doubles and then convert
+  # democratic percentages to negatives.
+  
+  mutate(pct = as.double(pct), dem_indicator = ifelse(party == "D", -1, 1)) %>%
+  mutate(pct = pct * dem_indicator) %>%
+  select(dist, party, pct)
+
+zip_pvi <- left_join(zip_cd_crosswalk, cook_pvi, by = c("cd_name" = "dist")) %>%
+  drop_na(pct) %>%
+  select(zip_census_tabulation_area, cd_name, pct) %>%
+  mutate(zip_census_tabulation_area = as.character(zip_census_tabulation_area))
+
+ppp_allstates_pvi <- left_join(zip_data_with_dummies, zip_pvi, 
+                               by = c("zip" = "zip_census_tabulation_area")) %>%
+  drop_na(pct)
+```
+```{r}
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+# 3-27 is 1 week before April 3rd when apps opened so we filter here for
+# less computational need + b/c we only need 7-day averages
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date > as.Date("2020-03-27")) %>%
+  select(-county, -state)
+
+# 7 day rolling average cases and deaths around application start date for
+# every ZIP code
+
+weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, 
+                             by = c("county" = "fips")) %>%
+  filter(date <= as.Date("2020-04-03")) %>%
+  group_by(zip) %>%
+  mutate(mean_cases_app_start = mean(cases), 
+         mean_deaths_app_start = mean(deaths)) %>%
+  select(-cases, -deaths, -date) %>%
+  distinct() %>%
+  
+  # To convert to zip code numbers we multiply by residential ratios
+  # of each zip code per county, meaning we get an estimated # of deaths
+  # assuming that deaths are equally distributed based on population.
+  
+  mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
+         mean_start_deaths_weighted = mean_deaths_app_start * res_ratio) %>%
+  select(-mean_cases_app_start, -mean_deaths_app_start) %>%
+  mutate(mean_start_cases_weighted = sum(mean_start_cases_weighted),
+         mean_start_deaths_weighted = sum(mean_start_deaths_weighted)) %>%
+  select(-county, -res_ratio) %>%
+  distinct()
+
+ppp_allstates_covid <- left_join(ppp_allstates_pvi, weighted_cases1, by = "zip") %>%
+  drop_na(mean_start_cases_weighted, mean_start_deaths_weighted)
+
+ppp_covidadj <- ppp_allstates_covid %>%
+  mutate(mean_start_cases_weighted = 
+           mean_start_cases_weighted * 10000 / estimate_total,
+         mean_start_deaths_weighted = 
+           mean_start_deaths_weighted * 10000 / estimate_total)
+
+```
+
+```{r}
+rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
+  clean_names() %>%
+  select(-state) %>%
+  
+  # This only includes ZIP codes that are rural, so everything else isn't.
+  
+  mutate(rural = 1)
+
+ppp_rural <- left_join(ppp_covidadj, rural, by = "zip") %>%
+  mutate(rural = replace_na(rural, 0)) %>%
+  mutate(rural = as.double(rural))
+
+# renamed ppp_rural to no_banks in console
+
+no_banks <- no_banks %>%
+  rename("population" = "estimate_total")
+
+```
+
+
+```{r}
+# Latest covid cases -- using what I already generated in RStudio Cloud before
+
+weighted_cases_current_6 <- read_csv('old_data/weighted_cases_current_6.csv')
+
+current_covid <- left_join(no_banks, 
+                              weighted_cases_current_6,
+                              by = c("zip", "date_approved")) %>%
+  drop_na(mean_end_cases_weighted, mean_end_deaths_weighted)
+
+current_covid <- current_covid %>%
+  mutate(mean_end_cases_weighted = mean_end_cases_weighted * 10000 / population,
+         mean_end_deaths_weighted = mean_end_deaths_weighted * 10000 / population)
+```
+
+
+```{r}
+# Marital status
+
+marital <- 
+  read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
+                    skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, 
+         estimate_now_married_except_separated_population_15_years_and_over) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         geographic_area_name = 
+           str_trim(geographic_area_name, side = "both")) %>%
+  rename("married_percent" = 
+           "estimate_now_married_except_separated_population_15_years_and_over")
+
+ppp_marital <- left_join(current_covid, marital, 
+                                      by = c("zip" = "geographic_area_name")) %>%
+  drop_na(married_percent) %>%
+  mutate(married_percent = as.double(married_percent))
+
+```
+
+```{r}
+state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
+                             sheet = "2020-06-22_Social Distancing Or", skip = 1,
+                             col_types = c("guess", "date", "date", "date", 
+                                           "date",
+                                           "date", "date", "guess", "date",
+                                           "date", "date", "date", "date",
+                                           "date")) %>%
+  clean_names() %>%
+  select(state, stay_at_home_start, non_essential_business_closure_start, 
+         stay_at_home_end, 
+         non_essential_business_closure_end) %>%
+  
+  # We just make NAs some later date just so they don't mess up our inequalities
+  # In this case I just use January 2021 since this is outside the scope of the
+  # program.
+  
+  mutate(stay_at_home_start = 
+           replace_na(stay_at_home_start, as.Date("2021-01-01")),
+         stay_at_home_end = replace_na(stay_at_home_end, as.Date("2021-01-01")),
+         non_essential_business_closure_start = 
+           replace_na(
+             non_essential_business_closure_start, as.Date("2021-01-01")),
+         non_essential_business_closure_end = 
+           replace_na(
+             non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
+  
+  mutate(stay_at_home_apr = ifelse(stay_at_home_start <= as.Date("2020-04-03"),
+                                   1, 0),
+         non_essential_closure_apr = 
+           ifelse(non_essential_business_closure_start <= as.Date("2020-04-03"),
+                  1, 0)) %>%
+  mutate(stay_at_home_apr = replace_na(stay_at_home_apr, 0),
+         non_essential_closure_apr = replace_na(non_essential_closure_apr, 0))
+
+# We use the congressional district names as a way to match restrictions by 
+# state -- this is why we needed the openintro package, since it includes a
+# function to convert state abbrevs into full state names with which
+# we can match to the Kaiser data on state level policy actions.
+
+states <- ppp_marital %>%
+  select(cd_name, date_approved) %>%
+  mutate(state_abb = str_sub(cd_name, 1, 2)) %>%
+  mutate(state = abbr2state(state_abb))
+
+# This codes the final dummies for whether states had stay at home
+# policies for the dates I care about -- i.e. approval dates.
+
+states_merged <- left_join(states, state_policies, by = "state") %>%
+  mutate(stay_at_home_current = 
+           ifelse(stay_at_home_start <= date_approved & 
+                    date_approved <= stay_at_home_end,
+                  1, 0),
+         non_essential_closure_current =  
+           ifelse(non_essential_business_closure_start <= date_approved & 
+                    date_approved <= non_essential_business_closure_end,
+                  1, 0))
+
+states_merged_cleaned <- states_merged %>%
+  select(stay_at_home_apr, stay_at_home_current, 
+         non_essential_closure_apr, non_essential_closure_current)
+```
+```{r}
+ppp_statepolicies <- bind_cols(ppp_marital, states_merged_cleaned)
+```
+
+
+```{r}
+# Adding in some COVID-related unemployment data too! This is from the BLS
+
+# This is taken from earlier when we needed to do county-zip weighting.
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+# And this reads in the unemployment data. We combine the state and county
+# FIPS code so we can get a full FIPS code for the county, which is how we'll
+# do the crosswalking later on. 
+
+unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
+  clean_names() %>%
+  select(state_fips_code, county_fips_code, period, 
+         unemployed, labor_force, unemployment_rate_percent) %>%
+  mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
+  drop_na(fips_code)
+
+# Weight this by population, as we did with the COVID test. What this means 
+# here is that we multiply raw unemployment and labor force numbers by the 
+# residential ratio each ZIP code occupies as a proportion of county, and
+# then divide those new numbers (after summing across different counties for
+# zip codes in multiple) to get an estimate of the zip unemployment rate.
+
+unemploy_zip <- left_join(county_zip_crosswalk, unemploy,
+                          by = c("county" = "fips_code")) %>%
+  select(-state_fips_code, -county_fips_code) %>%
+  group_by(zip, period) %>%
+  mutate(labor_force = labor_force * res_ratio,
+         unemployed = unemployed * res_ratio) %>%
+  summarize(total_labor = sum(labor_force),
+            total_unemployed = sum(unemployed), .groups = "drop") %>%
+  mutate(unemployment_rate = total_unemployed * 100 / total_labor) %>%
+  
+  # Again ,we only care about unemployment in certain months.
+  
+  filter(period %in% c("Apr-20", "May-20", "Jun-20", "Jul-20", "Aug-20 p"))
+
+# We convert the periods to dates which makes it
+# helpful for us, and then extract the month so we can do some matching with
+# when loans were approved!
+
+unemploy_zip_dates <- unemploy_zip %>%
+  mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
+  mutate(period = as.Date(paste("01", period, sep="-"), "%d-%b-%y")) %>%
+  mutate(month = month(period))
+```
+
+```{r}
+# Matching months between the PPP data and our unemployment data
+
+ppp_months <- ppp_statepolicies %>%
+  mutate(month = month(date_approved))
+
+# This means that we have a variable for the unemployment rate in the ZIP code
+# that we estimated, based on the month the loan was approved.
+
+ppp_unemploy <- left_join(ppp_months, unemploy_zip_dates, 
+                                       by = c("zip", "month"))
+
+# Here we calculate the unemployment rate when the apps initially opened, which
+# is just the April unemployment rate, doing the same thing
+
+unemploy_apr <- unemploy_zip_dates %>%
+  filter(month == 4) %>%
+  select(-total_labor, -total_unemployed, -period) %>%
+  rename("unemployment_rate_apr" = "unemployment_rate")
+
+ppp_unemploy_2 <- left_join(ppp_unemploy,
+                                         unemploy_apr, by = "zip") %>%
+  select(-total_labor, -total_unemployed, -period) %>%
+  drop_na(unemployment_rate, unemployment_rate_apr)
+```
+
+```{r}
+# Adding in gini index by ZIP code, using the same cleaning methods we've used
+# for every ACS dataset so far.
+
+inequality <- 
+  read_csv('raw_data/acs_gini/ACSDT5Y2018.B19083_data_with_overlays_2020-10-26T225918.csv',
+                       skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, estimate_gini_index) %>%
+  mutate(estimate_gini_index = as.double(estimate_gini_index),
+         geographic_area_name = 
+           map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+ppp_gini <- left_join(ppp_unemploy_2, inequality, 
+                              by = c("zip" = "geographic_area_name")) %>%
+  select(-month.y) %>%
+  rename("month" = "month.x") %>%
+  drop_na(estimate_gini_index)
+```
+
+```{r}
+payroll <- 
+  read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
+           skip = 1) %>%
+  clean_names() %>%
+  filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
+  select(geographic_area_name, annual_payroll_1_000) %>%
+  mutate(zip = str_sub(geographic_area_name, 5, 9),
+         annual_payroll_1_000 = as.double(annual_payroll_1_000)) %>%
+  rename("payroll" = "annual_payroll_1_000") %>%
+  drop_na(payroll) %>%
+  select(-geographic_area_name)
+
+ppp_payroll <- left_join(ppp_gini, payroll, by = "zip") %>%
+  drop_na(payroll)
+```
+```{r}
+gender <- 
+  read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  select(geographic_area_name, 
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male = 
+           as.double(percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male)) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+most_recent_2 <- left_join(ppp_payroll, 
+                           gender, by = c("zip" = "geographic_area_name")) %>%
+  rename("male_percent" = 
+           "percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male") %>%
+  drop_na(male_percent)
+```
+```{r}
+biz_count <- 
+  read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlays_2020-10-19T095307.csv",
+                      skip = 1) %>%
+  clean_names()  %>%
+  
+  # We do the same cleaning things that we did the last time in file 1.
+  
+  mutate(geographic_area_name = substring(geographic_area_name, 5, 9)) %>%
+  mutate(geographic_area_name = 
+           str_trim(geographic_area_name, side = "both")) %>%
+  
+  # We only want total business counts.
+  
+  filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
+  select(geographic_area_name, number_of_establishments)
+
+# Join and do some drop_nas for due diligence so we don't end up with
+# empty rows.
+
+most_recent_2 <- left_join(most_recent_2, biz_count, 
+                              by = c("zip" = "geographic_area_name")) %>%
+  #rename("white_percent" = "White_percent") %>%
+  rename("white_percent" = "percent_estimate_race_total_population_one_race_white",
+         "median_family_income" = "estimate_median_income_dollars_families_families",
+         "cook_pvi" = "pct") %>%
+  drop_na(number_of_establishments, white_percent,
+          high_school_pct, banks_per_pop, cook_pvi, mean_start_cases_weighted,
+          mean_start_deaths_weighted, rural) %>%
+  mutate(businesses_per_pop = number_of_establishments / (population/10000)) %>%
+  select(-number_of_establishments)
+```
+
+```{r}
+# Adding in violent crime rates
+crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+                    skip = 1) %>%
+  clean_names() %>%
+  select(fips, annual_average_violent_crimes)
+
+# Don't need to run this again if you have it above
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+# Weighting by population as usual. We do this the same way we did
+# unemployment, but we've kept the ACS population estimates so we can calculate
+# our own per-population crime rate estimates.
+
+crime_zip <- left_join(county_zip_crosswalk, crime, by = c("county" = "fips")) %>%
+  mutate(annual_average_violent_crimes = annual_average_violent_crimes * res_ratio) %>%
+  drop_na(annual_average_violent_crimes) %>%
+  group_by(zip) %>%
+  summarize(total_crime = sum(annual_average_violent_crimes), .groups = "drop")
+
+most_recent <- left_join(most_recent_2, crime_zip, by = "zip") %>%
+  mutate(violent_crime_rate = total_crime * 100000 / population) %>%
+  drop_na(violent_crime_rate) %>%
+  select(-total_crime)
+```
+
+```{r}
+# Cleaning up + doing all my modifications
+
+most_recent <- most_recent %>%
+ mutate(median_family_income = median_family_income / 1000,
+         businesses_per_pop = businesses_per_pop / 100,
+         violent_crime_rate = violent_crime_rate / 10,
+         payroll = payroll / 1000,
+         minority_percent = 100 - white_percent) %>%
+  mutate(delay = ifelse(date_approved > as.Date("2020-04-16"), 1, 0),
+         business_days = bizdays(as.Date("2020-04-03"), date_approved, 
+                                 'mycal')) %>%
+  select(-white_percent) %>%
+  mutate(zip = as.factor(zip)) %>%
+  mutate(lender = as.factor(lender))
+```
+

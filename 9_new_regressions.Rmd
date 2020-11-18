@@ -10,10 +10,28 @@ library(MASS)
 library(pscl)
 library(tidyverse)
 library(texreg)
+library(readxl)
+library(janitor)
 ```
 
 ```{r}
-most_recent <- readRDS('most_recent_zip_1117.rds')
+#most_recent <- readRDS('most_recent_zip_1117.rds')
+
+# Adding in FIPS to county
+
+most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
+
+zip_county_crosswalk <- read_excel('raw_data/crosswalks/ZIP_COUNTY_092020.xlsx') %>%
+  clean_names() %>%
+  select(zip, county, res_ratio) %>%
+  group_by(zip) %>%
+  arrange(desc(res_ratio)) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(-res_ratio) %>%
+  rename("fips" = "county")
+
+most_recent_2 <- left_join(most_recent, zip_county_crosswalk, by = "zip")
 ```
 
 
@@ -116,7 +134,7 @@ demographics <- felm(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate|fips|0|zip, data = most_recent)
+    violent_crime_rate|fips + lender|0|zip, data = most_recent)
 
 # Regression 2: Demographics and Loan-Specific
 
@@ -136,12 +154,7 @@ loan_spec <- felm(
     loan_1mil_2mil +
     loan_2mil_5mil + 
     loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    national +
-    cu +
-    bank_ppp_issued + 
-    jobs_reported|fips|0|zip, data = most_recent)
+    jobs_reported|fips + lender|0|zip, data = most_recent)
 
 # Regression 3: economics
 
@@ -161,17 +174,12 @@ econ <- felm(
     loan_2mil_5mil + 
     loan_5mil_10mil + 
     delay +
-    preference + 
-    requirement + 
-    national +
-    cu +
-    bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
     businesses_per_pop + 
     payroll +
     unemployment_rate_apr + 
-    unemployment_rate|fips|0|zip, data = most_recent)
+    unemployment_rate|fips + lender|0|zip, data = most_recent)
 
 # Regression 4: COVID 
 
@@ -191,11 +199,6 @@ covid <- felm(
     loan_1mil_2mil +
     loan_2mil_5mil + 
     loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    national +
-    cu +
-    bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
     businesses_per_pop + 
@@ -209,7 +212,7 @@ covid <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current|fips|0|zip,
+    non_essential_closure_current|fips + lender|0|zip,
   data = most_recent)
 
 # Regression 5: interactions
@@ -230,11 +233,6 @@ interactions <- felm(
     loan_1mil_2mil +
     loan_2mil_5mil + 
     loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    national +
-    cu +
-    bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
     businesses_per_pop + 
@@ -254,7 +252,7 @@ interactions <- felm(
     I(minority_percent * cook_pvi) +
     I(minority_percent * rural) + 
     I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate)|fips|0|zip,
+    I(minority_percent * violent_crime_rate)|fips + lender|0|zip,
   data = most_recent)
 
 ```
@@ -419,7 +417,7 @@ interactions_check <- felm(
 
 # Negative binomial on Zip -- zero inflated negbin from the pscl library
 
-dems_binomial <- glm.nb(business_days ~ 1 + 
+dems_binomial <- zeroinfl(business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -428,7 +426,7 @@ dems_binomial <- glm.nb(business_days ~ 1 +
     rural +
     estimate_gini_index +
     violent_crime_rate,
-    data = most_recent)
+    data = most_recent, dist = "negbin")
 
 
 loan_binomial <- glm.nb(business_days ~ 1 + 
