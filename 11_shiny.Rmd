@@ -7,6 +7,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggeffects)
+library(janitor)
+library(lubridate)
+library(bizdays)
+
+cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```
 
 
@@ -18,6 +23,96 @@ most_recent <- readRDS('most_recent_zip.rds')
 most_recent_county <- readRDS('most_recent_county.rds')
 ```
 
+```{r}
+# Adding in the race days stuff
+
+race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
+                skip = 1) %>%
+  clean_names() %>%
+  dplyr::select(geographic_area_name, 
+                    percent_estimate_race_total_population_one_race_white) %>%
+  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6)),
+         percent_estimate_race_total_population_one_race_white = 
+           as.double(percent_estimate_race_total_population_one_race_white)) %>%
+  mutate(geographic_area_name = 
+           str_trim(geographic_area_name, side = "both")) %>%
+  mutate(minority_percent = 
+           100 - percent_estimate_race_total_population_one_race_white) %>%
+  dplyr::select(-percent_estimate_race_total_population_one_race_white)
+```
+
+```{r}
+ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
+  clean_names() %>%
+  select(loan_range, zip, date_approved, lender, address, city, state,
+         jobs_reported) %>%
+  drop_na(zip, jobs_reported) %>%
+  
+  # This calculates the date on which loans were approved vs. when apps opened.
+  mutate(date_approved = mdy(date_approved), 
+         days_to_approval = date_approved - mdy("04/03/2020"),
+         zip = as.character(zip))
+
+ppp_150_newcol <- ppp_150 %>%
+  mutate(loan_amount = NA) %>%
+  mutate(loan_amount = as.character(loan_amount))
+
+sba_cleaning <- function(file) {
+  x <- read_csv(file, col_types = cols()) %>%
+    clean_names() %>%
+    select(loan_amount, zip, date_approved, lender, city, state,
+           jobs_reported) %>%
+    drop_na(zip, jobs_reported) %>%
+    mutate(date_approved = mdy(date_approved), 
+         days_to_approval = date_approved - mdy("04/03/2020"),
+         zip = as.character(zip))
+}
+
+# run for Mac
+
+file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+# run for Windows
+
+file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+all_states<- tibble()
+
+for(i in 1:length(file.names2)) {
+  file <- sba_cleaning(paste("raw_data/sba/states/",file.names2[i], sep = ""))
+  all_states <- rbind(all_states, file)
+}
+
+all_states2 <- all_states %>%
+  mutate(loan_range = "less than 150k", address = NA)
+
+ppp_total <- rbind(ppp_150_newcol, all_states2)
+```
+
+
+```{r}
+loan_race <- left_join(ppp_total, race, 
+                       by = c("zip" = "geographic_area_name")) %>%
+  drop_na(minority_percent) %>%
+  drop_na(state) %>%
+  select(state, date_approved, minority_percent) %>%
+  mutate(business_days = bizdays(as.Date("2020-04-03"), date_approved, 
+                                 'mycal')) %>%
+  mutate(cuts = cut(minority_percent,
+                    seq(0, 100, by = 10))) %>%
+  select(- minority_percent)
+
+national <- loan_race %>%
+  group_by(cuts) %>%
+  summarize(mean_days = mean(business_days), .groups = "drop") %>%
+  mutate(state = "National")
+
+states <- loan_race %>%
+  group_by(state, cuts) %>%
+  summarize(mean_days = mean(business_days), .groups = "drop")
+
+race_days3 <- rbind(national, states)
+```
 
 ```{r}
 interactions <- lm_robust(

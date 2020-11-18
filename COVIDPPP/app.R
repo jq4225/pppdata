@@ -20,8 +20,7 @@ county_regressors <- read_excel('regressors.xlsx', sheet = "Sheet2")
 
 county_simple <- read_excel('simple_regression2.xlsx', sheet = "county")
 
-race_days <- readRDS('race_days2.rds') %>%
-  mutate(state = toupper(state))
+race_days <- readRDS('race_days3.rds')
 
 descriptives_orig <- read_excel('descriptives.xlsx', sheet = "Sheet1")
 
@@ -77,10 +76,11 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                and the loan approval date."),
                              p("Later, I also attempt to disaggregate these results by individual banks and bank type, using the 
                                bank names provided in the SBA's dataset."),
-                             p("The basic OLS setup is as follows: "),
+                             p("The basic OLS setup is as follows in the ZIP code case: "),
                              uiOutput('OLS1'),
                              
-                             p("Later, I add in additional interaction terms between race and other demographic variables.")
+                             p("Later, I add in additional interaction terms between race and other demographic variables. For the
+                               county case, used as a robustness check, fixed effects are excluded.")
                            ))),
                   tabPanel("Descriptives",
                            mainPanel(
@@ -97,7 +97,7 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                          tabPanel("Waiting Times by Race", 
                                                   fluidRow(
                                                     p("Nationally, there is a slightly positive correlation between
-                                                      black populations and wait times without any controls. You
+                                                      minority populations and wait times without any controls. You
                                                       can see state-level visualizations here."),
                                                     selectizeInput("stateInput", "State",
                                                                    choices = state.abb,  
@@ -155,7 +155,7 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                       regressions for a couple of the country's largest banks to see if applying to
                                                       these banks is positively associated with more racial disparities. I also break
                                                       loan applications down by two types of banks I can easily identify in the dataset:
-                                                      large national banks, which are identified by the words 'national association' or
+                                                      large nationally chartered, which are identified by the words 'national association' or
                                                       'n.a.' in their names in the datset, and credit unions. All of these regressions
                                                       exclude interaction terms between minority_percent and other variables, but
                                                       include all of the background variables, as in Model 4 in the ZIP and county 
@@ -166,7 +166,9 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                       banks are likely to grant loans to high-minority localities faster, holding constant 
                                                       all of the variables identified in Model 4. The absolute advantage of going to a
                                                       national bank is larger at higher minority percentages. The abbreviated regression
-                                                      tables for both individual banks and bank types are shown below."),
+                                                      tables for both individual banks and bank types are shown below: the 'bank' indicator
+                                                      refers to a variable that takes the value 1 when the lending institution is the bank indicated
+                                                      in the column title and 0 otherwise -- so, its definition is different in each model."),
                                                     column(6, gt_output('zip_banks')),
                                                     column(6, gt_output('county_banks'))
                                                   )),
@@ -257,22 +259,21 @@ server <- function(input, output) {
     
     output$OLS1 <- renderUI({
       withMathJax(
-        "$$y_i = \\alpha_{locality} + \\beta minority_{locality} + X'_i \\gamma + \\epsilon_i$$
+        "$$y_i = \\alpha_{county} + \\beta minority_{ZIP} + X'_i \\gamma + \\epsilon_i$$
         Where \\(y_i\\) is the number of business days until the loan is approved, 
-                 \\(\\alpha_{locality}\\) are locality fixed effects (either ZIP or county), 
-                 \\(minority_{locality}\\) is the percent of the locality's population that is non-white, 
-                 and \\(X_i\\) is a vector of loan-specific controls (e.g. loan size).")
+                 \\(\\alpha_{county}\\) are county fixed effects, 
+                 \\(minority_{ZIP}\\) is the percent of the ZIP code's population that is non-white, 
+                 and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
     })
     
     output$natPlot <- renderPlot({
       race_days %>%
-        group_by(cuts) %>%
-        summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
+        filter(state == "National") %>%
         ggplot(aes(x = cuts, y = mean_days)) +
         geom_col(fill = "lightblue3") +
-        geom_hline(yintercept = 35.59, color = "red",
+        geom_hline(yintercept = 24.73, color = "red",
                    linetype = "dashed") +
-        scale_x_discrete(name = "Black Percent",
+        scale_x_discrete(name = "Non-white as Percent of Population",
                          labels = c("0-10%",
                                     "10-20%",
                                     "20-30%",
@@ -286,21 +287,19 @@ server <- function(input, output) {
         labs(title = "Mean Loan Waiting Time, National",
              subtitle = 
                "Dashed line indicates national average.",
-             y = "Mean Waiting Time (days)") +
+             y = "Mean Waiting Time (business days)",
+             fill = "State") +
         theme_classic() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
     
     output$statePlot <- renderPlot({
       race_days %>%
-        filter(state == input$stateInput) %>%
-        group_by(cuts) %>%
-        summarize(mean_days = mean(days_to_approval), .groups = "drop") %>%
-        ggplot(aes(x = cuts, y = mean_days)) +
-          geom_col(fill = "lightblue3") +
-          geom_hline(yintercept = 35.59, color = "red",
-                     linetype = "dashed") +
-          scale_x_discrete(name = "Black Percent",
+        filter(state %in% c(input$stateInput, "National")) %>%
+        group_by(state, cuts) %>%
+        ggplot(aes(x = cuts, y = mean_days, fill = state)) +
+          geom_col(position = "dodge") +
+          scale_x_discrete(name = "Non-white as Percent of Population",
                            labels = c("0-10%",
                                       "10-20%",
                                       "20-30%",
@@ -311,10 +310,10 @@ server <- function(input, output) {
                                       "70-80%",
                                       "80-90%",
                                       "90-100%")) +
-        labs(title = paste("Mean Loan Waiting Time,", input$stateInput),
-             subtitle = 
-             "Dashed line indicates national average.",
-             y = "Mean Waiting Time (days)") +
+          scale_fill_manual(values = c("coral", "lightblue3")) +
+        labs(title = paste("Mean Loan Waiting Time,", input$stateInput, 
+                           "vs. National Average"),
+             y = "Mean Waiting Time (business days)") +
         theme_classic() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
