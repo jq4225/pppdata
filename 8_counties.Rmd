@@ -13,6 +13,7 @@ library(openintro)
 library(broom)
 library(lmtest)
 library(sandwich)
+library(bizdays)
 
 #loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
@@ -74,6 +75,9 @@ loan_only <- loan_only %>%
   drop_na(jobs_reported)
 ```
 
+```{r}
+loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
+```
 
 ```{r}
 educ <- read_csv('raw_data/county/county_edu.csv', skip = 1) %>%
@@ -87,6 +91,7 @@ hs_id <- educ %>%
 
 ```{r}
 # This is household median income -- I think I should probably replace the family median income thing with this
+
 income <- read_csv('raw_data/county/county_income.csv', skip = 1) %>%
   clean_names() %>%
   select(id, geographic_area_name, estimate_households_median_income_dollars) %>%
@@ -463,9 +468,33 @@ gender <-
   mutate(fips = map_chr(id, ~ substring(., 10))) %>%
   select(-id)
 
-most_recent_county_2 <- left_join(most_recent_county, gender, by = "fips") %>%
+most_recent_county_2 <- left_join(county_gdp, gender, by = "fips") %>%
   drop_na(male_percent)
 ```
 
+```{r}
+# Integrating the transformations I did in the ols_updated file here too
+cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+
+most_recent_county <- most_recent_county_2 %>%
+ mutate(median_income = median_income / 1000,
+         
+         # This is b/c we didn't do per 10,000 people before, but we want 
+         # hundreds of businesses 
+         # per 10,000 people, or 100
+         
+         businesses_per_pop = businesses_per_pop * 100,
+         violent_crime_rate = violent_crime_rate / 10,
+         pop_den = pop_den / 100,
+         black_percent = black_percent * 100,
+         white_percent = white_percent * 100,
+         gdp = gdp / 1000) %>%
+  mutate(delay = ifelse(date_approved > as.Date("2020-04-16"), 1, 0),
+         business_days = bizdays(as.Date("2020-04-03"), date_approved, 
+                                 'mycal')) %>%
+  mutate(minority_percent = 100 - white_percent) %>%
+  select(-black_percent) %>%
+  mutate(fips = as.factor(fips))
+```
 
 
