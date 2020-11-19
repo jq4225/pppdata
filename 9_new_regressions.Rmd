@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(lfe)
 library(MASS)
 library(pscl)
+library(fixest)
 library(tidyverse)
 library(texreg)
 library(readxl)
@@ -19,9 +20,9 @@ library(janitor)
 
 # Adding in FIPS to county
 
-most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
+most_recent <- readRDS('most_recent_zip_1117.rds')
 
-most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
+# most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
 
 zip_county_crosswalk <- read_excel('raw_data/crosswalks/ZIP_COUNTY_092020.xlsx') %>%
   clean_names() %>%
@@ -214,8 +215,10 @@ covid <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current|lender|0|zip,
+    non_essential_closure_current|lender|0|zip + state,
   data = most_recent)
+
+# Take out state clustering here if necessary
 
 covid_fe <- felm(
   business_days ~ 1 + 
@@ -246,7 +249,7 @@ covid_fe <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current|fips + lender|0|zip,
+    non_essential_closure_current|fips + lender|0|zip + state,
   data = most_recent)
 
 # Regression 5: interactions
@@ -286,7 +289,7 @@ interactions <- felm(
     I(minority_percent * cook_pvi) +
     I(minority_percent * rural) + 
     I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate)|fips + lender|0|zip,
+    I(minority_percent * violent_crime_rate)|fips + lender|0|zip + state,
   data = most_recent)
 
 ```
@@ -304,7 +307,7 @@ demographics_check <- felm(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate|0|0|zip, data = most_recent_both)
+    county_crime_rate|0|0|zip + fips, data = most_recent_both)
 
 # Regression 2: Demographics and Loan-Specific
 
@@ -324,7 +327,7 @@ loan_spec_check <- felm(
     loan_1mil_2mil +
     loan_2mil_5mil + 
     loan_5mil_10mil + 
-    jobs_reported|lender|0|zip, data = most_recent_both)
+    jobs_reported|lender|0|zip + fips, data = most_recent_both)
 
 # Regression 3: economics
 
@@ -349,7 +352,7 @@ econ_check <- felm(
     businesses_per_pop + 
     payroll +
     county_unemployment_rate_apr + 
-    county_unemployment_rate|lender|0|zip, data = most_recent_both)
+    county_unemployment_rate|lender|0|zip + fips, data = most_recent_both)
 
 # Regression 4: COVID 
 
@@ -382,7 +385,7 @@ covid_check <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current|lender|0|zip,
+    non_essential_closure_current|lender|0|zip + fips + state,
   data = most_recent_both)
 
 # Regression 5: interactions
@@ -422,7 +425,7 @@ interactions_check <- felm(
     I(minority_percent * cook_pvi) +
     I(minority_percent * rural) + 
     I(minority_percent * estimate_gini_index) +
-    I(minority_percent * county_crime_rate)|lender|0|zip,
+    I(minority_percent * county_crime_rate)|lender|0|zip + fips + state,
   data = most_recent_both)
 ```
 
@@ -666,6 +669,88 @@ covid_binomial <- glm.nb(business_days ~ 1 +
     mean_end_cases_weighted +
     mean_end_deaths_weighted,
     data = most_recent)
+```
+```{r}
+# Trying another way of doing negative binomial w/ fixed effects
+dems_binomial <- fenegbin(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate|fips, most_recent)
+
+
+loan_binomial <- fenegbin(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate +
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported|lender + fips, most_recent)
+
+econ_binomial <- fenegbin(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate +
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported + 
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate|lender + fips, most_recent)
+
+covid_binomial <-  fenegbin(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate +
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported + 
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate +
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted +
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|lender + fips, most_recent)
 ```
 
 
