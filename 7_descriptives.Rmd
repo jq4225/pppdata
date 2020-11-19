@@ -64,13 +64,29 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 ```{r}
 # Calculates mean for everything
 
-sapply(most_recent, mean)
+sapply(most_recent, mean) %>%
+  bind_rows() %>%
+  pivot_longer(cols = loan_range:fips, names_to = "variable", values_to = "mean")
 ```
 
 ```{r}
 # SD for everything
+most_recent <- most_recent %>%
+  select(business_days, median_family_income, minority_percent,
+         high_school_pct, married_percent, male_percent, cook_pvi,
+         rural, estimate_gini_index, violent_crime_rate, delay,
+         loan_150_less, loan_150_350, loan_350_1mil, loan_1mil_2mil,
+         loan_2mil_5mil, loan_5mil_10mil, jobs_reported, banks_per_pop,
+         businesses_per_pop, payroll, unemployment_rate_apr, 
+         unemployment_rate, mean_start_cases_weighted, mean_start_deaths_weighted,
+         mean_end_cases_weighted, mean_end_deaths_weighted, stay_at_home_apr,
+         stay_at_home_current, non_essential_closure_apr, non_essential_closure_current)
 
-sapply(most_recent, sd)
+
+sapply(most_recent, sd) %>%
+    bind_rows() %>%
+  pivot_longer(cols = business_days:non_essential_closure_current, 
+               names_to = "variable", values_to = "mean")
 ```
 
 ```{r}

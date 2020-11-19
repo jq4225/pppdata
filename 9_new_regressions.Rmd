@@ -6,8 +6,6 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(lfe)
-library(MASS)
-library(pscl)
 library(fixest)
 library(tidyverse)
 library(texreg)
