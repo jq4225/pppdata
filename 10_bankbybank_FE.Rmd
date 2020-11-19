@@ -41,9 +41,9 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
                        1, 0)) %>%
   mutate(wells = ifelse(lender == "wells fargo bank, national association",
                        1, 0))
-  
-# 
-# most_recent_county <- readRDS('most_recent_county_1115.rds') %>%
+
+# most_recent_county <- 
+#   readRDS('most_recent_county_1115.rds') %>%
 #   mutate(baml = ifelse(lender == "bank of america, national association",
 #                        1, 0)) %>%
 #   mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
@@ -53,11 +53,11 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
 #   mutate(wells = ifelse(lender == "wells fargo bank, national association",
 #                        1, 0)) %>%
 #     mutate(cu = 0) %>%
-#     mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+#     mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1,
 #                               cu),
-#          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+#          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1,
 #                               cu),
-#          cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+#          cu = ifelse(str_detect(lender, pattern = "credit union"), 1,
 #                               cu)) %>%
 #   mutate(national = 0) %>%
 #   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
@@ -397,4 +397,5 @@ roundtable_reg2 <- felm(
     I(business_roundtable * minority_percent)|fips|0|zip, 
     data = most_recent)
 ```
+
 
