@@ -14,6 +14,15 @@ library(janitor)
 ```
 
 ```{r}
+# Reading in actual recent data
+
+most_recent <- readRDS('most_recent_zip_nobanks_1118.rds') %>%
+  mutate(log_days = log(business_days + 1))
+
+most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds')
+```
+
+```{r}
 #most_recent <- readRDS('most_recent_zip_1117.rds')
 
 # Adding in FIPS to county
@@ -750,6 +759,72 @@ covid_binomial <-  fenegbin(business_days ~ 1 +
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current|lender + fips, most_recent)
+```
+```{r}
+# Trying log again just to see what will happen
+
+log_covid <- felm(log_days ~ 
+                    1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate +
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported + 
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate +
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted +
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|lender + fips|0|zip, data = most_recent)
+
+log_interactions_test <- felm(log_days ~ 
+                    1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate +
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported + 
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate +
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted +
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+      I(minority_percent^2)|lender + fips|0|zip, data = most_recent)
 ```
 
 

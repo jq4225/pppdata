@@ -1,0 +1,140 @@
+---
+title: "Matching Banks"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(openintro)
+```
+
+```{r}
+
+most_recent <- readRDS('most_recent_zip_nobanks_1118.rds') %>%
+  mutate(lender = tolower(lender), id = seq.int(n())) %>%
+  mutate(lender = str_replace(lender, pattern = "n.a.", 
+                              replacement = "national association"))
+  
+
+```
+
+```{r}
+
+deposits <- read_csv('raw_data/fdic/All_Reports_20200630_Total_Deposits.csv',
+                     col_types = cols()) %>%
+  clean_names() %>%
+  mutate(name = tolower(name), dep = as.double(dep)) %>%
+  select(cert, name, city, stalp, dep)
+
+locations <- read_csv('raw_data/fdic/OFFICES2_PART2.csv',
+                      col_types = cols()) %>%
+  clean_names() %>%
+  select(cert, stname) %>%
+  group_by(cert) %>%
+  distinct(stname) %>%
+  mutate(state = state2abbr(stname)) %>%
+  select(-stname) %>%
+  summarize(state_list = list(state), .groups = "drop")
+
+bank_deposit_locations <- left_join(deposits, locations, by = "cert") %>%
+  filter(state_list != "NULL") %>%
+  select(-city, -stalp)
+
+
+
+```
+
+```{r}
+
+# Let's try a straight join and see what happens first
+
+sba_banks <- most_recent %>%
+  select(lender) %>%
+  distinct()
+
+matched_lenders <- left_join(sba_banks, bank_deposit_locations, 
+                                   by = c("lender" = "name"))
+  
+
+```
+
+```{r}
+deposits_joined <- left_join(most_recent, bank_deposit_locations, 
+                             by = c("lender" = "name")) %>%
+  drop_na(dep) %>%
+  group_by(id) %>%
+  mutate(duplicates = n()) %>%
+  ungroup()
+
+deposits_noduplicate <- deposits_joined %>%
+  filter(duplicates == 1)
+
+deposits_duplicate <- deposits_joined %>%
+  filter(duplicates > 1)
+```
+
+
+```{r}
+states_matching <- deposits_duplicate %>%
+  drop_na(state_list, state) %>%
+  mutate(in_state = str_detect(state_list, pattern = state))
+
+deposits_dedup <- states_matching %>%
+  filter(in_state == TRUE) %>%
+  select(-in_state) %>%
+  group_by(id) %>%
+  mutate(duplicates = n()) %>%
+  ungroup()
+
+deposits_cleaned <- deposits_dedup %>%
+  filter(duplicates == 1)
+
+deposits_dirty <- deposits_dedup %>%
+  filter(duplicates > 1)
+
+deposits_filtered <- rbind(deposits_noduplicate, deposits_cleaned)
+
+remaining_banks <- deposits_dirty %>%
+  select(lender, state, state_list, cert) %>%
+  distinct()
+
+```
+
+```{r}
+
+old_data <- readRDS('ppp_loanonly_all_loans.rds')
+
+loan_numbers <- old_data %>%
+  select(lender) %>%
+  group_by(lender) %>%
+  summarize(bank_ppp_issued = n(), .groups = "drop") %>%
+  mutate(lender = tolower(lender))
+
+```
+
+```{r}
+deposits_loannumbers <- 
+  left_join(deposits_filtered, loan_numbers, by = "lender") %>%
+  group_by(id) %>%
+  mutate(duplicates = n()) %>%
+  ungroup() %>%
+  filter(duplicates == 1)
+```
+
+
+```{r}
+deposits_joined <- left_join(deposits_filtered, loan_numbers,
+                             by = "lender") %>%
+  select(-cert, -state_list)
+
+deposits_joined <- distinct(deposits_joined)
+
+deposits_joined %>%
+  group_by(id) %>%
+  mutate(duplicates = n()) %>%
+  ungroup() %>%
+  filter(duplicates > 1)
+```
+

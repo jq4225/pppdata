@@ -42,7 +42,6 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
   mutate(wells = ifelse(lender == "wells fargo bank, national association",
                        1, 0))
 
-<<<<<<< HEAD
 # most_recent_county <- 
 #   readRDS('most_recent_county_1115.rds') %>%
 #   mutate(baml = ifelse(lender == "bank of america, national association",
@@ -74,7 +73,7 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
 #                                       1, 0))
 
 most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
-=======
+  
 most_recent_county <-
   readRDS('most_recent_county_1115.rds') %>%
   mutate(baml = ifelse(lender == "bank of america, national association",
@@ -92,13 +91,11 @@ most_recent_county <-
                               cu),
          cu = ifelse(str_detect(lender, pattern = "credit union"), 1,
                               cu)) %>%
->>>>>>> cd085988bb066946d986af017b7457c1546eed4c
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
          national = ifelse(str_detect(lender, pattern = "n.a."),
                            1, national)) %>%
-<<<<<<< HEAD
   mutate(cu = 0) %>%
   mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
                               cu),
@@ -106,23 +103,18 @@ most_recent_county <-
                               cu),
          cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
                               cu)) %>%
-=======
->>>>>>> cd085988bb066946d986af017b7457c1546eed4c
   mutate(business_roundtable = ifelse(lender %in%
                                         c("bank of america, national association",
                                           "citibank, n.a.",
                                           "keybank national association",
                                           "jpmorgan chase bank, national association",
                                           "wells fargo bank, national association"),
-<<<<<<< HEAD
                                       1, 0)) %>%
   mutate(baml = ifelse(lender == "bank of america, national association",
-=======
                                       1, 0))
 
 most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
     mutate(baml = ifelse(lender == "bank of america, national association",
->>>>>>> cd085988bb066946d986af017b7457c1546eed4c
                        1, 0)) %>%
   mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
                        1, 0)) %>%
@@ -130,10 +122,8 @@ most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
                        1, 0)) %>%
   mutate(wells = ifelse(lender == "wells fargo bank, national association",
                        1, 0)) %>%
-<<<<<<< HEAD
   mutate(fips = as.factor(fips),
-         zip = as.factor(zip))
-=======
+         zip = as.factor(zip)) %>%
     mutate(cu = 0) %>%
     mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1,
                               cu),
@@ -153,7 +143,6 @@ most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
                                           "jpmorgan chase bank, national association",
                                           "wells fargo bank, national association"),
                                       1, 0))
->>>>>>> cd085988bb066946d986af017b7457c1546eed4c
 ```
 
 ```{r}
@@ -621,7 +610,7 @@ national_reg <- felm(
 ```
 
 ```{r}
-<<<<<<< HEAD
+
 # Robustness check - running these regressions on the ZIP + county combined dataset
 
 baml_check <- felm(
@@ -630,7 +619,36 @@ baml_check <- felm(
     minority_percent +
     high_school_pct + 
     married_percent + male_percent + 
-=======
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + baml + I(baml*minority_percent)|fips|0|zip + fips, 
+    data = most_recent)
+
 roundtable_reg1_fix <- felm(
     business_days ~ 1 + 
     median_family_income + 
@@ -1634,6 +1652,110 @@ roundtable2_check <- felm(    business_days ~ 1 +
     cu +
     business_roundtable + I(business_roundtable * minority_percent)|0|0|zip + fips,
   data = most_recent_both)
+
+```
+
+```{r}
+
+# Trying bank-specific!
+
+# Read the file in if you have to
+
+most_recent_deposits <- readRDS('most_recent_zip_banksmatched_1124.rds') %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(business_roundtable = ifelse(lender %in%
+                                        c("bank of america, national association",
+                                          "citibank, n.a.",
+                                          "keybank national association",
+                                          "jpmorgan chase bank, national association",
+                                          "wells fargo bank, national association"),
+                                      1, 0)) %>%
+  mutate(fips = as.factor(fips))
+  
+
+
+```
+
+```{r}
+
+roundtable_deposits <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued +
+    dep + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + business_roundtable +
+      I(business_roundtable * minority_percent) +
+      I(national * minority_percent) + 
+      I(dep * minority_percent)|fips|0|zip, 
+    data = most_recent_deposits)
+
+roundtable_deposits_2 <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued +
+    dep + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + business_roundtable +
+      I(business_roundtable * minority_percent) + 
+      I(dep * minority_percent)|fips|0|zip, 
+    data = most_recent_deposits)
 
 ```
 
