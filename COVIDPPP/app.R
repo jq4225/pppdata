@@ -10,13 +10,13 @@ library(readxl)
 
 zip_regressors <- read_excel('regressors.xlsx', sheet = "Sheet1")
 
-zip_regression <- read_excel('zip_table.xlsx', sheet = "Sheet1")
+zip_regression <- read_excel('zip_table.xlsx', sheet = "zip")
 
 zip_simple <- read_excel('simple_regression2.xlsx', sheet = "zip2")
 
-zip_simple_nointeractions <- read_excel('simple_regression2.xlsx', sheet = "zip")
+zip_simple_check <- read_excel('simple_regression2.xlsx', sheet = "zip")
 
-county_regression <- read_excel('zip_table.xlsx', sheet = "Sheet3")
+county_regression <- read_excel('zip_table.xlsx', sheet = "county")
 
 county_regressors <- read_excel('regressors.xlsx', sheet = "Sheet2")
 
@@ -82,7 +82,7 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                              uiOutput('OLS1'),
                              
                              p("Later, I add in additional interaction terms between race and other demographic variables. For the
-                               county case, used as a robustness check, fixed effects are excluded.")
+                               county case, used as a robustness check, county fixed effects are excluded.")
                            ))),
                   tabPanel("Descriptives",
                            mainPanel(
@@ -129,10 +129,12 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                     column(6, plotOutput('marginalRace2')),
                                                     p("As you can see, there is a positive and significant relationship between the percentage of
                                                       minorities in a community and the predicted waiting times, holding constant other demographic,
-                                                      economic, loan-specific, and COVID-19-related variables. This relationship remains significant
-                                                      after including additional interaction terms."),
+                                                      economic, loan-specific, and COVID-19-related variables. This relationship disappears once we
+                                                      include additional interaction terms, but this is likely due to the high correlation between them.
+                                                      Here, I also present supplemental regression results replacing ZIP-level estimates for COVID-19 case/death,
+                                                      unemployment, and crime statistics with original county data to correct for measurement error."),
                                                     column(6, gt_output('zip_simple')),
-                                                    column(6, gt_output("zip_simple_nointeractions"))
+                                                    column(6, gt_output("zip_simple_check"))
                                                   )),
                                          tabPanel("Counties",
                                                   fluidRow(
@@ -262,9 +264,9 @@ server <- function(input, output) {
     
     output$OLS1 <- renderUI({
       withMathJax(
-        "$$y_i = \\alpha_{county} + \\beta minority_{ZIP} + X'_i \\gamma + \\epsilon_i$$
+        "$$y_i = \\alpha + \\beta minority_{ZIP} + X'_i \\gamma + \\epsilon_i$$
         Where \\(y_i\\) is the number of business days until the loan is approved, 
-                 \\(\\alpha_{county}\\) are county fixed effects, 
+                 \\(\\alpha_{county}\\) are county and lender fixed effects, 
                  \\(minority_{ZIP}\\) is the percent of the ZIP code's population that is non-white, 
                  and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
     })
@@ -364,15 +366,15 @@ server <- function(input, output) {
         gt() %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05") %>%
-        tab_header(title = "With County Fixed Effects")
+        tab_header(title = "Including ZIP-level Estimates")
     })
     
-    output$zip_simple_nointeractions <- render_gt({
-      zip_simple_nointeractions %>%
+    output$zip_simple_check <- render_gt({
+      zip_simple_check %>%
         gt() %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05") %>%
-        tab_header(title = "Without County Fixed Effects")
+        tab_header(title = "Using Original County Data (where necessary)")
     })
     
     output$marginalRace3 <- renderPlot({

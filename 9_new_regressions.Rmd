@@ -230,7 +230,7 @@ covid <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current|lender|0|zip + state,
+    non_essential_closure_current|lender|0|zip,
   data = most_recent)
 
 # Take out state clustering here if necessary -- update 11/24 taken out
@@ -525,8 +525,8 @@ interactions_check <- felm(
 
 # County fixed effects on lender
 
-most_recent_county <- most_recent_county %>%
-  mutate(lender = as.factor(lender))
+# most_recent_county <- most_recent_county %>%
+#   mutate(lender = as.factor(lender))
 
 county_dems <- felm(business_days ~ 1 + 
     median_income + 
@@ -1075,4 +1075,25 @@ log_interactions <- felm(log_days ~
     data = most_recent)
 ```
 
+```{r}
+# most_recent_housing <- most_recent_housing %>%
+#   mutate(lender = as.factor(lender),
+#          fips = as.factor(fips),
+#          renter_percent = as.double(renter_percent))
+#   
+# # Trying to add rent
+# 
+# dems <- felm(
+#   business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent + 
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     violent_crime_rate + 
+#     renter_percent|0|0|zip,
+#   data = most_recent_housing)
+# ```
 

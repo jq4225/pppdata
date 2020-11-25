@@ -1674,7 +1674,8 @@ most_recent_deposits <- readRDS('most_recent_zip_banksmatched_1124.rds') %>%
                                           "jpmorgan chase bank, national association",
                                           "wells fargo bank, national association"),
                                       1, 0)) %>%
-  mutate(fips = as.factor(fips))
+  mutate(fips = as.factor(fips)) %>%
+  mutate(dep = dep / 100000)
   
 
 

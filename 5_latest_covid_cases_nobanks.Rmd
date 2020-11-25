@@ -540,3 +540,29 @@ most_recent <- most_recent %>%
   mutate(lender = as.factor(lender))
 ```
 
+```{r}
+
+# Adding in renter percentage if it matters
+
+housing <- 
+  read_csv('raw_data/acs_housing/ACSDP5Y2018.DP04_data_with_overlays_2020-11-20T172050.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  select(geographic_area_name,
+         percent_estimate_housing_tenure_occupied_housing_units_renter_occupied) %>%
+  rename("renter_percent" = 
+           "percent_estimate_housing_tenure_occupied_housing_units_renter_occupied") %>%
+  mutate(geographic_area_name = 
+           map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+         
+
+most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
+
+most_recent_housing <- left_join(most_recent, housing, 
+                                 by = c("zip" = "geographic_area_name")) %>%
+  drop_na(renter_percent)
+
+```
+
+

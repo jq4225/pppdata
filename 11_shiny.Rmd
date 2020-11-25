@@ -18,9 +18,9 @@ cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```{r}
 # Reading in the data. I"m just doing this so I can use ggeffect later
 
-most_recent <- readRDS('most_recent_zip.rds')
+most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
 
-most_recent_county <- readRDS('most_recent_county.rds')
+most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds')
 ```
 
 ```{r}
@@ -115,12 +115,12 @@ race_days3 <- rbind(national, states)
 ```
 
 ```{r}
-interactions <- lm_robust(
+covid_fe <- felm(
   business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + 
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
@@ -131,9 +131,47 @@ interactions <- lm_robust(
     loan_1mil_2mil +
     loan_2mil_5mil + 
     loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|fips + lender|0|zip,
+  data = most_recent)
+```
+
+```{r}
+marginal_race <- ggpredict(covid_fe, 
+                             terms = "minority_percent")
+```
+
+
+
+```{r}
+sq <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
     jobs_reported +
     banks_per_pop + 
     businesses_per_pop + 
@@ -148,12 +186,12 @@ interactions <- lm_robust(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current +
-    I(minority_percent^2),
-  most_recent, clusters = zip, se_type = "CR0")
+    I(minority_percent^2)|fips + lender|0|zip,
+  data = most_recent)
 ```
 
 ```{r}
-marginal_race_sq <- ggeffect(interactions, 
+marginal_race_sq <- ggeffect(sq, 
                              terms = c("minority_percent"))
 ```
 
