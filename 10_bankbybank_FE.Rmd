@@ -19,7 +19,7 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
                            1, national),
          national = ifelse(str_detect(lender, pattern = "n.a."),
                            1, national)) %>%
-   mutate(cu = 0) %>%
+  mutate(cu = 0) %>%
   mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
                               cu),
          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
@@ -646,7 +646,7 @@ baml_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current + 
-       national + baml + I(baml*minority_percent)|fips|0|zip + fips, 
+       national + baml + I(baml*minority_percent)|fips|0|zip, 
     data = most_recent)
 
 roundtable_reg1_fix <- felm(
@@ -683,51 +683,51 @@ roundtable_reg1_fix <- felm(
     non_essential_closure_apr + 
     non_essential_closure_current + 
        national + cu + business_roundtable +
-      I(business_roundtable * minority_percent)|fips|0|zip + fips, 
+      I(business_roundtable * minority_percent)|fips|0|zip, 
     data = most_recent)
 
 ```
 
 
 ```{r}
-roundtable_reg1 <- felm(
-    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    violent_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    unemployment_rate_apr + 
-    unemployment_rate + 
-    mean_start_cases_weighted +
-    mean_start_deaths_weighted + 
-    mean_end_cases_weighted +
-    mean_end_deaths_weighted + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current + 
-       national + cu + business_roundtable +
-      I(business_roundtable * minority_percent) + 
-       I(business_roundtable * median_family_income) +
-       I(business_roundtable * unemployment_rate)|fips|0|zip + fips, 
-    data = most_recent)
+# roundtable_reg1 <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     violent_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement + 
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     unemployment_rate_apr + 
+#     unemployment_rate + 
+#     mean_start_cases_weighted +
+#     mean_start_deaths_weighted + 
+#     mean_end_cases_weighted +
+#     mean_end_deaths_weighted + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current + 
+#        national + cu + business_roundtable +
+#       I(business_roundtable * minority_percent) + 
+#        I(business_roundtable * median_family_income) +
+#        I(business_roundtable * unemployment_rate)|fips|0|zip + fips, 
+#     data = most_recent)
 
 roundtable_reg2 <- felm(
     business_days ~ 1 + 
@@ -1759,4 +1759,328 @@ roundtable_deposits_2 <- felm(
     data = most_recent_deposits)
 
 ```
+
+```{r}
+
+# Trying without preference and requirement variables -- i.e., using the 
+# original 3.7 million loan dataset
+
+most_recent <- readRDS('most_recent_zip_nobanks_1126.rds') %>%
+  mutate(lender = tolower(lender)) %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(cu = 0) %>%
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu)) %>%
+  mutate(business_roundtable = ifelse(lender %in%
+                                        c("bank of america, national association",
+                                          "citibank, n.a.",
+                                          "keybank national association",
+                                          "jpmorgan chase bank, national association",
+                                          "wells fargo bank, national association"),
+                                      1, 0)) %>%
+  mutate(baml = ifelse(lender == "bank of america, national association",
+                       1, 0)) %>%
+  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
+                       1, 0)) %>%
+  mutate(citi = ifelse(lender == "citibank, n.a.",
+                       1, 0)) %>%
+  mutate(wells = ifelse(lender == "wells fargo bank, national association",
+                       1, 0))
+  
+```
+
+```{r}
+roundtable_orig1 <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + cu + business_roundtable +
+      I(business_roundtable * minority_percent)|fips|0|zip, 
+    data = most_recent)
+
+roundtable_orig2 <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + cu + business_roundtable +
+      I(business_roundtable * minority_percent) +
+      I(national * minority_percent)|fips|0|zip, 
+    data = most_recent)
+
+```
+
+```{r}
+
+# Doing the bank checks here, too
+
+baml_orig <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       baml + I(baml * minority_percent)|fips|0|zip, 
+    data = most_recent)
+
+citi_orig <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       citi + I(citi * minority_percent)|fips|0|zip, 
+    data = most_recent)
+
+jpm_orig <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       jpm + I(jpm * minority_percent)|fips|0|zip, 
+    data = most_recent)
+```
+
+```{r}
+wells_orig <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       wells + I(wells * minority_percent)|fips|0|zip, 
+    data = most_recent)
+
+national_orig <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + I(national * minority_percent)|fips|0|zip, 
+    data = most_recent)
+
+cu_orig <- felm(
+    business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       cu + I(cu * minority_percent)|fips|0|zip, 
+    data = most_recent)
+```
+
+
 
