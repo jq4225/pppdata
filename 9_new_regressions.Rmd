@@ -19,7 +19,8 @@ library(janitor)
 
 most_recent <- readRDS('most_recent_zip_nobanks_1118.rds') %>%
   mutate(log_days = log(business_days + 1)) %>%
-  mutate(fips = as.factor(fips), lender = as.factor(lender))
+  mutate(fips = as.factor(fips), lender = as.factor(lender),
+         state = as.factor(state))
 
 most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds') %>%
   mutate(lender = as.factor(lender))
@@ -1073,6 +1074,106 @@ log_interactions <- felm(log_days ~
     I(minority_percent * estimate_gini_index) +
     I(minority_percent * violent_crime_rate)|lender + fips|0|zip, 
     data = most_recent)
+```
+```{r}
+
+# Robustness check -- using state FEs instead of county FEs
+
+covid_state <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted|state + lender + fips|0|zip,
+  data = most_recent)
+
+# Regression 5: Squared
+
+sq_state <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    I(minority_percent^2)|state + lender|0|zip,
+  data = most_recent)
+
+# Regression 6: interactions
+
+interactions_state <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    I(minority_percent^2) + 
+    I(minority_percent * median_family_income) +
+    I(minority_percent * cook_pvi) +
+    I(minority_percent * rural) + 
+    I(minority_percent * estimate_gini_index) +
+    I(minority_percent * violent_crime_rate)|state + lender|0|zip,
+  data = most_recent)
+
 ```
 
 ```{r}

@@ -542,7 +542,7 @@ most_recent <- most_recent %>%
 
 ```{r}
 
-# Adding in renter percentage if it matters
+# Adding in renter percentage if it matters -- update didn't use this
 
 housing <- 
   read_csv('raw_data/acs_housing/ACSDP5Y2018.DP04_data_with_overlays_2020-11-20T172050.csv',
@@ -562,6 +562,25 @@ most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
 most_recent_housing <- left_join(most_recent, housing, 
                                  by = c("zip" = "geographic_area_name")) %>%
   drop_na(renter_percent)
+
+```
+```{r}
+
+# Adding in loan counts even though idt they matter lol
+
+# Also read in most recent if you need to -- here, I didn't b/c I'd loaded alr
+
+old_data <- readRDS("ppp_loanonly_with_jobs.rds")
+
+loan_numbers <- old_data %>%
+  select(lender) %>%
+  group_by(lender) %>%
+  summarize(bank_ppp_issued = n(), .groups = "drop")
+
+most_recent_lender <- left_join(most_recent, loan_numbers,
+                                by = "lender") %>%
+  drop_na(bank_ppp_issued)
+
 
 ```
 
