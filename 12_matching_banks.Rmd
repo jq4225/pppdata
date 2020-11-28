@@ -12,10 +12,11 @@ library(openintro)
 
 ```{r}
 
-most_recent <- readRDS('most_recent_zip_nobanks_1118.rds') %>%
+most_recent <- readRDS('most_recent_zip_nobanks_1126.rds') %>%
   mutate(lender = tolower(lender), id = seq.int(n())) %>%
   mutate(lender = str_replace(lender, pattern = "n.a.", 
-                              replacement = "national association"))
+                              replacement = "national association")) %>%
+  mutate(lender = str_trim(lender, side = "both"))
   
 
 ```
@@ -26,6 +27,7 @@ deposits <- read_csv('raw_data/fdic/All_Reports_20200630_Total_Deposits.csv',
                      col_types = cols()) %>%
   clean_names() %>%
   mutate(name = tolower(name), dep = as.double(dep)) %>%
+  mutate(name = str_trim(name, side = "both")) %>%
   select(cert, name, city, stalp, dep)
 
 locations <- read_csv('raw_data/fdic/OFFICES2_PART2.csv',
@@ -40,7 +42,8 @@ locations <- read_csv('raw_data/fdic/OFFICES2_PART2.csv',
 
 bank_deposit_locations <- left_join(deposits, locations, by = "cert") %>%
   filter(state_list != "NULL") %>%
-  select(-city, -stalp)
+  select(-city, -stalp, -name) %>%
+  mutate(cert = as.character(cert))
 
 
 
@@ -61,7 +64,7 @@ matched_lenders <- left_join(sba_banks, bank_deposit_locations,
 ```
 
 ```{r}
-deposits_joined <- left_join(most_recent, bank_deposit_locations, 
+deposits_joined <- left_join(most_recent, deposits, 
                              by = c("lender" = "name")) %>%
   drop_na(dep) %>%
   group_by(id) %>%
@@ -69,16 +72,23 @@ deposits_joined <- left_join(most_recent, bank_deposit_locations,
   ungroup()
 
 deposits_noduplicate <- deposits_joined %>%
-  filter(duplicates == 1)
+  filter(duplicates == 1) %>%
+  mutate(cert = as.character(cert))
 
 deposits_duplicate <- deposits_joined %>%
-  filter(duplicates > 1)
+  filter(duplicates > 1) %>%
+  mutate(cert = as.character(cert))
 ```
 
 
 ```{r}
-states_matching <- deposits_duplicate %>%
+states_matching <- left_join(deposits_duplicate, bank_deposit_locations,
+                             by = "cert") %>%
+  drop_na(dep.y) %>%
+  select(-dep.x, -city.y) %>%
+  rename("dep" = "dep.y", "city" = "city.x") %>%
   drop_na(state_list, state) %>%
+  mutate(state = as.character(state)) %>%
   mutate(in_state = str_detect(state_list, pattern = state))
 
 deposits_dedup <- states_matching %>%
@@ -89,16 +99,22 @@ deposits_dedup <- states_matching %>%
   ungroup()
 
 deposits_cleaned <- deposits_dedup %>%
-  filter(duplicates == 1)
+  filter(duplicates == 1) %>%
+  select(-state_list)
 
-deposits_dirty <- deposits_dedup %>%
-  filter(duplicates > 1)
+# deposits_dirty <- deposits_dedup %>%
+#   filter(duplicates > 1)
+
+deposits_noduplicate <- deposits_noduplicate %>%
+  mutate(state = as.character(state)) %>%
+  select(-city.y) %>%
+  rename("city" = "city.x")
 
 deposits_filtered <- rbind(deposits_noduplicate, deposits_cleaned)
 
-remaining_banks <- deposits_dirty %>%
-  select(lender, state, state_list, cert) %>%
-  distinct()
+# remaining_banks <- deposits_dirty %>%
+#   select(lender, state, state_list, cert) %>%
+#   distinct()
 
 ```
 
