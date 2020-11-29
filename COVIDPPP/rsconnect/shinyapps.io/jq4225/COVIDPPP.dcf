@@ -5,8 +5,9 @@ account: jq4225
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3025574
-bundleId: 3746319
+bundleId: 3905745
 url: https://jq4225.shinyapps.io/COVIDPPP/
-when: 1602790231.40073
+when: 1606328015.75414
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: www/graphic.jpg

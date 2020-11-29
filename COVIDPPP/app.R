@@ -3,6 +3,7 @@ library(tidyverse)
 library(shinythemes)
 library(gt)
 library(readxl)
+library(openintro)
 
 # Reading in files here: most of these are excel files converted from 
 # htmlreg and other functions b/c I made tables for the papers I'm writing
@@ -44,6 +45,8 @@ national_banks_zip <- readRDS('national_bank_graph.rds')
 
 national_banks_county <- readRDS('national_bank_graph_county.rds')
 
+state_cases <- readRDS('state_cases.rds')
+
 
 # Define UI 
 
@@ -56,7 +59,14 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                              p("The COVID-19 pandemic triggered an unprecedented economic shock. Social distancing measures
                                such as stay-at-home orders and mandatory business closures, combined with the fear of the
                                pandemic, cratered consumption, especially harming small businesses with no access
-                               to public financial markets. According to some estimates, over 40 percent of small
+                               to public financial markets. The pandemic shows little signs to abating absent a vaccine,
+                               with many state reporting renewed waves of cases in recent weeks."),
+                             selectizeInput("stateInput1", "State",
+                                            choices = state.abb,  
+                                            selected ="AK", multiple = FALSE),
+                             column(6, plotOutput("covidCases")),
+                             column(6, plotOutput("covidDeaths")),
+                             p("According to some estimates, over 40 percent of small
                                businesses closed because of the pandemic, many of whom had saved just two weeks' of
                                operating costs. Without a safety net for small businesses, US policymakers passed the
                                Coronavirus Aid, Relief, and Economic Security (CARES) Act, which included a novel
@@ -84,6 +94,7 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                              p("Later, I add in additional interaction terms between race and other demographic variables. For the
                                county case, used as a robustness check, county fixed effects are excluded.")
                            ))),
+                 
                   tabPanel("Descriptives",
                            mainPanel(
                              h2("Descriptives"),
@@ -101,7 +112,7 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                     p("Nationally, there is a slightly positive correlation between
                                                       minority populations and wait times without any controls. You
                                                       can see state-level visualizations here."),
-                                                    selectizeInput("stateInput", "State",
+                                                    selectizeInput("stateInput2", "State",
                                                                    choices = state.abb,  
                                                                    selected ="AK", multiple = FALSE),
                                                     column(6, plotOutput("statePlot")),
@@ -132,7 +143,11 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                       economic, loan-specific, and COVID-19-related variables. This relationship disappears once we
                                                       include additional interaction terms, but this is likely due to the high correlation between them.
                                                       Here, I also present supplemental regression results replacing ZIP-level estimates for COVID-19 case/death,
-                                                      unemployment, and crime statistics with original county data to correct for measurement error."),
+                                                      unemployment, and crime statistics with original county data to correct for measurement error. These
+                                                      results are robust to multiple robustness checks not included here, including negative binomial regression.
+                                                      The rightmost regression table below shows one of the robustness checks, where I replaced data that I had to
+                                                      create ZIP-level estimates for (COVID cases/deaths, crime rates, and unemployment) with the original county-level
+                                                      data, to correct for any problems with my estimations."),
                                                     column(6, gt_output('zip_simple')),
                                                     column(6, gt_output("zip_simple_check"))
                                                   )),
@@ -204,7 +219,10 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                             a(href = "mailto: qij@college.harvard.edu", "qij@college.harvard.edu", .noWS = "outside"),
                                             " or my ", a(href = "https://www.linkedin.com/in/justin-qi/", "LinkedIn", .noWS = "outside"), 
                                             ". Please contact me for access to the original data files, which
-                                            were too large to upload to Github. Thanks for stopping by!"),
+                                            were too large to upload to Github, or for the paper describing these results in more detail,
+                                            which includes all of the robustness checks and additional extensions exploring the role of
+                                            corporate social responsibility agreements. 
+                                            Thanks for stopping by!"),
                                         
                                  
                                  # Just listing sources for everything I've done here. 
@@ -260,7 +278,64 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
 )
 
 # Define server logic 
+
 server <- function(input, output) {
+  
+    output$covidCases <- renderPlot({
+      state_cases %>%
+        filter(state == abbr2state(input$stateInput1)) %>%
+        ggplot(aes(x = date, y = cases)) +
+          geom_line(color = "dodgerblue", size = 1) +
+          labs(x = "Month", y = "Cases",
+             title =  paste("Total COVID-19 Cases,", 
+                            abbr2state(input$stateInput1))) + 
+        theme(legend.position = "none") + 
+        scale_x_date(breaks = c(as.Date("2020/02/01"),
+                                as.Date("2020/03/01"),
+                                as.Date("2020/04/01"),
+                                as.Date("2020/05/01"),
+                                as.Date("2020/06/01"),
+                                as.Date("2020/07/01"),
+                                as.Date("2020/08/01"),
+                                as.Date("2020/09/01"),
+                                as.Date("2020/10/01"),
+                                as.Date("2020/11/01")),
+                     labels = c("Feb", "Mar", "Apr",
+                                "May", "Jun", "Jul", "Aug",
+                                "Sept", "Oct", "Nov")) + 
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 10), 
+                           label = scales::comma) + 
+        theme_classic()
+    })
+    
+    output$covidDeaths <- renderPlot({
+      state_cases %>%
+        filter(state == abbr2state(input$stateInput1)) %>% 
+        ggplot(aes(x = date, y = deaths)) +
+        geom_line(color = "firebrick4", size = 1) +
+        labs(x = "Month", y = "Deaths",
+             title =  paste("Total COVID-19 Deaths,", 
+                            abbr2state(input$stateInput1)),
+             caption = "Source: New York Times") + 
+        theme(legend.position = "none") + 
+        scale_x_date(breaks = c(as.Date("2020/02/01"),
+                                as.Date("2020/03/01"),
+                                as.Date("2020/04/01"),
+                                as.Date("2020/05/01"),
+                                as.Date("2020/06/01"),
+                                as.Date("2020/07/01"),
+                                as.Date("2020/08/01"),
+                                as.Date("2020/09/01"),
+                                as.Date("2020/10/01"),
+                                as.Date("2020/11/01")),
+                     labels = c("Feb", "Mar", "Apr",
+                                "May", "Jun", "Jul", "Aug",
+                                "Sept", "Oct", "Nov")) + 
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 10), 
+                           label = scales::comma) + 
+        theme_classic()
+        
+    })
     
     output$OLS1 <- renderUI({
       withMathJax(
@@ -300,7 +375,7 @@ server <- function(input, output) {
     
     output$statePlot <- renderPlot({
       race_days %>%
-        filter(state %in% c(input$stateInput, "National")) %>%
+        filter(state %in% c(input$stateInput2, "National")) %>%
         group_by(state, cuts) %>%
         ggplot(aes(x = cuts, y = mean_days, fill = state)) +
           geom_col(position = "dodge") +
@@ -316,7 +391,8 @@ server <- function(input, output) {
                                       "80-90%",
                                       "90-100%")) +
           scale_fill_manual(values = c("coral", "lightblue3")) +
-        labs(title = paste("Mean Loan Waiting Time,", input$stateInput, 
+        labs(title = paste("Mean Loan Waiting Time,", 
+                           abbr2state(input$stateInput2), 
                            "vs. National Average"),
              y = "Mean Waiting Time (business days)") +
         theme_classic() +

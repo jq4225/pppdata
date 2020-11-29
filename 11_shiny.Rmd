@@ -10,8 +10,12 @@ library(ggeffects)
 library(janitor)
 library(lubridate)
 library(bizdays)
+library(openintro)
 
 cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+
+# This file is purely experimental -- me pulling out chunks of a shiny app
+# run in an rmd or prepping files for the shiny app
 ```
 
 
@@ -244,3 +248,35 @@ marginal_race_sq_county <- ggeffect(county_interactions,
 Writing equation:
 
 $$y_i = \alpha_{locality} + \beta minority + X'_i\gamma + \epsilon_i$$
+```{r}
+latest_state_cases <- read_csv('COVIDPPP/us-states.csv', col_types = cols()) %>%
+  mutate(state_abb = state2abbr(state)) %>%
+  select(-fips)
+
+latest_state_cases %>%
+  filter(state_abb == "AZ") %>%
+  ggplot(aes(x = date, y = cases)) +
+    geom_line(color = "dodgerblue") +
+    labs(x = "Month", y = "Cases",
+         #title =  paste("Daily New COVID-19 Cases,", input$stateInput2),
+         caption = "Source: New York Times") + 
+    theme(legend.position = "none") + 
+    scale_x_date(breaks = c(as.Date("2020/02/01"),
+                                  as.Date("2020/03/01"),
+                                  as.Date("2020/04/01"),
+                                  as.Date("2020/05/01"),
+                                  as.Date("2020/06/01"),
+                                  as.Date("2020/07/01"),
+                                  as.Date("2020/08/01"),
+                                  as.Date("2020/09/01"),
+                                  as.Date("2020/10/01"),
+                                  as.Date("2020/11/01")),
+                 labels = c("Feb", "Mar", "Apr",
+                            "May", "Jun", "Jul", "Aug",
+                            "Sept", "Oct", "Nov")) + 
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 10), 
+                       label = scales::comma) + 
+    theme_classic()
+  
+```
+
