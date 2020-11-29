@@ -11,6 +11,10 @@ library(tidyverse)
 library(texreg)
 library(readxl)
 library(janitor)
+
+# These are the regressions that solely focus on aggregate disparities, rather
+# than disaggregating by bank.
+
 ```
 
 ```{r}
@@ -32,7 +36,7 @@ most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds') %>%
 ```{r}
 # most_recent <- readRDS('most_recent_zip_1117.rds')
 
-# Adding in FIPS to county
+# Adding in FIPS to county, since it wasn't added in before.
 
 most_recent <- readRDS('most_recent_zip_1117.rds')
 
@@ -59,7 +63,8 @@ most_recent_2 <- left_join(most_recent, zip_county_crosswalk, by = "zip")
 
 # Crime
 
-crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+crime <- read_excel('raw_data/county/county_health.xlsx', 
+                    sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%
   rename("county_crime_rate" = "violent_crime_rate") %>%
@@ -140,7 +145,7 @@ combined_covid <- left_join(combined_covid_curr, temp, by = "fips") %>%
 
 
 ```{r}
-# Zip with fixed effects
+# Zip with fixed effects -- regressions start here
 
 # Regression 1
 
@@ -798,7 +803,8 @@ county_interactions <- felm(business_days ~ 1 +
 #     data = most_recent)
 ```
 ```{r}
-# Trying another way of doing negative binomial w/ fixed effects
+# Trying another way of doing negative binomial w/ fixed effects -- this takes
+# a while but ends up running properly!
 
 dems_binomial <- fenegbin(business_days ~ 1 + 
     median_family_income + 

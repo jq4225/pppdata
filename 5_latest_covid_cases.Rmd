@@ -12,7 +12,11 @@ library(openintro)
 library(zoo)
 
 # I think the only stats packages I end up needing are openintro, lmtest,
-# and estimatr- some other packages were from previous attempts
+# and estimatr- some other packages were from previous attempts.
+# You can ignore the commented out regressions since they've all been moved
+# to another file now. This file adds in COVID cases/deaths at loan approval
+# time (actually run in RStudio Cloud due to RAM problems), unemployment
+# crime, and business payroll data
 
 #ppp_allvars_1024_marital <- readRDS('ppp_allvars_1024_marital.rds')
 ```
@@ -293,6 +297,7 @@ ppp_allvars_1027 <- left_join(current, inequality,
 
 ```{r}
 # Adding in violent crime rates
+
 crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%

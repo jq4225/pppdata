@@ -10,6 +10,8 @@ library(readxl)
 library(janitor)
 library(lubridate)
 
+# This is our initial data cleaning. We add in some basic demographic data
+# and create our full dataset of loans.
 
 ```
 
@@ -30,9 +32,10 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
          zip = as.character(zip))
 
 ```
+
 ```{r}
 sba_cleaning <- function(file) {
-  x <- read_csv(file) %>%
+  x <- read_csv(file, col_types = cols()) %>%
     clean_names() %>%
     select(loan_amount, zip, date_approved, lender, city, state,
            jobs_reported) %>%
@@ -46,10 +49,13 @@ sba_cleaning <- function(file) {
 
 ```{r}
 # run for Mac
-file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+file.names1 <- 
+  dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", 
+      pattern = ".csv")
 
 # run for Windows
-file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+file.names2 <- 
+  dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
 ```
 
 

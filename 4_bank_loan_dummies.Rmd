@@ -8,13 +8,19 @@ knitr::opts_chunk$set(echo = TRUE)
 library(janitor)
 library(tidyverse)
 library(readxl)
+
 #ppp_allvars_1024 <- readRDS('ppp_allvars_1024_notdone.rds')
 
 # Just note that loan_data is our most recent data after file 3, and old_data
 # is our data purely from combining loan data only from the SBA.
 
+# In this file we add in my manually collected data for bank lending policy, 
+# in addition to rurality and business count data.
+
 loan_data <- ppp_covidadj
+
   #readRDS("ppp_covidadj.rds")
+
 old_data <- readRDS("ppp_loanonly_all_loans.rds")
 ```
 

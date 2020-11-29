@@ -14,6 +14,11 @@ library(lubridate)
 library(stringr)
 
 #zip_data <- readRDS("zip_ppp_allstates_1018.rds")
+
+# This just ended up being one file by itself because I was originally
+# including other things and decided not to. This just creates
+# dummies that I actually end up renaming a little bit later anyway.
+
 ```
 
 

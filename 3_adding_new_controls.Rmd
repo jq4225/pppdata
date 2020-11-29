@@ -11,13 +11,15 @@ library(readxl)
 
 # I would read in a file for the results of file 2, but the names changed
 # so assume this is there. Just note that what what I've done so far is called
-# ppp_allstates initially
+# ppp_allstates initially -- the code here is commented out.
+
+# Here, we continue adding controls most notably Cook PVI partisanship
+# data and some of the COVID case data (the rest is added in file 5, I think)
 
 # ppp_allstates <- readRDS(file = "zip_ppp_allstates_1018_dummy.rds")
 
 #ppp_allstates <- zip_data_with_dummies
 
-# Everything in this file as of 5 pm 10/17 is already in the ppp_acs_pvi_covid rds file
 ```
 
 ```{r creating a zip to CD crosswalk}
