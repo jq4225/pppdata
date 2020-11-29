@@ -87,6 +87,7 @@ ggplot(original_lat, aes(longitude, latitude)) +
 
 ```{r graphing}
 # Similarly we then do this for our final dataset too!
+
 ggplot(new_lat, aes(longitude, latitude)) +
   geom_polygon(data = us, aes(x = long,y = lat, group = group), color = 'gray',
                fill = NA, alpha = .35)+

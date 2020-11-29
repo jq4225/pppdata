@@ -26,7 +26,8 @@ library(bizdays)
 
 
 ```{r}
-# Loan data has to include jobs!
+# Loan data has to include jobs -- we remake the loan only dataset, though
+# this isn't needed anymore since I've made an RDS with this.
 
 ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   clean_names() %>%
@@ -34,6 +35,8 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   drop_na(zip) %>%
   
   # This calculates the date on which loans were approved vs. when apps opened.
+  # now deprecated b/c I moved to using bizdays instead
+  
   mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),
          zip = as.character(zip))
@@ -42,7 +45,8 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 sba_cleaning <- function(file) {
   x <- read_csv(file) %>%
     clean_names() %>%
-    select(loan_amount, zip, date_approved, lender, city, state, jobs_reported) %>%
+    select(loan_amount, zip, date_approved, 
+           lender, city, state, jobs_reported) %>%
     drop_na(zip) %>%
     mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),
@@ -50,10 +54,15 @@ sba_cleaning <- function(file) {
 }
 
 # run for Mac
-file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+file.names1 <- 
+  dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", 
+      pattern = ".csv")
 
 # run for Windows
-file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+
+file.names2 <- 
+  dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
 
 all_states<- tibble()
 
@@ -80,6 +89,9 @@ loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
 ```
 
 ```{r}
+
+# Starting on reading in demographic data
+
 educ <- read_csv('raw_data/county/county_edu.csv', skip = 1) %>%
   clean_names()
 
@@ -90,7 +102,7 @@ hs_id <- educ %>%
 
 
 ```{r}
-# This is household median income -- I think I should probably replace the family median income thing with this
+# This is household median income
 
 income <- read_csv('raw_data/county/county_income.csv', skip = 1) %>%
   clean_names() %>%
@@ -130,7 +142,9 @@ businesses <- read_csv('raw_data/county/CBP2016.CB1600CBP_data_with_overlays_202
          meaning_of_legal_form_of_organization_code == "All establishments") %>%
   select(id, geographic_area_name, number_of_establishments) %>%
   
-  # Terrible practice but I'm just slicing the rows where I know total business counts are lol
+  # Terrible practice but I'm just slicing the rows where I 
+  # know total business counts are lol
+  
   slice(1:3304)
 ```
 
@@ -153,6 +167,9 @@ merge4 <- left_join(merge3, businesses, by = "id") %>%
 
 
 ```{r}
+
+# Elections data -- this replaces cook pvi on county level
+
 elections <- read_csv('raw_data/county_elections/countypres_2000-2016.csv') %>%
   clean_names() %>%
   filter(year == "2016")
@@ -162,7 +179,8 @@ elections_clean <- elections %>%
   group_by(fips, party) %>%
   summarize(percent = candidatevotes/totalvotes, .groups = "drop") %>%
   filter(party == "republican") %>%
-  mutate(percent = percent * 100, fips = str_pad(fips, width = 5, "left", "0")) %>%
+  mutate(percent = percent * 100, 
+         fips = str_pad(fips, width = 5, "left", "0")) %>%
   select(-party)
 ```
 
@@ -177,7 +195,11 @@ merge5 <- left_join(demographics, elections_clean, by = "fips") %>%
 
 
 ```{r}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+# Merging everything and assigning fips county codes to the zip-level
+# loan data
+
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio) %>%
   group_by(zip) %>%
@@ -197,6 +219,9 @@ combined <- left_join(loan_only_fips, merge5, by = "fips") %>%
 
 
 ```{r}
+
+# Merge in bank population values
+
 banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
   'ZIP' = col_character()))%>%
   clean_names() %>%
@@ -227,6 +252,9 @@ combined_with_bank <- left_join(combined, banks_matched,
 
 
 ```{r}
+
+# Merge in premade population density file
+
 pop_density <- read_csv('raw_data/county/census-population-landarea.csv') %>%
   clean_names() %>%
   select(fips, 'pop060210') %>%
@@ -239,7 +267,7 @@ combined_with_popden <- left_join(combined_with_bank, pop_density, by = "fips") 
 
 
 ```{r}
-#covid cases, covid deaths, state requirements, unemployment, loan reqs
+# covid cases, covid deaths, state requirements, unemployment, loan reqs
 
 county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
   filter(date > as.Date("2020-03-27")) %>%
@@ -259,6 +287,9 @@ combined_covid_curr <- left_join(combined_with_popden, current_cases, by = "fips
 
 
 ```{r}
+
+# Put in COVID case/death rates the week the loan was approved
+
 dates_approved <- combined_covid_curr %>%
   select(date_approved, fips) %>%
   distinct()
@@ -271,6 +302,9 @@ temp <- left_join(dates_approved, county_covid, by = "fips") %>%
 
 
 ```{r}
+
+# Merging this w/ original loan file (to save memory)
+
 combined_covid <- left_join(combined_covid_curr, temp, by = "fips") %>%
   drop_na(mean_end_cases, mean_end_deaths) %>%
   mutate(mean_end_cases = mean_end_cases * 10000/estimate_total, 
@@ -291,6 +325,9 @@ combined_covid_2 <- combined_covid %>%
 
 
 ```{r}
+
+# Adding in unemployment data
+
 unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
   clean_names() %>%
   select(state_fips_code, county_fips_code, period, 
@@ -324,7 +361,9 @@ combined_unemploy2 <- left_join(combined_unemploy,
 
 ```{r}
 # Still need state reqs and loan regs, number of loans per bank
+
 so_far <- combined_unemploy2
+
   #readRDS('counties_unemploy.rds')
 
 state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
@@ -340,12 +379,16 @@ state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
   
   # We just make NAs some later date just so they don't mess up our inequalities
   
-  mutate(stay_at_home_start = replace_na(stay_at_home_start, as.Date("2021-01-01")),
-         stay_at_home_end = replace_na(stay_at_home_end, as.Date("2021-01-01")),
+  mutate(stay_at_home_start = replace_na(stay_at_home_start, 
+                                         as.Date("2021-01-01")),
+         stay_at_home_end = replace_na(stay_at_home_end, 
+                                       as.Date("2021-01-01")),
          non_essential_business_closure_start = 
-           replace_na(non_essential_business_closure_start, as.Date("2021-01-01")),
+           replace_na(non_essential_business_closure_start, 
+                      as.Date("2021-01-01")),
          non_essential_business_closure_end = 
-           replace_na(non_essential_business_closure_end, as.Date("2021-01-01"))) %>%
+           replace_na(non_essential_business_closure_end, 
+                      as.Date("2021-01-01"))) %>%
   mutate(stay_at_home_apr = ifelse(stay_at_home_start <= as.Date("2020-04-03"),
                                    1, 0),
          non_essential_closure_apr = 
@@ -371,23 +414,28 @@ states_merged <- left_join(prepping_state_policies, state_policies,
            ifelse(non_essential_business_closure_start <= date_approved & 
                     date_approved <= non_essential_business_closure_end,
                   1, 0)) %>%
-  select(-stay_at_home_start, -stay_at_home_end, -non_essential_business_closure_start,
+  select(-stay_at_home_start, -stay_at_home_end, 
+         -non_essential_business_closure_start,
          -non_essential_business_closure_end) %>%
   mutate(lender = tolower(lender), lender = str_trim(lender, side = "both"))
 ```
 
 
 ```{r}
-bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+bank_ppp_policy_manual <- 
+  read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
   mutate(sba_name = tolower(sba_name)) %>%
   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
   drop_na(preference, requirement)
 
 banking_policies <- left_join(states_merged, bank_ppp_policy_manual,
                                       by = c("lender" = "sba_name")) %>%
-  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 
+                              1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 
+                              1, requirement),
+         requirement = ifelse(str_detect(lender, pattern = "credit union"), 
+                              1, requirement)) %>%
   drop_na(requirement) %>%
   mutate(preference = replace_na(preference, 0))
 
@@ -423,7 +471,9 @@ income_inequality <- left_join(loan_numbers2, gini, by = "id") %>%
 
 ```{r}
 # Crime rates
-crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+
+crime <- read_excel('raw_data/county/county_health.xlsx', 
+                    sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%
   select(fips, violent_crime_rate)
@@ -458,7 +508,8 @@ most_recent_county <- readRDS('most_recent_county_1114.rds')
 # Trying to add gender data because we forgot it last time
 
 gender <- 
-  read_csv('raw_data/county/ACSDP5Y2018.DP05_data_with_overlays_2020-11-12T203338.csv', skip = 1) %>%
+  read_csv('raw_data/county/ACSDP5Y2018.DP05_data_with_overlays_2020-11-12T203338.csv', 
+           skip = 1) %>%
   clean_names() %>%
   select(id,
          percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male) %>%
@@ -473,7 +524,10 @@ most_recent_county_2 <- left_join(county_gdp, gender, by = "fips") %>%
 ```
 
 ```{r}
-# Integrating the transformations I did in the ols_updated file here too
+# Integrating the transformations I did in the ols_updated file here too --
+# just variable fransmorations and business days calculations to make the
+# coefficients a little easier to interpret
+
 cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 
 most_recent_county <- most_recent_county_2 %>%

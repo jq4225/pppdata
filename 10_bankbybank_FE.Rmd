@@ -10,9 +10,19 @@ library(janitor)
 library(estimatr)
 library(lfe)
 library(texreg)
+
+# This file just runs the bank-by-bank regressions with fixed effects, in 
+# addition to a bunch of robustness checks. Note that this is not relevant
+# for Gov 50 -- this just uses the same data, which is why it's in the same
+# repo.
+
 ```
 
 ```{r}
+
+# Inputting individual bank regressions by adding in dummies for different
+# banks and bank types.
+
 most_recent <- readRDS('most_recent_zip_1117.rds') %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
@@ -41,38 +51,6 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
                        1, 0)) %>%
   mutate(wells = ifelse(lender == "wells fargo bank, national association",
                        1, 0))
-
-# most_recent_county <- 
-#   readRDS('most_recent_county_1115.rds') %>%
-#   mutate(baml = ifelse(lender == "bank of america, national association",
-#                        1, 0)) %>%
-#   mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
-#                        1, 0)) %>%
-#   mutate(citi = ifelse(lender == "citibank, n.a.",
-#                        1, 0)) %>%
-#   mutate(wells = ifelse(lender == "wells fargo bank, national association",
-#                        1, 0)) %>%
-#     mutate(cu = 0) %>%
-#     mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1,
-#                               cu),
-#          cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1,
-#                               cu),
-#          cu = ifelse(str_detect(lender, pattern = "credit union"), 1,
-#                               cu)) %>%
-#   mutate(national = 0) %>%
-#   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
-#                            1, national),
-#          national = ifelse(str_detect(lender, pattern = "n.a."),
-#                            1, national)) %>%
-#   mutate(business_roundtable = ifelse(lender %in%
-#                                         c("bank of america, national association",
-#                                           "citibank, n.a.",
-#                                           "keybank national association",
-#                                           "jpmorgan chase bank, national association",
-#                                           "wells fargo bank, national association"),
-#                                       1, 0))
-
-most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
   
 most_recent_county <-
   readRDS('most_recent_county_1115.rds') %>%
@@ -113,6 +91,9 @@ most_recent_county <-
   mutate(baml = ifelse(lender == "bank of america, national association",
                                       1, 0))
 
+# This is for one of the robustness checks where I replace
+# ZIP-level estimated data with county estimated data.
+
 most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
     mutate(baml = ifelse(lender == "bank of america, national association",
                        1, 0)) %>%
@@ -146,6 +127,11 @@ most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
 ```
 
 ```{r}
+
+# This series of regressions excludes all the interaction terms except between
+# bank and race. There are later, unused regressions that also put in
+# extra interaction terms.
+
 baml_reg_only <- felm(
     business_days ~ 1 + 
     median_family_income + 
@@ -365,6 +351,10 @@ national_reg_only <- felm(
 
 
 ```{r}
+
+# These regressions end up being unused because of the high correlation 
+# between the interaction terms.
+
 baml_reg <- felm(
     business_days ~ 1 + 
     median_family_income + 
@@ -611,44 +601,6 @@ national_reg <- felm(
 
 ```{r}
 
-# Robustness check - running these regressions on the ZIP + county combined dataset
-
-baml_check <- felm(
-  business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent + 
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    violent_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement + 
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    unemployment_rate_apr + 
-    unemployment_rate + 
-    mean_start_cases_weighted +
-    mean_start_deaths_weighted + 
-    mean_end_cases_weighted +
-    mean_end_deaths_weighted + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current + 
-       national + baml + I(baml*minority_percent)|fips|0|zip, 
-    data = most_recent)
-
 roundtable_reg1_fix <- felm(
     business_days ~ 1 + 
     median_family_income + 
@@ -686,48 +638,6 @@ roundtable_reg1_fix <- felm(
       I(business_roundtable * minority_percent)|fips|0|zip, 
     data = most_recent)
 
-```
-
-
-```{r}
-# roundtable_reg1 <- felm(
-#     business_days ~ 1 + 
-#     median_family_income + 
-#     minority_percent +
-#     high_school_pct + 
-#     married_percent + male_percent +
-#     cook_pvi + 
-#     rural +
-#     estimate_gini_index +
-#     violent_crime_rate + 
-#     delay +
-#     loan_150_350 +
-#     loan_350_1mil +
-#     loan_1mil_2mil +
-#     loan_2mil_5mil + 
-#     loan_5mil_10mil + 
-#     preference + 
-#     requirement + 
-#     bank_ppp_issued + 
-#     jobs_reported +
-#     banks_per_pop + 
-#     businesses_per_pop + 
-#     payroll +
-#     unemployment_rate_apr + 
-#     unemployment_rate + 
-#     mean_start_cases_weighted +
-#     mean_start_deaths_weighted + 
-#     mean_end_cases_weighted +
-#     mean_end_deaths_weighted + 
-#     stay_at_home_apr + 
-#     stay_at_home_current + 
-#     non_essential_closure_apr + 
-#     non_essential_closure_current + 
-#        national + cu + business_roundtable +
-#       I(business_roundtable * minority_percent) + 
-#        I(business_roundtable * median_family_income) +
-#        I(business_roundtable * unemployment_rate)|fips|0|zip + fips, 
-#     data = most_recent)
 
 roundtable_reg2 <- felm(
     business_days ~ 1 + 
@@ -1069,16 +979,56 @@ cu_county <- felm(business_days ~ 1 +
 
 # Robustness check w/ zip and county
 
-baml_reg_check <- felm(
-    business_days ~ 1 + 
+# baml_reg_check <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     baml + I(baml * minority_percent) + 
+#        I(baml * median_family_income) +
+#        I(baml * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
+```
+
+```{r}
+baml_check <- felm(
+  business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
-    married_percent + male_percent +
+    married_percent + male_percent + 
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    violent_crime_rate + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1086,29 +1036,25 @@ baml_reg_check <- felm(
     loan_2mil_5mil + 
     loan_5mil_10mil + 
     preference + 
-    requirement +
+    requirement + 
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
     businesses_per_pop + 
     payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current +
-    baml + I(baml * minority_percent) + 
-       I(baml * median_family_income) +
-       I(baml * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
-```
+    non_essential_closure_current + 
+       national + baml + I(baml*minority_percent)|fips|0|zip, 
+    data = most_recent)
 
-```{r}
 citi_check <- felm(
   business_days ~ 1 + 
     median_family_income + 
@@ -1142,46 +1088,46 @@ citi_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       baml + I(baml * minority_percent)|0|0|zip + fips, 
+       citi + I(citi * minority_percent)|0|0|zip + fips, 
     data = most_recent_both)
 
-jpm_reg_check <- felm(
-    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    citi + I(citi * minority_percent) + 
-       I(citi * median_family_income) +
-       I(citi * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
+# jpm_reg_check <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     citi + I(citi * minority_percent) + 
+#        I(citi * median_family_income) +
+#        I(citi * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
 ```
 
 ```{r}
@@ -1221,43 +1167,43 @@ jpm_check <- felm(
        jpm + I(jpm * minority_percent)|0|0|zip + fips, 
     data = most_recent_both)
 
-citi_reg_check <- felm(
-    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    jpm + I(jpm * minority_percent) + 
-       I(jpm * median_family_income) +
-       I(jpm * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
+# citi_reg_check <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     jpm + I(jpm * minority_percent) + 
+#        I(jpm * median_family_income) +
+#        I(jpm * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
 ```
 
 
@@ -1298,43 +1244,43 @@ wells_check <- felm(
        citi + I(citi * minority_percent)|0|0|zip + fips, 
     data = most_recent_both)
 
-wells_reg_check <- felm(
-    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    wells + I(wells * minority_percent) + 
-       I(wells * median_family_income) +
-       I(wells * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
+# wells_reg_check <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     wells + I(wells * minority_percent) + 
+#        I(wells * median_family_income) +
+#        I(wells * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
 ```
 
 
@@ -1375,43 +1321,43 @@ national_check <- felm(
        wells + I(wells * minority_percent)|0|0|zip + fips, 
     data = most_recent_both)
 
-cu_reg_check <- felm(
-    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    national + I(national * minority_percent) + 
-       I(national * median_family_income) +
-       I(national * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
+# cu_reg_check <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     national + I(national * minority_percent) + 
+#        I(national * median_family_income) +
+#        I(national * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
 ```
 
 
@@ -1452,43 +1398,43 @@ cu_check <- felm(
        cu + I(cu * minority_percent)|0|0|zip + fips, 
     data = most_recent_both)
 
-national_reg_check <- felm(
-    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    cu + I(cu * minority_percent) + 
-       I(cu * median_family_income) +
-       I(cu * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
+# national_reg_check <- felm(
+#     business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     cu + I(cu * minority_percent) + 
+#        I(cu * median_family_income) +
+#        I(cu * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
 ```
 
 
@@ -1535,44 +1481,44 @@ business_roundtable_check <- felm(
 
 # roundtable check
 
-roundtable1_check <- felm(    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    national + 
-    cu +
-    business_roundtable + I(business_roundtable * minority_percent) + 
-       I(business_roundtable * median_family_income) +
-       I(business_roundtable * unemployment_rate)|0|0|zip + fips,
-  data = most_recent_both)
+# roundtable1_check <- felm(    business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     national + 
+#     cu +
+#     business_roundtable + I(business_roundtable * minority_percent) + 
+#        I(business_roundtable * median_family_income) +
+#        I(business_roundtable * unemployment_rate)|0|0|zip + fips,
+#   data = most_recent_both)
 ```
 
 
@@ -1615,49 +1561,50 @@ business_roundtable_check2 <- felm(
       I(business_roundtable * minority_percent)|0|0|zip + fips, 
     data = most_recent_both)
 
-roundtable2_check <- felm(    business_days ~ 1 + 
-    median_family_income + 
-    minority_percent +
-    high_school_pct + 
-    married_percent + male_percent +
-    cook_pvi + 
-    rural +
-    estimate_gini_index +
-    county_crime_rate + 
-    delay +
-    loan_150_350 +
-    loan_350_1mil +
-    loan_1mil_2mil +
-    loan_2mil_5mil + 
-    loan_5mil_10mil + 
-    preference + 
-    requirement +
-    bank_ppp_issued + 
-    jobs_reported +
-    banks_per_pop + 
-    businesses_per_pop + 
-    payroll +
-    county_unemployment_rate_apr + 
-    county_unemployment_rate + 
-    mean_start_cases +
-    mean_start_deaths + 
-    mean_end_cases +
-    mean_end_deaths + 
-    stay_at_home_apr + 
-    stay_at_home_current + 
-    non_essential_closure_apr + 
-    non_essential_closure_current +
-    national + 
-    I(national * minority_percent) + 
-    cu +
-    business_roundtable + I(business_roundtable * minority_percent)|0|0|zip + fips,
-  data = most_recent_both)
+# roundtable2_check <- felm(    business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent +
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     county_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     preference + 
+#     requirement +
+#     bank_ppp_issued + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     county_unemployment_rate_apr + 
+#     county_unemployment_rate + 
+#     mean_start_cases +
+#     mean_start_deaths + 
+#     mean_end_cases +
+#     mean_end_deaths + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     national + 
+#     I(national * minority_percent) + 
+#     cu +
+#     business_roundtable + I(business_roundtable * minority_percent)|0|0|zip + fips,
+#   data = most_recent_both)
 
 ```
 
 ```{r}
 
-# Trying bank-specific!
+# Trying bank-specific w/ deposits -- this isn't in the initial setup
+# part because I thought to do this a little bit later than the others.
 
 # Read the file in if you have to
 

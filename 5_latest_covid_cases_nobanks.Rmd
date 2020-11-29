@@ -15,6 +15,11 @@ library(readxl)
 library(lubridate)
 
 cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+
+# This is actually the equivalent of files 1-5 except for a situation where
+# I'm not matching based on bank lending requirements, which adds back
+# almost 2 million data points into my analysis.
+
 ```
 
 ```{r}
@@ -28,6 +33,8 @@ loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
 
 
 ```{r}
+# Equivalent to file 1, inputting lots of demographic stuff
+
 acs_income <- 
   read_csv("raw_data/acs_income/ACSST5Y2018.S1903_data_with_overlays_2020-10-12T102624.csv",
                        skip = 1) %>%
@@ -73,10 +80,14 @@ educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10
 hs_educ <- educ %>%
   select(id, geographic_area_name, 
          estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
-  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  rename(high_school_pct = 
+           estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
   mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 ```
 ```{r}
+
+# Joining these tibbles together
+
 pop_race <- inner_join(pop, race, by = "geographic_area_name")
 income_pop_race <- inner_join(acs_income, pop_race, by = "geographic_area_name") %>%
   select(-id.y, -id.x) %>%
@@ -87,7 +98,9 @@ income_pop_race_educ <- inner_join(income_pop_race, hs_educ, by = "geographic_ar
 
 acs_with_banking <- left_join(income_pop_race_educ, banks, 
                               by = c("geographic_area_name" = "zip")) %>%
+  
   # replace no banks in a county with zero banks in a county
+  
   replace_na(replace = list(number = 0))
 
 ppp_with_demographics <- left_join(loan_only, acs_with_banking,  
@@ -97,6 +110,9 @@ ppp_with_demographics <- left_join(loan_only, acs_with_banking,
   drop_na(high_school_pct)
 ```
 ```{r}
+
+# Creating loan size dummies like file 2
+
 zip_data_with_dummies <- ppp_with_demographics %>%
   mutate("loan_350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
          "loan_150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
@@ -109,6 +125,9 @@ zip_data_with_dummies <- ppp_with_demographics %>%
 
 
 ```{r}
+
+# Matching on Cook PVI
+
 zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", 
                              skip = 1) %>%
   clean_names() %>%
@@ -428,6 +447,10 @@ ppp_gini <- left_join(ppp_unemploy_2, inequality,
 ```
 
 ```{r}
+
+# Adding in total payroll data from the ZBP survey - measure of aggregate
+# economic activity
+
 payroll <- 
   read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
            skip = 1) %>%
@@ -444,6 +467,9 @@ ppp_payroll <- left_join(ppp_gini, payroll, by = "zip") %>%
   drop_na(payroll)
 ```
 ```{r}
+
+# Controlling for potential gender bias by adding in gender percentages
+
 gender <- 
   read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
                 skip = 1) %>%

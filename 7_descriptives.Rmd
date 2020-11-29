@@ -13,7 +13,8 @@ library(bizdays)
 # Note that this isn't relevant for Gov 50 at all: this is for my other
 # projects where I needed to make a bunch of descriptive statistics
 # for  everything in the regressions, so feel free to ignore this file entirely.
-# This is NOT part of my Gov 50 final project.
+# This is NOT part of my Gov 50 final project (though the final tables
+# end up being so)
 
 loan_only <- readRDS('ppp_loanonly_all_loans.rds')
 
@@ -21,6 +22,12 @@ loan_only <- readRDS('ppp_loanonly_all_loans.rds')
   #readRDS('ppp_allvars_1105.rds')
 
 cal <-  create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+
+# Generally, the methodology is just to merge in my data sources one at a 
+# time to the original dataset so I can get a true dataset average of 
+# things like race, income and compare it to my sample to make sure
+# we haven't egregiously selected for weird points.
+
 ```
 
 ```{r}
@@ -66,11 +73,13 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 
 sapply(most_recent, mean) %>%
   bind_rows() %>%
-  pivot_longer(cols = loan_range:fips, names_to = "variable", values_to = "mean")
+  pivot_longer(cols = loan_range:fips, names_to = "variable", 
+               values_to = "mean")
 ```
 
 ```{r}
 # SD for everything
+
 most_recent <- most_recent %>%
   select(business_days, median_family_income, minority_percent,
          high_school_pct, married_percent, male_percent, cook_pvi,
@@ -78,9 +87,11 @@ most_recent <- most_recent %>%
          loan_150_less, loan_150_350, loan_350_1mil, loan_1mil_2mil,
          loan_2mil_5mil, loan_5mil_10mil, jobs_reported, banks_per_pop,
          businesses_per_pop, payroll, unemployment_rate_apr, 
-         unemployment_rate, mean_start_cases_weighted, mean_start_deaths_weighted,
+         unemployment_rate, mean_start_cases_weighted, 
+         mean_start_deaths_weighted,
          mean_end_cases_weighted, mean_end_deaths_weighted, stay_at_home_apr,
-         stay_at_home_current, non_essential_closure_apr, non_essential_closure_current)
+         stay_at_home_current, non_essential_closure_apr, 
+         non_essential_closure_current)
 
 
 sapply(most_recent, sd) %>%
@@ -106,7 +117,8 @@ acs_income <-
            as.double(estimate_median_income_dollars_families_families)) %>%
   mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 
-ppptemp <- left_join(loan_only, acs_income, by = c("zip" = "geographic_area_name")) %>%
+ppptemp <- left_join(loan_only, acs_income, 
+                     by = c("zip" = "geographic_area_name")) %>%
   drop_na(estimate_median_income_dollars_families_families)
 
 ppptemp %>%
@@ -119,7 +131,8 @@ ppptemp %>%
 pop <- read_csv("raw_data/acs_pop/ACSDT5Y2018.B01003_data_with_overlays_2020-10-06T100104.csv",
                 skip = 1) %>%
   clean_names() %>%
-  mutate(geographic_area_name = map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  mutate(geographic_area_name = 
+           map_chr(geographic_area_name, ~ substring(., 6))) %>%
   select(-margin_of_error_total) %>%
   mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 
@@ -130,6 +143,7 @@ banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
   filter(zip != 0) %>%
   
   # FDIC data drops leading zeroes from zip codes, so we add them back!
+  
   mutate(zip = str_pad(zip, width = 5, "left", "0")) %>%
   mutate(zip = str_trim(zip, side = "both")) %>%
   group_by(zip) %>%
@@ -166,7 +180,8 @@ temp3 <- left_join(loan_only, race, by = c("zip" = "geographic_area_name"))
 temp3 %>%
   drop_na(percent_estimate_race_total_population_one_race_black_or_african_american,
           percent_estimate_race_total_population_one_race_white) %>%
-  summarize(number = n(), mean1 = mean(percent_estimate_race_total_population_one_race_black_or_african_american),
+  summarize(number = n(), 
+            mean1 = mean(percent_estimate_race_total_population_one_race_black_or_african_american),
             sd1 = sd(percent_estimate_race_total_population_one_race_black_or_african_american),
             mean2 = mean(percent_estimate_race_total_population_one_race_white),
             sd2 = sd(percent_estimate_race_total_population_one_race_white))
@@ -174,6 +189,9 @@ temp3 %>%
 
 
 ```{r}
+
+# Merging in education data
+
 educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10-15T084511.csv",
                  skip = 1) %>%
   clean_names() %>%
@@ -182,7 +200,8 @@ educ <- read_csv("raw_data/acs_educ/ACSST5Y2018.S1501_data_with_overlays_2020-10
 hs_educ <- educ %>%
   select(id, geographic_area_name, 
          estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
-  rename(high_school_pct = estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  rename(high_school_pct = 
+           estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
   mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 
 temp4 <- left_join(loan_only, hs_educ, by = c("zip" = "geographic_area_name")) %>%
@@ -195,6 +214,9 @@ temp4 %>%
             sd = sd(high_school_pct))
 ```
 ```{r}
+
+# Merging in loan dummies
+
 zip_data_with_dummies <- loan_only %>%
   mutate("350_1mil" = ifelse(loan_range == "d $350,000-1 million", 1, 0),
          "150-350" = ifelse(loan_range == "e $150,000-350,000", 1, 0),
@@ -223,18 +245,25 @@ zip_data_with_dummies %>%
 
 ```
 ```{r}
+
+# Merging in congressional districts for cook pvi
+
 zip_cd_crosswalk <- read_csv("raw_data/crosswalks/zcta_cd_actual_umiss.csv", skip = 1) %>%
   clean_names() %>%
-  mutate(x116th_congressional_district = ifelse(x116th_congressional_district == "00",
-                                                "AL", x116th_congressional_district)) %>%
-  mutate(cd_name = str_c(state_abbreviation, x116th_congressional_district, sep = "-")) %>%
+  mutate(x116th_congressional_district = 
+           ifelse(x116th_congressional_district == "00",
+                    "AL", x116th_congressional_district)) %>%
+  mutate(cd_name = 
+           str_c(state_abbreviation, 
+                 x116th_congressional_district, sep = "-")) %>%
   select(-state_code, -population_2010) %>%
   group_by(zip_census_tabulation_area) %>%
   
   # de-duplicate by assigning zips to only the CD where most of them are in
   
   arrange(cd116_to_zcta5_allocation_factor) %>%
-  mutate(zip_census_tabulation_area = str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
+  mutate(zip_census_tabulation_area = 
+           str_pad(zip_census_tabulation_area, width = 5, "left", "0")) %>%
   slice(1)
 
 cook_pvi <- read_csv(file = 'raw_data/cook_pvi/data-5vPn3.csv') %>%
@@ -254,14 +283,20 @@ zip_pvi <- left_join(zip_cd_crosswalk, cook_pvi, by = c("cd_name" = "dist")) %>%
   select(zip_census_tabulation_area, cd_name, pct) %>%
   mutate(zip_census_tabulation_area = as.character(zip_census_tabulation_area))
 
-temp5 <- left_join(loan_only, zip_pvi, by = c("zip" = "zip_census_tabulation_area")) %>%
+temp5 <- left_join(loan_only, zip_pvi, 
+                   by = c("zip" = "zip_census_tabulation_area")) %>%
   drop_na(pct)
 
 temp5 %>%
   summarize(n = n(), mean = mean(pct), sd = sd(pct))
 ```
 ```{r}
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+
+# Adding in COVID cases and deaths, creating the estimates -- all identical
+# to file 5 and 4 I think.
+
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio)
 
@@ -269,10 +304,12 @@ county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
   filter(date > as.Date("2020-03-27")) %>%
   select(-county, -state)
 
-weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips")) %>%
+weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, 
+                             by = c("county" = "fips")) %>%
   filter(date <= as.Date("2020-04-03")) %>%
   group_by(zip) %>%
-  mutate(mean_cases_app_start = mean(cases), mean_deaths_app_start = mean(deaths)) %>%
+  mutate(mean_cases_app_start = mean(cases), 
+         mean_deaths_app_start = mean(deaths)) %>%
   select(-cases, -deaths, -date) %>%
   distinct() %>%
   mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
@@ -285,8 +322,10 @@ weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, by = c("county"
 
 temp6 <- left_join(ppp_pop, weighted_cases1, by = "zip") %>%
   drop_na(mean_start_cases_weighted, mean_start_deaths_weighted) %>%
-  mutate(mean_start_cases_weighted = mean_start_cases_weighted * 10000 / estimate_total,
-         mean_start_deaths_weighted = mean_start_deaths_weighted * 10000 / estimate_total)
+  mutate(mean_start_cases_weighted = 
+           mean_start_cases_weighted * 10000 / estimate_total,
+         mean_start_deaths_weighted = 
+           mean_start_deaths_weighted * 10000 / estimate_total)
 
 temp6 %>%
   summarize(n = n(), mean1 = mean(mean_start_cases_weighted),
@@ -296,7 +335,11 @@ temp6 %>%
 
 ```
 ```{r}
-bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
+
+# Manually collected bank lending policy data.
+
+bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', 
+                                     sheet = "Sheet2") %>%
   mutate(sba_name = tolower(sba_name)) %>%
   mutate(sba_name = str_trim(sba_name, side = "both")) %>%
   drop_na(preference, requirement)
@@ -304,11 +347,19 @@ bank_ppp_policy_manual <- read_excel('raw_data/bank_ppp_policy_manual.xlsx', she
 ppp_setup <- loan_only %>%
   mutate(lender = str_trim(lender, side = "both"), lender = tolower(lender))
 
+
+# This is explained in file 4. We can just assign credit unions dummies
+# b/c they only really lend to members anyway
+
 temp7 <- left_join(ppp_setup, bank_ppp_policy_manual,
                                       by = c("lender" = "sba_name")) %>%
-  mutate(requirement = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
-         requirement = ifelse(str_detect(lender, pattern = "credit union"), 1, requirement)) %>%
+  mutate(requirement = 
+           ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, requirement),
+         requirement = 
+           ifelse(str_detect(lender, pattern = "\\scu$"), 1, requirement),
+         requirement = 
+           ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                  requirement)) %>%
   drop_na(requirement) %>%
   mutate(preference = replace_na(preference, 0))
 
@@ -319,17 +370,22 @@ temp7 %>%
 
 
 ```{r}
+
+# Adding in loans issued per bank
+
 loan_numbers <- loan_only %>%
   select(lender) %>%
   group_by(lender) %>%
   summarize(bank_ppp_issued = n(), .groups = "drop")
 
 temp8 <- left_join(loan_only, loan_numbers, by = "lender") %>%
+  
   # rename("cook_pvi" = "pct", 
   #        "black_percent" = "percent_estimate_race_total_population_one_race_black_or_african_american",
   #        "white_percent" = "percent_estimate_race_total_population_one_race_white",
   #        "median_family_income" = "estimate_median_income_dollars_families_families",
   #        "population" = "estimate_total") %>%
+  
   select(-loan_range)
 
 temp8 %>%
@@ -338,6 +394,9 @@ temp8 %>%
 ```
 
 ```{r}
+
+# Rurality descriptives
+
 rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
   clean_names() %>%
   select(-state) %>%
@@ -351,6 +410,9 @@ temp9 %>%
   summarize(mean = mean(rural), sd = sd(rural))
 ```
 ```{r}
+
+# Business count descriptives
+
 biz_count <- read_csv("raw_data/acs_business/ZBP2014.CB1400ZBP_data_with_overlays_2020-10-19T095307.csv",
                       skip = 1) %>%
   clean_names()  %>%
@@ -370,6 +432,9 @@ temp10 %>%
             sd = sd(businesses_per_pop))
 ```
 ```{r}
+
+# Marital status descriptives
+
 marital <- read_csv("raw_data/acs_marital/ACSST5Y2018.S1201_data_with_overlays_2020-10-19T152147.csv",
                     skip = 1) %>%
   clean_names() %>%
@@ -391,6 +456,9 @@ temp11 %>%
 
 
 ```{r}
+
+# Adding in Gini coefficient
+
 inequality <- read_csv('raw_data/acs_gini/ACSDT5Y2018.B19083_data_with_overlays_2020-10-26T225918.csv',
                        skip = 1) %>%
   clean_names() %>%
@@ -412,6 +480,7 @@ temp15 %>%
 
 ```{r}
 # Adding in violent crime rates
+
 crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%
@@ -441,7 +510,8 @@ temp16 %>% summarize(n = n(), mean = mean(violent_crime_rate), sd = sd(violent_c
 
 
 ```{r}
-# Calculating for business patterns
+# Calculating for business patterns -- payroll data
+
 payroll <- 
   read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
            skip = 1) %>%
@@ -461,7 +531,7 @@ temp17 %>%
   summarize(n = n(), mean = mean(payroll), sd = sd(payroll))
 ```
 ```{r}
-# Calculating lender stuff
+# Calculating lender characteristics via the dummy variables
 
 loan_only %>%
     mutate(lender = tolower(lender)) %>%
@@ -483,7 +553,7 @@ loan_only %>%
 
 ```{r}
 
-# Calculating gender
+# Calculating gender ratios
 
 gender <- 
   read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
@@ -508,6 +578,10 @@ temp17 <- left_join(loan_only, gender,
 
 
 ```{r}
+
+# This is code for remaking the full loan dataset like we did in file 1.
+# I don't actually need this, since I saved the results to an RDS initially.
+
 ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   clean_names() %>%
   select(loan_range, zip, date_approved, lender, address, city, state,
@@ -515,6 +589,7 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   drop_na(zip, jobs_reported) %>%
   
   # This calculates the date on which loans were approved vs. when apps opened.
+  
   mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),
          zip = as.character(zip))
@@ -535,10 +610,13 @@ sba_cleaning <- function(file) {
 }
 
 # run for Mac
-file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+file.names1 <- 
+  dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", 
+      pattern = ".csv")
 
 # run for Windows
-file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+file.names2 <- 
+  dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
 
 all_states<- tibble()
 

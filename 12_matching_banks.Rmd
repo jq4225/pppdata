@@ -8,9 +8,17 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
 library(openintro)
+
+# Here, we're adding in deposit values for banks as a robustness check
+# for CSR agreement effectiveness. THIS IS NOT PART OF THE GOV 50 shiny app,
+# only for other projects for my other classes using the same data.
+
 ```
 
 ```{r}
+
+# Read in the most recent dataset we have - about 3.7 million loans. We
+# replace n.a. to make later matching easier.
 
 most_recent <- readRDS('most_recent_zip_nobanks_1126.rds') %>%
   mutate(lender = tolower(lender), id = seq.int(n())) %>%
@@ -22,6 +30,7 @@ most_recent <- readRDS('most_recent_zip_nobanks_1126.rds') %>%
 ```
 
 ```{r}
+# Basic data cleaning to make our matching easier a little bit later.
 
 deposits <- read_csv('raw_data/fdic/All_Reports_20200630_Total_Deposits.csv',
                      col_types = cols()) %>%
@@ -29,6 +38,9 @@ deposits <- read_csv('raw_data/fdic/All_Reports_20200630_Total_Deposits.csv',
   mutate(name = tolower(name), dep = as.double(dep)) %>%
   mutate(name = str_trim(name, side = "both")) %>%
   select(cert, name, city, stalp, dep)
+
+# This will come in handy a little bit later -- we don't actually use this
+# yet until we try to deduplicate duplicated loans.
 
 locations <- read_csv('raw_data/fdic/OFFICES2_PART2.csv',
                       col_types = cols()) %>%
@@ -51,23 +63,28 @@ bank_deposit_locations <- left_join(deposits, locations, by = "cert") %>%
 
 ```{r}
 
-# Let's try a straight join and see what happens first
-
-sba_banks <- most_recent %>%
-  select(lender) %>%
-  distinct()
-
-matched_lenders <- left_join(sba_banks, bank_deposit_locations, 
-                                   by = c("lender" = "name"))
+# sba_banks <- most_recent %>%
+#   select(lender) %>%
+#   distinct()
+# 
+# matched_lenders <- left_join(sba_banks, bank_deposit_locations, 
+#                                    by = c("lender" = "name"))
   
 
 ```
 
 ```{r}
+
+# Let's try a straight join and see what happens first. This matches
+# most of the loans we end up using -- most banks are correctly matched.
+
 deposits_joined <- left_join(most_recent, deposits, 
                              by = c("lender" = "name")) %>%
   drop_na(dep) %>%
   group_by(id) %>%
+  
+  # We filter for duplicates and then split this into two tibbles.
+  
   mutate(duplicates = n()) %>%
   ungroup()
 
@@ -82,6 +99,12 @@ deposits_duplicate <- deposits_joined %>%
 
 
 ```{r}
+
+# The noduplicate file is already finalized. Now we're working with the 
+# duplicated ones. We match these to the list of bank locations I have
+# from the FDIC -- this ends up dropping a bunch since the FDIC I guess
+# doesn't track locations for some banks.
+
 states_matching <- left_join(deposits_duplicate, bank_deposit_locations,
                              by = "cert") %>%
   drop_na(dep.y) %>%
@@ -89,7 +112,19 @@ states_matching <- left_join(deposits_duplicate, bank_deposit_locations,
   rename("dep" = "dep.y", "city" = "city.x") %>%
   drop_na(state_list, state) %>%
   mutate(state = as.character(state)) %>%
+  
+  # Then we create a logical for whether the state the loan was acquired in
+  # is one of the states where the "matched" bank has an office. We do this
+  # to attempt to eliminate cases where identically named banks in 
+  # different parts of the country are matched, so we can get rid of 
+  # some of the duplicates
+  
   mutate(in_state = str_detect(state_list, pattern = state))
+
+# We then count duplicates AGAIN to see if we've gotten some more decisively
+# matched loans. This isn't fully accurate, because you might have crossed
+# state lines to get a loan, but it's probably mostly there. This only adds on
+# about 75k additional loans to our analysis, because it's very limited.
 
 deposits_dedup <- states_matching %>%
   filter(in_state == TRUE) %>%
@@ -105,6 +140,9 @@ deposits_cleaned <- deposits_dedup %>%
 # deposits_dirty <- deposits_dedup %>%
 #   filter(duplicates > 1)
 
+# This preps the noduplicate file for a rowbind by matching up column types
+# and names.
+
 deposits_noduplicate <- deposits_noduplicate %>%
   mutate(state = as.character(state)) %>%
   select(-city.y) %>%
@@ -119,6 +157,8 @@ deposits_filtered <- rbind(deposits_noduplicate, deposits_cleaned)
 ```
 
 ```{r}
+# We also take the opportunity to add in loan numbers, something we exclude
+# from the original dataset since we were just using lender fixed effects.
 
 old_data <- readRDS('ppp_loanonly_all_loans.rds')
 
@@ -141,6 +181,9 @@ deposits_loannumbers <-
 
 
 ```{r}
+
+# DOn't need this code -- was just looking at which banks had duplicates.
+
 deposits_joined <- left_join(deposits_filtered, loan_numbers,
                              by = "lender") %>%
   select(-cert, -state_list)
