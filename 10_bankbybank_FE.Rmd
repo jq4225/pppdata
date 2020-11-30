@@ -1912,7 +1912,7 @@ roundtable_deposits_2 <- felm(
 # Trying without preference and requirement variables -- i.e., using the 
 # original 3.7 million loan dataset
 
-most_recent <- readRDS('most_recent_zip_nobanks_1126.rds') %>%
+most_recent <- readRDS('most_recent_zip_nobanks_1129.rds') %>%
   mutate(lender = tolower(lender)) %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
@@ -2232,7 +2232,8 @@ cu_orig <- felm(
 ```{r}
 
 # Trying yet another robustness check -- simply just running the bank
-# regressions with the national and cu stuff built in
+# regressions with the national and cu stuff built in -- this is the 
+# original most recent dataset
 
 baml_robust <- felm(
     business_days ~ 1 + 
