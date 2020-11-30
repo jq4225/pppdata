@@ -50,7 +50,7 @@ state_cases <- readRDS('state_cases.rds')
 
 # Define UI 
 
-ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?",
+ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the Paycheck Protection Program",
                   theme = shinytheme("sandstone"),
                   tabPanel("Introduction",
                            mainPanel(
@@ -148,6 +148,9 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                       The rightmost regression table below shows one of the robustness checks, where I replaced data that I had to
                                                       create ZIP-level estimates for (COVID cases/deaths, crime rates, and unemployment) with the original county-level
                                                       data, to correct for any problems with my estimations."),
+                                                    p("Note that due to computational limitations, the graphics show predicted waiting times without
+                                                      fixed effects in the regression. While the results with and without fixed effects are qualitatively similar,
+                                                      the fixed effects regressions have lower coefficients on the minority percentage variable."),
                                                     column(6, gt_output('zip_simple')),
                                                     column(6, gt_output("zip_simple_check"))
                                                   )),
@@ -159,6 +162,9 @@ ui <- navbarPage("Does Race Determine Paycheck Protection Program Waiting Times?
                                                       are included. However, including additional interaction terms suggests that the relationship between race
                                                       and waiting times is significant and nonlinear, as you can see in the abbreviated regression table below. It appears that
                                                       the effect of having a higher minority percentage tapers off at higher levels of minority populations."),
+                                                    p("Note that due to computational limitations, the graphics show predicted waiting times without
+                                                      fixed effects in the regression. While the results with and without fixed effects are qualitatively similar,
+                                                      the fixed effects regressions have lower coefficients on the minority percentage variable."),
                                                     gt_output('county_simple')
                                                   )),
                                          tabPanel("Full Tables", 

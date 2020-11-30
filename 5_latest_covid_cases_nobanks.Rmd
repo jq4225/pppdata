@@ -193,10 +193,10 @@ county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
 
 weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, 
                              by = c("county" = "fips")) %>%
-  filter(date <= as.Date("2020-04-03")) %>%
+  filter(date %in% c(as.Date("2020-04-03"), as.Date("2020-03-27"))) %>%
   group_by(zip) %>%
-  mutate(mean_cases_app_start = mean(cases), 
-         mean_deaths_app_start = mean(deaths)) %>%
+  mutate(mean_cases_app_start = (max(cases) - min(cases)) / 7, 
+         mean_deaths_app_start = (max(deaths) - min(deaths)) / 7) %>%
   select(-cases, -deaths, -date) %>%
   distinct() %>%
   

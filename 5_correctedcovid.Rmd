@@ -1,0 +1,343 @@
+---
+title: "correctedcovid"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(lubridate)
+```
+
+```{r}
+
+# Start with fixing the ZIP numbers
+
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+# 3-27 is 1 week before April 3rd when apps opened so we filter here for
+# less computational need + b/c we only need 7-day averages
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date > as.Date("2020-03-27")) %>%
+  select(-county, -state)
+
+# 7 day rolling average cases and deaths around application start date for
+# every ZIP code
+
+weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, 
+                             by = c("county" = "fips")) %>%
+  filter(date %in% c(as.Date("2020-04-03"), as.Date("2020-03-27"))) %>%
+  group_by(zip) %>%
+  mutate(mean_cases_app_start = (max(cases) - min(cases)) / 7, 
+         mean_deaths_app_start = (max(deaths) - min(deaths)) / 7) %>%
+  select(-cases, -deaths, -date) %>%
+  distinct() %>%
+  
+  # To convert to zip code numbers we multiply by residential ratios
+  # of each zip code per county, meaning we get an estimated # of deaths
+  # assuming that deaths are equally distributed based on population.
+  
+  mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
+         mean_start_deaths_weighted = mean_deaths_app_start * res_ratio) %>%
+  select(-mean_cases_app_start, -mean_deaths_app_start) %>%
+  mutate(mean_start_cases_weighted = sum(mean_start_cases_weighted),
+         mean_start_deaths_weighted = sum(mean_start_deaths_weighted)) %>%
+  select(-county, -res_ratio) %>%
+  distinct()
+
+```
+```{r}
+most_recent <- most_recent %>%
+  select(-mean_start_cases_weighted, -mean_start_deaths_weighted,
+         -mean_end_cases_weighted, -mean_end_deaths_weighted)
+
+most_recent_1129 <- left_join(most_recent, weighted_cases1, by = "zip") %>%
+    drop_na(mean_start_cases_weighted, mean_start_deaths_weighted)
+```
+
+```{r}
+
+weighted_cases_current <- 
+  left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips"))
+
+weighted_cases_current_2 <- weighted_cases_current %>%
+  mutate(weighted_cases = cases * res_ratio,
+         weighted_deaths = deaths * res_ratio) %>%
+  select(-county, -res_ratio) %>%
+  group_by(zip, date) %>%
+  summarize(weighted_cases = sum(weighted_cases),
+            weighted_deaths = sum(weighted_deaths)) %>%
+  filter(date <= as.Date("2020-08-08"), date >= as.Date("2020-03-27"))
+
+dates_approved <- most_recent_1129 %>%
+  select(zip, date_approved) %>%
+  distinct()
+```
+```{r}
+
+# Again, need to run this in Rstudio Cloud for this to work due to memory issues
+
+weighted_cases_current_3 <- left_join(dates_approved, weighted_cases_current_2,
+                                      by = "zip") %>%
+  group_by(zip, date_approved) %>%
+  filter(date %in% c(date_approved, as.Date(date_approved - 7))) %>%
+  summarize(mean_end_cases_weighted = 
+              (max(weighted_cases) - min(weighted_cases))/7,
+            mean_end_deaths_weighted = 
+              (max(weighted_deaths) - min(weighted_deaths))/7, 
+            .groups = "drop")
+```
+```{r}
+weighted_cases_current_3 <- readRDS('weighted_cases_current_3.rds')
+
+most_recent_1129 <- left_join(most_recent_1129, 
+                              weighted_cases_current_3,
+                              by = c("zip", "date_approved")) %>%
+  drop_na(mean_end_cases_weighted, mean_end_deaths_weighted) %>%
+  mutate(mean_end_cases_weighted = mean_end_cases_weighted * 100000 / population,
+         mean_end_deaths_weighted = 
+           mean_end_deaths_weighted * 100000 / population,
+         mean_start_cases_weighted = 
+           mean_start_cases_weighted * 100000 / population,
+         mean_start_deaths_weighted = 
+           mean_start_deaths_weighted * 100000 / population)
+```
+
+```{r}
+# We can use this dataset to merge the other zips too -- with banks and 
+# with deposits
+
+most_recent <- readRDS('most_recent_zip_1117.rds') %>%
+    select(-mean_start_cases_weighted, -mean_start_deaths_weighted,
+         -mean_end_cases_weighted, -mean_end_deaths_weighted)
+
+most_recent_1129 <- left_join(most_recent, weighted_cases1, by = "zip") %>%
+    drop_na(mean_start_cases_weighted, mean_start_deaths_weighted)
+
+most_recent_1129 <- left_join(most_recent_1129, 
+                              weighted_cases_current_3,
+                              by = c("zip", "date_approved")) %>%
+  drop_na(mean_end_cases_weighted, mean_end_deaths_weighted) %>%
+  mutate(mean_end_cases_weighted = mean_end_cases_weighted * 100000 / population,
+         mean_end_deaths_weighted = 
+           mean_end_deaths_weighted * 100000 / population,
+         mean_start_cases_weighted = 
+           mean_start_cases_weighted * 100000 / population,
+         mean_start_deaths_weighted = 
+           mean_start_deaths_weighted * 100000 / population)
+
+```
+
+```{r}
+most_recent <- readRDS('most_recent_zip_banksmatched_1128.rds') %>%
+      select(-mean_start_cases_weighted, -mean_start_deaths_weighted,
+         -mean_end_cases_weighted, -mean_end_deaths_weighted)
+
+most_recent_1129 <- left_join(most_recent, weighted_cases1, by = "zip") %>%
+    drop_na(mean_start_cases_weighted, mean_start_deaths_weighted)
+```
+
+```{r}
+most_recent_1129 <- left_join(most_recent_1129, 
+                              weighted_cases_current_3,
+                              by = c("zip", "date_approved")) %>%
+  drop_na(mean_end_cases_weighted, mean_end_deaths_weighted) %>%
+  mutate(mean_end_cases_weighted = mean_end_cases_weighted * 100000 / population,
+         mean_end_deaths_weighted = 
+           mean_end_deaths_weighted * 100000 / population,
+         mean_start_cases_weighted = 
+           mean_start_cases_weighted * 100000 / population,
+         mean_start_deaths_weighted = 
+           mean_start_deaths_weighted * 100000 / population)
+```
+
+```{r}
+# Doing the same for counties -- need some recalculations here
+
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date >= as.Date("2020-03-28")) %>%
+  select(date, fips, cases, deaths)
+
+current_cases <- county_covid %>%
+  filter(date %in% c(as.Date("2020-04-03"), as.Date("2020-03-28"))) %>%
+  group_by(fips) %>%
+  summarize(cases = (max(cases) - min(cases))/7, 
+            deaths = (max(deaths) - min(deaths))/7, .groups = "drop")
+```
+```{r}
+most_recent_county <- readRDS('most_recent_county_1115.rds') %>%
+  select(-mean_start_cases, -mean_start_deaths, 
+         -mean_end_deaths, -mean_end_cases)
+```
+
+```{r}
+most_recent_county_1129 <- left_join(most_recent_county, current_cases,
+                                     by = "fips") %>%
+  mutate(mean_start_cases = cases * 100000/estimate_total,
+         mean_start_deaths = deaths * 100000/estimate_total) %>%
+  select(-cases, -deaths) %>%
+  drop_na(mean_start_cases, mean_start_deaths)
+```
+
+```{r}
+dates_approved <- most_recent_county_1129 %>%
+  select(date_approved, fips) %>%
+  distinct()
+
+temp <- left_join(dates_approved, county_covid, by = "fips") %>%
+  filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
+  group_by(fips, date_approved) %>%
+  summarize(mean_end_cases = (max(cases) - min(cases))/7, 
+            mean_end_deaths = (max(deaths) - min(deaths))/7)
+
+# This all has to be run in the cloud, otherwise it takes too long / memory 
+# issues
+
+most_recent_county_1129 <- left_join(most_recent_county_1129,
+                                     temp, by = c("fips", "date_approved")) %>%
+  drop_na(mean_end_cases, mean_end_deaths) %>%
+  mutate(mean_end_cases = mean_end_cases * 100000/estimate_total, 
+         mean_end_deaths = mean_end_deaths * 100000/estimate_total)
+```
+
+```{r}
+most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds') %>%
+  select(-mean_start_cases, -mean_start_deaths, 
+         -mean_end_deaths, -mean_end_cases)
+```
+
+```{r}
+most_recent_county_1129 <- left_join(most_recent_county, current_cases,
+                                     by = "fips") %>%
+  mutate(mean_start_cases = cases * 100000/estimate_total,
+         mean_start_deaths = deaths * 100000/estimate_total) %>%
+  select(-cases, -deaths) %>%
+  drop_na(mean_start_cases, mean_start_deaths)
+
+dates_approved <- most_recent_county_1129 %>%
+  select(date_approved, fips) %>%
+  distinct()
+
+temp <- left_join(dates_approved, county_covid, by = "fips") %>%
+  filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
+  group_by(fips, date_approved) %>%
+  summarize(mean_end_cases = (max(cases) - min(cases))/7, 
+            mean_end_deaths = (max(deaths) - min(deaths))/7)
+
+most_recent_county_1129 <- left_join(most_recent_county_1129,
+                                     temp, by = c("fips", "date_approved")) %>%
+  drop_na(mean_end_cases, mean_end_deaths) %>%
+  mutate(mean_end_cases = mean_end_cases * 100000/estimate_total, 
+         mean_end_deaths = mean_end_deaths * 100000/estimate_total)
+```
+
+```{r}
+# We can also do this for the zip with counties, both with and without
+# banks
+
+most_recent_zipcounty <- 
+  readRDS('most_recent_zip_withcounties_nobanks_1118.rds') %>%
+    select(-mean_start_cases, -mean_start_deaths, 
+         -mean_end_deaths, -mean_end_cases, -mean_start_cases_weighted,
+         -mean_start_deaths_weighted, -mean_end_cases_weighted,
+         -mean_end_deaths_weighted)
+
+# read in county population data
+
+pop <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id, estimate_total) %>%
+  mutate(fips = str_sub(id, start = 10)) %>%
+  select(-id)
+
+zipcounty_pop <- left_join(most_recent_zipcounty, pop, 
+                           by = "fips") %>%
+  drop_na(estimate_total)
+```
+
+
+```{r}
+most_recent_zipcounty_1129 <- left_join(zipcounty_pop, current_cases,
+                                     by = "fips") %>%
+  mutate(mean_start_cases = cases * 100000/estimate_total,
+         mean_start_deaths = deaths * 100000/estimate_total) %>%
+  select(-cases, -deaths) %>%
+  drop_na(mean_start_cases, mean_start_deaths)
+```
+
+
+```{r}
+
+dates_approved <- most_recent_zipcounty_1129 %>%
+  select(date_approved, fips) %>%
+  distinct()
+
+temp <- left_join(dates_approved, county_covid, by = "fips") %>%
+  filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
+  group_by(fips, date_approved) %>%
+  summarize(mean_end_cases = (max(cases) - min(cases))/7, 
+            mean_end_deaths = (max(deaths) - min(deaths))/7)
+
+most_recent_zipcounty_1129 <- left_join(most_recent_zipcounty_1129,
+                                     temp, by = c("fips", "date_approved")) %>%
+  drop_na(mean_end_cases, mean_end_deaths) %>%
+  mutate(mean_end_cases = mean_end_cases * 100000/estimate_total, 
+         mean_end_deaths = mean_end_deaths * 100000/estimate_total)
+```
+
+```{r}
+most_recent_zipcounty <- 
+  readRDS('most_recent_zip_withcounties_1118.rds') %>%
+    select(-mean_start_cases, -mean_start_deaths, 
+         -mean_end_deaths, -mean_end_cases, -mean_start_cases_weighted,
+         -mean_start_deaths_weighted, -mean_end_cases_weighted,
+         -mean_end_deaths_weighted)
+
+# read in county population data -- no need here, already run before
+
+# pop <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
+#   clean_names() %>%
+#   select(id, estimate_total) %>%
+#   mutate(fips = str_sub(id, start = 10)) %>%
+#   select(-id)
+
+zipcounty_pop <- left_join(most_recent_zipcounty, pop, 
+                           by = "fips") %>%
+  drop_na(estimate_total)
+```
+
+```{r}
+most_recent_zipcounty_1129 <- left_join(zipcounty_pop, current_cases,
+                                     by = "fips") %>%
+  mutate(mean_start_cases = cases * 100000/estimate_total,
+         mean_start_deaths = deaths * 100000/estimate_total) %>%
+  select(-cases, -deaths) %>%
+  drop_na(mean_start_cases, mean_start_deaths)
+
+
+```
+
+```{r}
+dates_approved <- most_recent_zipcounty_1129 %>%
+  select(date_approved, fips) %>%
+  distinct()
+
+temp <- left_join(dates_approved, county_covid, by = "fips") %>%
+  filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
+  group_by(fips, date_approved) %>%
+  summarize(mean_end_cases = (max(cases) - min(cases))/7, 
+            mean_end_deaths = (max(deaths) - min(deaths))/7)
+
+most_recent_zipcounty_1129 <- left_join(most_recent_zipcounty_1129,
+                                     temp, by = c("fips", "date_approved")) %>%
+  drop_na(mean_end_cases, mean_end_deaths) %>%
+  mutate(mean_end_cases = mean_end_cases * 100000/estimate_total, 
+         mean_end_deaths = mean_end_deaths * 100000/estimate_total)
+
+```
+

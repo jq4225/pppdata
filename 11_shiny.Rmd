@@ -11,6 +11,8 @@ library(janitor)
 library(lubridate)
 library(bizdays)
 library(openintro)
+library(lfe)
+library(estimatr)
 
 cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 
@@ -22,7 +24,7 @@ cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```{r}
 # Reading in the data. I"m just doing this so I can use ggeffect later
 
-most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
+most_recent <- readRDS('most_recent_zip_nobanks_1126.rds')
 
 most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds')
 ```
@@ -119,8 +121,14 @@ race_days3 <- rbind(national, states)
 ```
 
 ```{r}
-covid_fe <- felm(
-  business_days ~ 1 + 
+set.seed(9)
+sample <- sample_n(most_recent, size = 1000000)
+
+most_recent <- most_recent %>%
+  mutate(zip = as.factor(zip),
+         lender = as.factor(lender))
+
+covid_fe <- lm_robust(business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -148,8 +156,8 @@ covid_fe <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current|fips + lender|0|zip,
-  data = most_recent)
+    non_essential_closure_current, fixed_effects = ~ lender + fips,
+    clusters = zip, data = most_recent)
 ```
 
 ```{r}
@@ -191,7 +199,7 @@ sq <- felm(
     non_essential_closure_apr + 
     non_essential_closure_current +
     I(minority_percent^2)|fips + lender|0|zip,
-  data = most_recent)
+  data = sample)
 ```
 
 ```{r}
