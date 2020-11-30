@@ -23,7 +23,7 @@ library(texreg)
 # Inputting individual bank regressions by adding in dummies for different
 # banks and bank types.
 
-most_recent <- readRDS('most_recent_zip_1117.rds') %>%
+most_recent <- readRDS('most_recent_zip_1129.rds') %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
@@ -53,7 +53,7 @@ most_recent <- readRDS('most_recent_zip_1117.rds') %>%
                        1, 0))
   
 most_recent_county <-
-  readRDS('most_recent_county_1115.rds') %>%
+  readRDS('most_recent_county_1130.rds') %>%
   mutate(baml = ifelse(lender == "bank of america, national association",
                        1, 0)) %>%
   mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
@@ -87,14 +87,12 @@ most_recent_county <-
                                           "keybank national association",
                                           "jpmorgan chase bank, national association",
                                           "wells fargo bank, national association"),
-                                      1, 0)) %>%
-  mutate(baml = ifelse(lender == "bank of america, national association",
                                       1, 0))
 
 # This is for one of the robustness checks where I replace
 # ZIP-level estimated data with county estimated data.
 
-most_recent_both <- readRDS('most_recent_zip_withcounties_1118.rds') %>%
+most_recent_both <- readRDS('most_recent_zip_withcounties_1130.rds') %>%
     mutate(baml = ifelse(lender == "bank of america, national association",
                        1, 0)) %>%
   mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
@@ -674,7 +672,7 @@ roundtable_reg2 <- felm(
     non_essential_closure_current + 
        national + cu + business_roundtable +
     I(national * minority_percent) + 
-    I(business_roundtable * minority_percent)|fips|0|zip + fips, 
+    I(business_roundtable * minority_percent)|fips|0|zip, 
     data = most_recent)
 ```
 
@@ -1025,10 +1023,10 @@ baml_check <- felm(
     minority_percent +
     high_school_pct + 
     married_percent + male_percent + 
-    cook_pvi + 
+     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    county_crime_rate + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1036,24 +1034,24 @@ baml_check <- felm(
     loan_2mil_5mil + 
     loan_5mil_10mil + 
     preference + 
-    requirement + 
+    requirement +
     bank_ppp_issued + 
     jobs_reported +
     banks_per_pop + 
     businesses_per_pop + 
     payroll +
-    unemployment_rate_apr + 
-    unemployment_rate + 
-    mean_start_cases_weighted +
-    mean_start_deaths_weighted + 
-    mean_end_cases_weighted +
-    mean_end_deaths_weighted + 
+    county_unemployment_rate_apr + 
+    county_unemployment_rate + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
     stay_at_home_apr + 
     stay_at_home_current + 
-    non_essential_closure_apr + 
+    non_essential_closure_apr +
     non_essential_closure_current + 
-       national + baml + I(baml*minority_percent)|fips|0|zip, 
-    data = most_recent)
+       national + baml + I(baml*minority_percent)|0|0|zip, 
+    data = most_recent_both)
 
 citi_check <- felm(
   business_days ~ 1 + 
@@ -1088,7 +1086,7 @@ citi_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       citi + I(citi * minority_percent)|0|0|zip + fips, 
+       citi + I(citi * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # jpm_reg_check <- felm(
@@ -1164,7 +1162,7 @@ jpm_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       jpm + I(jpm * minority_percent)|0|0|zip + fips, 
+       jpm + I(jpm * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # citi_reg_check <- felm(
@@ -1241,7 +1239,7 @@ wells_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       citi + I(citi * minority_percent)|0|0|zip + fips, 
+       citi + I(citi * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # wells_reg_check <- felm(
@@ -1318,7 +1316,7 @@ national_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       wells + I(wells * minority_percent)|0|0|zip + fips, 
+       wells + I(wells * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # cu_reg_check <- felm(
@@ -1472,7 +1470,9 @@ business_roundtable_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       national + I(national * minority_percent)|0|0|zip + fips, 
+       national + cu + business_roundtable +
+   I(business_roundtable * minority_percent) +
+   I(national * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 ```
@@ -1558,7 +1558,7 @@ business_roundtable_check2 <- felm(
     non_essential_closure_current + 
       cu + national +
        business_roundtable + 
-      I(business_roundtable * minority_percent)|0|0|zip + fips, 
+      I(business_roundtable * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # roundtable2_check <- felm(    business_days ~ 1 + 
@@ -1608,7 +1608,7 @@ business_roundtable_check2 <- felm(
 
 # Read the file in if you have to
 
-most_recent_deposits <- readRDS('most_recent_zip_banksmatched_1128.rds') %>%
+most_recent_deposits <- readRDS('most_recent_zip_banksmatched_1129.rds') %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
