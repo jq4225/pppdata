@@ -16,7 +16,7 @@ library(bizdays)
 # This is NOT part of my Gov 50 final project (though the final tables
 # end up being so)
 
-loan_only <- readRDS('ppp_loanonly_all_loans.rds')
+loan_only <- readRDS('ppp_all_loans_withstate.rds')
 
 #most_recent <- ppp_allvars_1027_crime
   #readRDS('ppp_allvars_1105.rds')
@@ -73,7 +73,7 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 
 sapply(most_recent, mean) %>%
   bind_rows() %>%
-  pivot_longer(cols = loan_range:fips, names_to = "variable", 
+  pivot_longer(cols = loan_range:renter_percent, names_to = "variable", 
                values_to = "mean")
 ```
 
@@ -91,12 +91,12 @@ most_recent <- most_recent %>%
          mean_start_deaths_weighted,
          mean_end_cases_weighted, mean_end_deaths_weighted, stay_at_home_apr,
          stay_at_home_current, non_essential_closure_apr, 
-         non_essential_closure_current)
+         non_essential_closure_current, renter_percent)
 
 
 sapply(most_recent, sd) %>%
     bind_rows() %>%
-  pivot_longer(cols = business_days:non_essential_closure_current, 
+  pivot_longer(cols = business_days:renter_percent, 
                names_to = "variable", values_to = "mean")
 ```
 
@@ -306,12 +306,17 @@ county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
 
 weighted_cases1 <- left_join(county_zip_crosswalk, county_covid, 
                              by = c("county" = "fips")) %>%
-  filter(date <= as.Date("2020-04-03")) %>%
+  filter(date %in% c(as.Date("2020-04-03"), as.Date("2020-03-27"))) %>%
   group_by(zip) %>%
-  mutate(mean_cases_app_start = mean(cases), 
-         mean_deaths_app_start = mean(deaths)) %>%
+  mutate(mean_cases_app_start = (max(cases) - min(cases)) / 7, 
+         mean_deaths_app_start = (max(deaths) - min(deaths)) / 7) %>%
   select(-cases, -deaths, -date) %>%
   distinct() %>%
+  
+  # To convert to zip code numbers we multiply by residential ratios
+  # of each zip code per county, meaning we get an estimated # of deaths
+  # assuming that deaths are equally distributed based on population.
+  
   mutate(mean_start_cases_weighted = mean_cases_app_start * res_ratio,
          mean_start_deaths_weighted = mean_deaths_app_start * res_ratio) %>%
   select(-mean_cases_app_start, -mean_deaths_app_start) %>%
@@ -323,9 +328,9 @@ weighted_cases1 <- left_join(county_zip_crosswalk, county_covid,
 temp6 <- left_join(ppp_pop, weighted_cases1, by = "zip") %>%
   drop_na(mean_start_cases_weighted, mean_start_deaths_weighted) %>%
   mutate(mean_start_cases_weighted = 
-           mean_start_cases_weighted * 10000 / estimate_total,
+           mean_start_cases_weighted * 100000 / estimate_total,
          mean_start_deaths_weighted = 
-           mean_start_deaths_weighted * 10000 / estimate_total)
+           mean_start_deaths_weighted * 100000 / estimate_total)
 
 temp6 %>%
   summarize(n = n(), mean1 = mean(mean_start_cases_weighted),
@@ -573,6 +578,32 @@ temp17 <- left_join(loan_only, gender,
   drop_na(male_percent) %>%
   summarize(n = n(), mean = mean(male_percent), sd = sd(male_percent))
 
+```
+
+```{r}
+# Calculating renter percent
+
+housing <- 
+  read_csv('raw_data/acs_housing/ACSDP5Y2018.DP04_data_with_overlays_2020-11-20T172050.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  select(geographic_area_name,
+         percent_estimate_housing_tenure_occupied_housing_units_renter_occupied) %>%
+  rename("renter_percent" = 
+           "percent_estimate_housing_tenure_occupied_housing_units_renter_occupied") %>%
+  mutate(geographic_area_name = 
+           map_chr(geographic_area_name, ~ substring(., 6))) %>%
+  mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
+
+
+temp18 <- left_join(loan_only, housing, 
+                                 by = c("zip" = "geographic_area_name")) %>%
+  mutate(renter_percent = as.double(renter_percent)) %>%
+  drop_na(renter_percent)
+
+temp18 %>%
+  summarize(mean = mean(renter_percent), sd = sd(renter_percent), 
+            n = n())
 ```
 
 

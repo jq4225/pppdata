@@ -1082,7 +1082,6 @@ log_interactions <- felm(log_days ~
 
 # Robustness check -- using state FEs instead of county FEs
 
-
 covid_state <- felm(
   business_days ~ 1 + 
     median_family_income + 
@@ -1108,7 +1107,11 @@ covid_state <- felm(
     mean_start_cases_weighted +
     mean_start_deaths_weighted + 
     mean_end_cases_weighted +
-    mean_end_deaths_weighted|state + lender|0|zip,
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|lender + state|0|zip,
   data = most_recent)
 
 # Regression 5: Squared
@@ -1139,6 +1142,10 @@ sq_state <- felm(
     mean_start_deaths_weighted + 
     mean_end_cases_weighted +
     mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current
     I(minority_percent^2)|state + lender|0|zip,
   data = most_recent)
 
@@ -1170,6 +1177,10 @@ interactions_state <- felm(
     mean_start_deaths_weighted + 
     mean_end_cases_weighted +
     mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current
     I(minority_percent^2) + 
     I(minority_percent * median_family_income) +
     I(minority_percent * cook_pvi) +

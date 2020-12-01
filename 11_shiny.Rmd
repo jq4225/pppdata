@@ -24,7 +24,7 @@ cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```{r}
 # Reading in the data. I"m just doing this so I can use ggeffect later
 
-most_recent <- readRDS('most_recent_zip_nobanks_1126.rds')
+most_recent <- readRDS('most_recent_zip_nobanks_1130.rds')
 
 most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds')
 ```
@@ -122,11 +122,17 @@ race_days3 <- rbind(national, states)
 
 ```{r}
 set.seed(9)
-sample <- sample_n(most_recent, size = 1000000)
+sample <- sample_n(most_recent, size = 1000000) %>%
+  mutate(zip = as.factor(zip),
+         lender = as.factor(lender),
+         state = as.factor(zip),
+         fips = as.factor(fips))
 
 most_recent <- most_recent %>%
   mutate(zip = as.factor(zip),
-         lender = as.factor(lender))
+         lender = as.factor(lender),
+         state = as.factor(zip),
+         fips = as.factor(fips))
 
 covid_fe <- lm_robust(business_days ~ 1 + 
     median_family_income + 
@@ -136,7 +142,7 @@ covid_fe <- lm_robust(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -156,8 +162,8 @@ covid_fe <- lm_robust(business_days ~ 1 +
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current, fixed_effects = ~ lender + fips,
-    clusters = zip, data = most_recent)
+    non_essential_closure_current, fixed_effects = ~ lender + state,
+    clusters = zip, data = sample, se_type = "stata")
 ```
 
 ```{r}
