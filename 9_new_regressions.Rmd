@@ -1145,7 +1145,7 @@ sq_state <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current
+    non_essential_closure_current +
     I(minority_percent^2)|state + lender|0|zip,
   data = most_recent)
 
@@ -1180,7 +1180,7 @@ interactions_state <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current
+    non_essential_closure_current +
     I(minority_percent^2) + 
     I(minority_percent * median_family_income) +
     I(minority_percent * cook_pvi) +
