@@ -21,7 +21,7 @@ library(janitor)
 
 # Reading in actual recent data
 
-most_recent <- readRDS('most_recent_zip_nobanks_1129.rds') %>%
+most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
   mutate(log_days = log(business_days + 1)) %>%
   mutate(fips = as.factor(fips), lender = as.factor(lender),
          state = as.factor(state))
@@ -38,7 +38,7 @@ most_recent_county <- readRDS('most_recent_county_nobanks_1130.rds') %>%
 
 # Adding in FIPS to county, since it wasn't added in before.
 
-most_recent <- readRDS('most_recent_zip_1117.rds')
+most_recent <- readRDS('most_recent_zip_1130.rds')
 
 # most_recent <- readRDS('most_recent_zip_nobanks_1118.rds')
 
@@ -67,7 +67,7 @@ crime <- read_excel('raw_data/county/county_health.xlsx',
                     sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%
-  rename("county_crime_rate" = "violent_crime_rate") %>%
+  rename("county_crime_rate" = "violent_crime_rate + renter_percent") %>%
   select(fips, county_crime_rate)
 
 ppp_crime <- left_join(most_recent, crime, by = "fips") %>%
@@ -158,7 +158,7 @@ demographics <- felm(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate|0|0|zip, data = most_recent)
+    violent_crime_rate + renter_percent|0|0|zip, data = most_recent)
 
 # Regression 2: Demographics and Loan-Specific
 
@@ -171,7 +171,7 @@ loan_spec <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -191,7 +191,7 @@ econ <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -216,7 +216,7 @@ covid <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -250,7 +250,7 @@ covid_fe <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -284,7 +284,7 @@ sq <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -319,7 +319,7 @@ interactions <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -366,7 +366,7 @@ demographics_check <- felm(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate|0|0|zip, data = most_recent_both)
+    county_crime_rate + renter_percent|0|0|zip, data = most_recent_both)
 
 # Regression 2: Demographics and Loan-Specific
 
@@ -379,7 +379,7 @@ loan_spec_check <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -399,7 +399,7 @@ econ_check <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -424,7 +424,7 @@ covid_check <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -458,7 +458,7 @@ sq_check <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -493,7 +493,7 @@ interactions_check <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent +  
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -526,7 +526,7 @@ interactions_check <- felm(
 
 ```{r}
 
-# County fixed effects on lender
+# County fixed effects gone
 
 # most_recent_county <- most_recent_county %>%
 #   mutate(lender = as.factor(lender))
@@ -540,7 +540,7 @@ county_dems <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate|0|0|fips, 
+    violent_crime_rate + renter_percent|0|0|fips, 
     data = most_recent_county
 )
 
@@ -553,7 +553,7 @@ county_loan <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -573,7 +573,7 @@ county_econ <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -598,7 +598,7 @@ county_covid <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -631,7 +631,7 @@ county_sq <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -666,7 +666,7 @@ county_interactions <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -692,7 +692,7 @@ county_interactions <- felm(business_days ~ 1 +
     I(minority_percent * republican_percent) +
     I(minority_percent * pop_den) + 
     I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate)|lender|0|fips, 
+    I(minority_percent * violent_crime_rate )|lender|0|fips, 
     data = most_recent_county
 )
 
@@ -712,7 +712,7 @@ county_interactions <- felm(business_days ~ 1 +
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     violent_crime_rate,
+#     violent_crime_rate + renter_percent,
 #     data = most_recent, dist = "negbin")
 # 
 # 
@@ -724,7 +724,7 @@ county_interactions <- felm(business_days ~ 1 +
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     violent_crime_rate +
+#     violent_crime_rate + renter_percent +
 #     delay + 
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -747,7 +747,7 @@ county_interactions <- felm(business_days ~ 1 +
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     violent_crime_rate +
+#     violent_crime_rate + renter_percent +
 #     delay + 
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -775,7 +775,7 @@ county_interactions <- felm(business_days ~ 1 +
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     violent_crime_rate +
+#     violent_crime_rate + renter_percent +
 #     delay + 
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -811,7 +811,7 @@ dems_binomial <- fenegbin(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate|fips, most_recent)
+    violent_crime_rate + renter_percent|fips, most_recent)
 
 
 loan_binomial <- fenegbin(business_days ~ 1 + 
@@ -822,7 +822,7 @@ loan_binomial <- fenegbin(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -839,7 +839,7 @@ econ_binomial <- fenegbin(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -861,7 +861,7 @@ covid_binomial <-  fenegbin(business_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -897,7 +897,7 @@ log_demographics <- felm(log_days ~ 1 +
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate|0|0|zip, data = most_recent)
+    violent_crime_rate + renter_percent|0|0|zip, data = most_recent)
 
 # Regression 2: Demographics and Loan-Specific
 
@@ -910,7 +910,7 @@ log_loan_spec <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -930,7 +930,7 @@ log_econ <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     loan_150_350 +
     loan_350_1mil +
     loan_1mil_2mil +
@@ -954,7 +954,7 @@ log_covid_1 <- felm(log_days ~
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -985,7 +985,7 @@ log_covid_2 <- felm(log_days ~
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -1016,7 +1016,7 @@ log_interactions_test <- felm(log_days ~
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -1048,7 +1048,7 @@ log_interactions <- felm(log_days ~
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent +
     delay + 
     loan_150_350 +
     loan_350_1mil +
@@ -1075,7 +1075,7 @@ log_interactions <- felm(log_days ~
     I(minority_percent * cook_pvi) +
     I(minority_percent * rural) + 
     I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate)|lender + fips|0|zip, 
+    I(minority_percent * violent_crime_rate )|lender + fips|0|zip, 
     data = most_recent)
 ```
 ```{r}
@@ -1092,7 +1092,7 @@ covid_state <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1122,7 +1122,7 @@ sq_state <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1153,7 +1153,7 @@ interactions_state <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1175,7 +1175,7 @@ interactions_state <- felm(
     I(minority_percent * cook_pvi) +
     I(minority_percent * rural) + 
     I(minority_percent * estimate_gini_index) +
-    I(minority_percent * violent_crime_rate)|state + lender|0|zip,
+    I(minority_percent * violent_crime_rate )|state + lender|0|zip,
   data = most_recent)
 ```
 
@@ -1196,7 +1196,7 @@ interactions_state <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     violent_crime_rate + 
+#     violent_crime_rate + renter_percent + 
 #     renter_percent|0|0|zip,
 #   data = most_recent_housing)
 # ```
