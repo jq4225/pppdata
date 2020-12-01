@@ -23,7 +23,7 @@ library(texreg)
 # Inputting individual bank regressions by adding in dummies for different
 # banks and bank types.
 
-most_recent <- readRDS('most_recent_zip_1129.rds') %>%
+most_recent <- readRDS('most_recent_zip_1130.rds') %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
@@ -139,7 +139,7 @@ baml_reg_only <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -175,7 +175,7 @@ jpm_reg_only <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -211,7 +211,7 @@ citi_reg_only <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -247,7 +247,7 @@ wells_reg_only <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -283,7 +283,7 @@ cu_reg_only <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -319,7 +319,7 @@ national_reg_only <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -362,7 +362,7 @@ baml_reg <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -403,7 +403,7 @@ jpm_reg <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -444,7 +444,7 @@ citi_reg <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -485,7 +485,7 @@ wells_reg <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -526,7 +526,7 @@ cu_reg <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -567,7 +567,7 @@ national_reg <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -608,7 +608,7 @@ roundtable_reg1_fix <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -646,7 +646,7 @@ roundtable_reg2 <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -688,7 +688,7 @@ county_roundtable1 <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -725,7 +725,7 @@ county_roundtable2 <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -768,7 +768,7 @@ baml_county <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -803,7 +803,7 @@ citi_county <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -838,7 +838,7 @@ jpm_county <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -873,7 +873,7 @@ wells_county <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -910,7 +910,7 @@ national_county <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -945,7 +945,7 @@ cu_county <- felm(business_days ~ 1 +
     republican_percent + 
     pop_den +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -986,7 +986,7 @@ cu_county <- felm(business_days ~ 1 +
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1026,7 +1026,7 @@ baml_check <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1062,7 +1062,7 @@ citi_check <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1098,7 +1098,7 @@ citi_check <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1138,7 +1138,7 @@ jpm_check <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1174,7 +1174,7 @@ jpm_check <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1215,7 +1215,7 @@ wells_check <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1251,7 +1251,7 @@ wells_check <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1292,7 +1292,7 @@ national_check <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1328,7 +1328,7 @@ national_check <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1369,7 +1369,7 @@ cu_check <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1393,7 +1393,7 @@ cu_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       cu + I(cu * minority_percent)|0|0|zip + fips, 
+       cu + I(cu * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # national_reg_check <- felm(
@@ -1405,7 +1405,7 @@ cu_check <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1446,7 +1446,7 @@ business_roundtable_check <- felm(
  cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1489,7 +1489,7 @@ business_roundtable_check <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1532,7 +1532,7 @@ business_roundtable_check2 <- felm(
      cook_pvi + 
     rural +
     estimate_gini_index +
-    county_crime_rate + 
+    county_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1569,7 +1569,7 @@ business_roundtable_check2 <- felm(
 #     cook_pvi + 
 #     rural +
 #     estimate_gini_index +
-#     county_crime_rate + 
+#     county_crime_rate + renter_percent + 
 #     delay +
 #     loan_150_350 +
 #     loan_350_1mil +
@@ -1608,7 +1608,7 @@ business_roundtable_check2 <- felm(
 
 # Read the file in if you have to
 
-most_recent_deposits <- readRDS('most_recent_zip_banksmatched_1129.rds') %>%
+most_recent_deposits <- readRDS('most_recent_zip_banksmatchd_1130.rds') %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
                            1, national),
@@ -1651,7 +1651,7 @@ baml_dep <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1725,7 +1725,7 @@ jpm_dep <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1761,7 +1761,7 @@ wells_dep <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1799,7 +1799,7 @@ national_dep <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1839,7 +1839,7 @@ roundtable_deposits <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1877,7 +1877,7 @@ roundtable_deposits_2 <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1912,7 +1912,7 @@ roundtable_deposits_2 <- felm(
 # Trying without preference and requirement variables -- i.e., using the 
 # original 3.7 million loan dataset
 
-most_recent <- readRDS('most_recent_zip_nobanks_1129.rds') %>%
+most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
   mutate(lender = tolower(lender)) %>%
   mutate(national = 0) %>%
   mutate(national = ifelse(str_detect(lender, pattern = "national association"),
@@ -1954,7 +1954,7 @@ roundtable_orig1 <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -1989,7 +1989,7 @@ roundtable_orig2 <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2031,7 +2031,7 @@ baml_orig <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2065,7 +2065,7 @@ citi_orig <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2099,7 +2099,7 @@ jpm_orig <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2135,7 +2135,7 @@ wells_orig <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2169,7 +2169,7 @@ national_orig <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2203,7 +2203,7 @@ cu_orig <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2244,7 +2244,7 @@ baml_robust <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2281,7 +2281,7 @@ citi_robust <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2320,7 +2320,7 @@ jpm_robust <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -2357,7 +2357,7 @@ wells_robust <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent +
     delay +
     loan_150_350 +
     loan_350_1mil +
