@@ -551,4 +551,32 @@ most_recent_county <- most_recent_county_2 %>%
   mutate(fips = as.factor(fips))
 ```
 
+```{r}
+# Let's try adding in minority business ownership as an outcome variable instead
+
+most_recent_county <- readRDS('most_recent_county_nobanks_1130.rds')
+
+ownership <- 
+  read_csv('raw_data/county/ABSCS2017.AB1700CSA01_data_with_overlays_2020-12-01T000046.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  filter(meaning_of_sex_code == "Total",
+         meaning_of_race_code %in% c("Total", "Minority"),
+         meaning_of_veteran_code == "Total",
+         meaning_of_naics_code == "Total for all sectors",
+         meaning_of_ethnicity_code == "Total") %>%
+  select(id, meaning_of_race_code, number_of_employer_firms) %>%
+  pivot_wider(id_cols = id, names_from = meaning_of_race_code,
+              values_from = number_of_employer_firms) %>%
+  mutate(Total = as.double(Total),
+         Minority = as.double(Minority)) %>%
+  drop_na(Total, Minority) %>%
+  mutate(percent_minority_biz = Minority * 100 / Total,
+         fips = str_sub(id, 10)) %>%
+  select(-Total, -Minority, -id)
+
+most_recent_ownership <- 
+  left_join(most_recent_county, ownership, by = "fips") %>%
+  drop_na(percent_minority_biz)
+```
 
