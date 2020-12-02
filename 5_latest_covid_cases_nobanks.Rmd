@@ -690,3 +690,48 @@ most_recent_lender <- left_join(most_recent, loan_numbers,
 ```
 
 
+```{r}
+# Adding in alternative IV for racial ownership
+
+most_recent <- readRDS('most_recent_zip_nobanks_1130.rds')
+
+ownership <- 
+  read_csv('raw_data/county/ABSCS2017.AB1700CSA01_data_with_overlays_2020-12-01T000046.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  filter(meaning_of_sex_code == "Total",
+         meaning_of_race_code %in% c("Total", "Minority"),
+         meaning_of_veteran_code == "Total",
+         meaning_of_naics_code == "Total for all sectors",
+         meaning_of_ethnicity_code == "Total") %>%
+  select(id, meaning_of_race_code, number_of_employer_firms) %>%
+  pivot_wider(id_cols = id, names_from = meaning_of_race_code,
+              values_from = number_of_employer_firms) %>%
+  mutate(Total = as.double(Total),
+         Minority = as.double(Minority)) %>%
+  drop_na(Total, Minority) %>%
+  mutate(percent_minority_biz = Minority * 100 / Total,
+         fips = str_sub(id, 10)) %>%
+  select(-Total, -Minority, -id)
+
+# Let's create a county level estimate, like we do for crime
+
+county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio)
+
+ownership_zip <- left_join(county_zip_crosswalk, ownership, 
+                           by = c("county" = "fips")) %>%
+  mutate(percent_minority_biz  = 
+           percent_minority_biz * res_ratio) %>%
+  drop_na(percent_minority_biz) %>%
+  group_by(zip) %>%
+  summarize(minority_biz_percent = 
+              sum(percent_minority_biz), .groups = "drop")
+
+most_recent <- left_join(most_recent, ownership_zip, by = "zip") %>%
+  drop_na(minority_biz_percent) %>%
+  mutate(minority_biz_percent = 
+           ifelse(minority_biz_percent > 1, 1, minority_biz_percent))
+```
+
