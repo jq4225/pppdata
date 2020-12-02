@@ -1050,7 +1050,7 @@ baml_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       national + baml + I(baml*minority_percent)|0|0|zip, 
+    baml + I(baml*minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 citi_check <- felm(
@@ -1316,7 +1316,7 @@ national_check <- felm(
     stay_at_home_current + 
     non_essential_closure_apr +
     non_essential_closure_current + 
-       wells + I(wells * minority_percent)|0|0|zip, 
+       national + I(national * minority_percent)|0|0|zip, 
     data = most_recent_both)
 
 # cu_reg_check <- felm(
@@ -1687,7 +1687,7 @@ citi_dep <- felm(
     cook_pvi +
     rural +
     estimate_gini_index +
-    violent_crime_rate +
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +

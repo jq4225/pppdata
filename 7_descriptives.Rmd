@@ -73,7 +73,7 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 
 sapply(most_recent, mean) %>%
   bind_rows() %>%
-  pivot_longer(cols = loan_range:renter_percent, names_to = "variable", 
+  pivot_longer(cols = zip:renter_percent, names_to = "variable", 
                values_to = "mean")
 ```
 
