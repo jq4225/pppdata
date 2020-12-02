@@ -33,7 +33,7 @@ zip_banks <- read_excel('bankbybank.xlsx', sheet = "zip")
 
 county_banks <- read_excel('bankbybank.xlsx', sheet = "county")
 
-zip_race_graph <- readRDS('marginalrace_nointeractions.rds')
+zip_race_graph <- readRDS('marginalrace.rds')
 
 county_race_graph <- readRDS('marginalrace_county.rds')
 
