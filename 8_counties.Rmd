@@ -43,7 +43,7 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
 
 
 sba_cleaning <- function(file) {
-  x <- read_csv(file) %>%
+  x <- read_csv(file, col_types = cols()) %>%
     clean_names() %>%
     select(loan_amount, zip, date_approved, 
            lender, city, state, jobs_reported) %>%
@@ -581,4 +581,38 @@ most_recent_ownership <-
   left_join(most_recent_county, ownership, by = "fips") %>%
   drop_na(percent_minority_biz)
 ```
+```{r}
 
+# Adding in renters on county level
+
+housing_county <- 
+  read_csv('raw_data/county/ACSDP5Y2018.DP04_data_with_overlays_2020-11-23T151752.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  select(id,
+         percent_estimate_housing_tenure_occupied_housing_units_renter_occupied) %>%
+  rename("renter_percent" = 
+           "percent_estimate_housing_tenure_occupied_housing_units_renter_occupied") %>%
+  mutate(fips = str_sub(id, start = 10)) %>%
+  select(-id) %>%
+  mutate(renter_percent = as.double(renter_percent)) %>%
+  drop_na(renter_percent)
+```
+```{r}
+most_recent_county <- readRDS('most_recent_county_1130.rds')
+
+most_recent_county_housing <- left_join(most_recent_county,
+                                        housing_county,
+                                        by = "fips") %>%
+  drop_na(renter_percent)
+```
+
+```{r}
+most_recent_county <- readRDS('most_recent_county_nobanks_1130.rds')
+
+most_recent_county_housing <- left_join(most_recent_county,
+                                        housing_county,
+                                        by = "fips") %>%
+  drop_na(renter_percent)
+
+```

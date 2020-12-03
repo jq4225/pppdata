@@ -1,0 +1,432 @@
+---
+title: "descriptives county"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(openintro)
+
+# This calculates descriptives for my county dataset -- again, not relevant
+# to Gov 50
+
+```
+
+```{r}
+most_recent_ownership_county <- most_recent_ownership_county %>%
+  drop_na(stay_at_home_apr, 
+          non_essential_closure_apr,
+          stay_at_home_current,
+          non_essential_closure_current)
+
+sapply(most_recent_ownership_county, mean) %>%
+  bind_rows() %>%
+  pivot_longer(cols = business_days:percent_minority_biz, names_to = "variable", 
+               values_to = "mean")
+```
+```{r}
+
+most_recent_ownership_county <- most_recent_ownership_county %>%
+  select(business_days, median_income, percent_minority_biz,
+         minority_percent,
+         high_school_pct, married_percent, male_percent, republican_percent,
+         pop_den, estimate_gini_index, violent_crime_rate, delay,
+         loan_150_less, loan_150_350, loan_350_1mil, loan_1mil_2mil,
+         loan_2mil_5mil, loan_5mil_10mil, jobs_reported, banks_per_pop,
+         businesses_per_pop, gdp, unemployment_rate_apr, 
+         unemployment_rate_percent, mean_start_cases, 
+         mean_start_deaths,
+         mean_end_cases, mean_end_deaths, stay_at_home_apr,
+         stay_at_home_current, non_essential_closure_apr, 
+         non_essential_closure_current, renter_percent)
+
+
+sapply(most_recent_ownership_county, sd) %>%
+    bind_rows() %>%
+  pivot_longer(cols = business_days:renter_percent, 
+               names_to = "variable", values_to = "mean")
+
+```
+
+```{r}
+loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
+
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+  clean_names() %>%
+  select(county, zip, res_ratio) %>%
+  group_by(zip) %>%
+  arrange(desc(res_ratio)) %>%
+  slice(1) %>%
+  select(-res_ratio)
+
+loan_only_fips <- left_join(loan_only, county_zip_crosswalk, by = "zip") %>%
+  drop_na(county) %>%
+  rename('fips' = 'county')
+```
+
+```{r}
+educ <- read_csv('raw_data/county/county_edu.csv', skip = 1, col_types = cols()) %>%
+  clean_names()
+
+hs_id <- educ %>%
+  select(id, geographic_area_name,
+         estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher) %>%
+  mutate(fips = str_sub(id, 10)) %>%
+  select(-id, -geographic_area_name)
+
+temp1 <- left_join(loan_only_fips, hs_id, by = "fips") %>%
+  rename("hs" = 
+           "estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher") %>%
+  drop_na(hs) %>%
+  summarize(n = n(), sd = sd(hs), mean = mean(hs))
+```
+
+```{r}
+income <- read_csv('raw_data/county/county_income.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id, estimate_households_median_income_dollars) %>%
+  mutate(fips = str_sub(id, 10),
+         median_income = 
+           as.double(estimate_households_median_income_dollars)) %>%
+  drop_na(median_income) %>%
+  select(-id)
+
+temp2 <- left_join(loan_only_fips, income, by = "fips") %>%
+  drop_na(median_income) %>%
+  summarize(n = n(), sd = sd(median_income), mean = mean(median_income))
+
+temp2
+
+```
+
+
+```{r}
+marital <- read_csv('raw_data/county/county_marital.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id, 
+         estimate_now_married_except_separated_population_15_years_and_over) %>%
+  mutate(marry = 
+           as.double(estimate_now_married_except_separated_population_15_years_and_over),
+         fips = str_sub(id, 10)) %>%
+  select(-estimate_now_married_except_separated_population_15_years_and_over,
+         -id)
+
+temp3 <- left_join(loan_only_fips, marital, by = "fips") %>%
+  drop_na(marry) %>%
+  summarize(n = n(), sd = sd(marry), mean = mean(marry))
+
+temp3
+```
+
+```{r}
+race <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id, estimate_total, estimate_total_white_alone,) %>%
+  mutate(minority_percent = 100 - 
+           estimate_total_white_alone * 100 / estimate_total,
+         fips = str_sub(id, 10)) %>%
+  select(-estimate_total_white_alone, -id)
+
+loan_only <- left_join(loan_only_fips, race, by = "fips") %>%
+  drop_na(minority_percent)
+
+loan_only %>%
+  summarize(n = n(), sd = sd(minority_percent), mean = mean(minority_percent))
+
+```
+
+```{r}
+businesses <- 
+  read_csv('raw_data/county/CBP2016.CB1600CBP_data_with_overlays_2020-10-16T114119.csv',
+                       skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  filter(meaning_of_employment_size_of_establishments == "All establishments",
+         meaning_of_legal_form_of_organization_code == "All establishments") %>%
+  select(id, number_of_establishments) %>%
+  
+  # Terrible practice but I'm just slicing the rows where I 
+  # know total business counts are lol
+  
+  slice(1:3304) %>%
+  mutate(fips = as.character(str_sub(id, 10))) %>%
+  select(-id)
+
+temp5 <- left_join(loan_only, businesses, by = "fips") %>%
+  drop_na(number_of_establishments) %>%
+  mutate(biz = number_of_establishments * 10000 / estimate_total)
+
+temp5 %>%
+  summarize(n = n(), mean = mean(biz), sd = sd(biz))
+```
+```{r}
+elections <- read_csv('raw_data/county_elections/countypres_2000-2016.csv') %>%
+  clean_names() %>%
+  filter(year == "2016") %>%
+  select(fips, party, candidatevotes, totalvotes) %>%
+  group_by(fips, party) %>%
+  summarize(percent = candidatevotes/totalvotes, .groups = "drop") %>%
+  filter(party == "republican") %>%
+  mutate(percent = percent * 100, 
+         fips = str_pad(fips, width = 5, "left", "0")) %>%
+  select(-party)
+
+temp6 <- left_join(loan_only, elections, by = "fips") %>%
+  drop_na(percent) %>%
+  summarize(n = n(), mean = mean(percent), sd = sd(percent))
+
+temp6
+```
+```{r}
+banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
+  'ZIP' = col_character()))%>%
+  clean_names() %>%
+  select(zip)
+
+banks_matched <- left_join(banks, county_zip_crosswalk, by = "zip") %>%
+  drop_na(county) %>%
+  select(-zip) %>%
+  group_by(county) %>%
+  summarize(number_banks = n())
+
+temp7 <- left_join(loan_only, banks_matched, 
+                                by = c("fips" = "county")) %>%
+  mutate(number_banks = replace_na(number_banks, 0)) %>%
+  mutate(banks_per_pop = number_banks * 10000 / estimate_total) %>%
+  select(-number_banks)
+
+temp7 %>%
+  summarize(n = n(), mean = mean(banks_per_pop), sd = sd(banks_per_pop))
+```
+```{r}
+pop_density <- read_csv('raw_data/county/census-population-landarea.csv') %>%
+  clean_names() %>%
+  select(fips, 'pop060210') %>%
+  mutate(fips = str_pad(fips, width = 5, "left", "0"))
+
+temp8 <- left_join(loan_only, pop_density, by = "fips") %>%
+  drop_na('pop060210') %>%
+  rename('pop_den' = 'pop060210')
+
+temp8 %>%
+  summarize(n = n(), mean = mean(pop_den), sd = sd(pop_den))
+```
+```{r}
+county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+  filter(date >= as.Date("2020-03-28")) %>%
+  select(date, fips, cases, deaths)
+
+current_cases <- county_covid %>%
+  filter(date %in% c(as.Date("2020-04-03"), as.Date("2020-03-28"))) %>%
+  group_by(fips) %>%
+  summarize(cases = (max(cases) - min(cases))/7, 
+            deaths = (max(deaths) - min(deaths))/7, .groups = "drop")
+
+temp9 <- left_join(loan_only, current_cases,
+                                     by = "fips") %>%
+  mutate(mean_start_cases = cases * 100000/estimate_total,
+         mean_start_deaths = deaths * 100000/estimate_total) %>%
+  select(-cases, -deaths) %>%
+  drop_na(mean_start_cases, mean_start_deaths)
+
+temp9 %>%
+  summarize(n = n(), mean1 = mean(mean_start_cases),
+            mean2 = mean(mean_start_deaths),
+            sd1 = sd(mean_start_cases),
+            sd2 = sd(mean_start_deaths))
+```
+```{r}
+dates_approved <- loan_only %>%
+  select(date_approved, fips) %>%
+  distinct()
+
+temp <- left_join(dates_approved, county_covid, by = "fips") %>%
+  filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
+  group_by(fips, date_approved) %>%
+  summarize(mean_end_cases = (max(cases) - min(cases))/7, 
+            mean_end_deaths = (max(deaths) - min(deaths))/7)
+```
+
+```{r}
+temp10 <- left_join(loan_only,
+                                     temp, by = c("fips", "date_approved")) %>%
+  drop_na(mean_end_cases, mean_end_deaths) %>%
+  mutate(mean_end_cases = mean_end_cases * 100000/estimate_total, 
+         mean_end_deaths = mean_end_deaths * 100000/estimate_total)
+
+temp10 %>%
+  summarize(n = n(), 
+            mean1 = mean(mean_end_cases),
+            sd1 = sd(mean_end_cases),
+            mean2 = mean(mean_end_deaths),
+            sd2 = sd(mean_end_deaths))
+```
+```{r}
+unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
+  clean_names() %>%
+  select(state_fips_code, county_fips_code, period, 
+         unemployed, labor_force, unemployment_rate_percent) %>%
+  mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
+  drop_na(fips_code) %>%
+  filter(period %in% c("Apr-20", "May-20", "Jun-20", "Jul-20", "Aug-20 p")) %>%
+  mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
+  mutate(period = as.Date(paste("01", period, sep="-"), "%d-%b-%y")) %>%
+  mutate(month = month(period))
+```
+
+```{r}
+ppp_months <- loan_only %>%
+  mutate(month = month(date_approved))
+
+combined_unemploy <- left_join(ppp_months, unemploy, 
+                                       by = c("fips" = "fips_code", "month"))
+
+unemploy_apr <- unemploy %>%
+  filter(month == 4) %>%
+  select(-period, -unemployed, -labor_force, -state_fips_code,
+         -county_fips_code) %>%
+  rename("unemployment_rate_apr" = "unemployment_rate_percent")
+```
+
+```{r}
+combined_unemploy2 <- left_join(combined_unemploy,
+                                         unemploy_apr, 
+                                by = c("fips" = "fips_code")) %>%
+  drop_na(unemployment_rate_percent, unemployment_rate_apr) %>%
+  select(-period, -unemployed, -labor_force, -state_fips_code,
+         -county_fips_code)
+
+combined_unemploy2 %>%
+  summarize(n = n(), mean1 = mean(unemployment_rate_percent),
+            sd1 = sd(unemployment_rate_percent),
+            mean2 = mean(unemployment_rate_apr),
+            sd2 = sd(unemployment_rate_apr))
+```
+
+```{r}
+gini <- read_csv('raw_data/county/county_inequality.csv', skip = 1) %>%
+  clean_names() %>%
+  select(id, estimate_gini_index) %>%
+  mutate(estimate_gini_index = as.double(estimate_gini_index),
+         fips = str_sub(id, 10)) %>%
+  select(-id)
+
+income_inequality <- left_join(loan_only, gini, by = "fips") %>%
+  drop_na(estimate_gini_index)
+
+income_inequality %>%
+  summarize(mean = mean(estimate_gini_index),
+            sd = sd(estimate_gini_index),
+            n = n())
+```
+```{r}
+crime <- read_excel('raw_data/county/county_health.xlsx', 
+                    sheet = 'Ranked Measure Data',
+                    skip = 1) %>%
+  clean_names() %>%
+  select(fips, violent_crime_rate)
+
+county_crime <- left_join(loan_only, crime, by = "fips") %>%
+  drop_na(violent_crime_rate)
+
+county_crime %>%
+  summarize(n = n(), 
+            mean = mean(violent_crime_rate),
+            sd = sd(violent_crime_rate))
+```
+
+```{r}
+gdp <- read_csv('raw_data/gdp/CAGDP2__ALL_AREAS_2001_2018.csv') %>%
+  clean_names() %>%
+  filter(industry_classification == "All industry total") %>%
+  select(geo_fips, x2017) %>%
+  mutate(fips = str_sub(geo_fips, 1, 5),
+         x2017 = as.double(x2017)) %>%
+  rename("gdp" = "x2017")
+
+county_gdp <- left_join(loan_only, gdp, by = "fips") %>%
+  drop_na(gdp) %>%
+  select(-geo_fips)
+
+county_gdp %>%
+  summarize(n = n(),
+            mean = mean(gdp),
+            sd = sd(gdp))
+```
+
+```{r}
+ownership <- 
+  read_csv('raw_data/county/ABSCS2017.AB1700CSA01_data_with_overlays_2020-12-01T000046.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  filter(meaning_of_sex_code == "Total",
+         meaning_of_race_code %in% c("Total", "Minority"),
+         meaning_of_veteran_code == "Total",
+         meaning_of_naics_code == "Total for all sectors",
+         meaning_of_ethnicity_code == "Total") %>%
+  select(id, meaning_of_race_code, number_of_employer_firms) %>%
+  pivot_wider(id_cols = id, names_from = meaning_of_race_code,
+              values_from = number_of_employer_firms) %>%
+  mutate(Total = as.double(Total),
+         Minority = as.double(Minority)) %>%
+  drop_na(Total, Minority) %>%
+  mutate(percent_minority_biz = Minority * 100 / Total,
+         fips = str_sub(id, 10)) %>%
+  select(-Total, -Minority, -id)
+
+most_recent_ownership <- 
+  left_join(loan_only, ownership, by = "fips") %>%
+  drop_na(percent_minority_biz)
+
+most_recent_ownership %>%
+  summarize(n = n(),
+            mean = mean(percent_minority_biz),
+            sd = sd(percent_minority_biz))
+```
+
+```{r}
+gender <- 
+  read_csv('raw_data/county/ACSDP5Y2018.DP05_data_with_overlays_2020-11-12T203338.csv', 
+           skip = 1) %>%
+  clean_names() %>%
+  select(id,
+         percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male) %>%
+  rename("male_percent" =
+           "percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male") %>%
+  mutate(male_percent = as.double(male_percent)) %>%
+  mutate(fips = map_chr(id, ~ substring(., 10))) %>%
+  select(-id)
+
+temp11 <- left_join(loan_only, gender, by = "fips") %>%
+  drop_na(male_percent)
+
+temp11 %>%
+  summarize(n = n(), mean = mean(male_percent),
+            sd = sd(male_percent))
+```
+```{r}
+housing_county <- 
+  read_csv('raw_data/county/ACSDP5Y2018.DP04_data_with_overlays_2020-11-23T151752.csv',
+           skip = 1, col_types = cols()) %>%
+  clean_names() %>%
+  select(id,
+         percent_estimate_housing_tenure_occupied_housing_units_renter_occupied) %>%
+  rename("renter_percent" = 
+           "percent_estimate_housing_tenure_occupied_housing_units_renter_occupied") %>%
+  mutate(fips = str_sub(id, start = 10)) %>%
+  select(-id) %>%
+  mutate(renter_percent = as.double(renter_percent)) %>%
+  drop_na(renter_percent)
+
+temp12 <- left_join(loan_only, housing_county, by = "fips") %>%
+  drop_na(renter_percent)
+
+temp12 %>%
+  summarize(mean = mean(renter_percent),
+            sd = sd(renter_percent),
+            n = n())
+```
+
