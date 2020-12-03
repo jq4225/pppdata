@@ -599,4 +599,24 @@ latest_state_cases %>%
 ```
 Writing equation:
 
+
 $$y_i = \alpha_{locality} + \beta minority + X'_i\gamma + \epsilon_i$$
+
+```{r}
+# Trying graphing my marginal race stuff
+
+marg_race <- readRDS('marg_race.rds')
+
+marg_race %>%
+  ggplot(aes(x = x, y = predicted)) +
+          geom_line(color = "darkblue") +
+          geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
+          labs(x = "Minority Proportion of Population (Percent)", 
+               y = "Predicted Wait Time (Business Days)",
+               title = "Linear Predicted Effect of Racial Minority Presence on Wait Times
+               (Grouping by ZIP Codes)") +
+          xlim(0, 100) +
+          theme_classic()
+```
+
+
