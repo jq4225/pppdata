@@ -105,8 +105,8 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                various demographic variables."),
                              
                              tabsetPanel(type = "tabs",
-                                         tabPanel("Full Loan Location Heatmap", img(src = "original_heatmap.png")),
-                                         tabPanel("Sample Loan Location Heatmap", img(src = "new_heatmap.png")),
+                                         tabPanel("Full Loan Location Heatmap", img(src = "original_heatmap.jpg", height="75%", width="75%")),
+                                         tabPanel("Sample Loan Location Heatmap", img(src = "new_heatmap.jpg", height="75%", width="75%")),
                                          tabPanel("Waiting Times by Race", 
                                                   fluidRow(
                                                     p("Nationally, there is a slightly positive correlation between
@@ -161,7 +161,10 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     p("On the county leve, the relationship between race and waiting times becomes insignificant after COVID-19 variables
                                                       are included. However, including additional interaction terms suggests that the relationship between race
                                                       and waiting times is significant and nonlinear, as you can see in the abbreviated regression table below. It appears that
-                                                      the effect of having a higher minority percentage tapers off at higher levels of minority populations."),
+                                                      the effect of having a higher minority percentage tapers off at higher levels of minority populations.
+                                                      While the standard errors appear quite large, this is likely because county racial breakdowns are just worse
+                                                      predictors of individual race than ZIP-code level racial breakdowns, since there is more intra-county variation.
+                                                      This means that the ZIP code-level results are likely more reliable."),
                                                     p("Note that due to computational limitations, the graphics show predicted waiting times without
                                                       fixed effects in the regression. While the results with and without fixed effects are qualitatively similar,
                                                       the fixed effects regressions have lower coefficients on the minority percentage variable."),
