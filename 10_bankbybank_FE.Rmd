@@ -2386,3 +2386,290 @@ wells_robust <- felm(
     data = most_recent)
 ```
 
+```{r}
+# One final robustness check -- replacing minority_percent with ownership
+# percentage!!!
+
+most_recent_ownership_county <- 
+  readRDS('most_recent_county_nobanks_ownership.rds') %>%
+  mutate(lender = as.factor(lender), state = as.factor(state),
+         fips = as.factor(fips)) %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(cu = 0) %>%
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu)) %>%
+  mutate(business_roundtable = ifelse(lender %in%
+                                        c("bank of america, national association",
+                                          "citibank, n.a.",
+                                          "keybank national association",
+                                          "jpmorgan chase bank, national association",
+                                          "wells fargo bank, national association"),
+                                      1, 0)) %>%
+  mutate(baml = ifelse(lender == "bank of america, national association",
+                       1, 0)) %>%
+  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
+                       1, 0)) %>%
+  mutate(citi = ifelse(lender == "citibank, n.a.",
+                       1, 0)) %>%
+  mutate(wells = ifelse(lender == "wells fargo bank, national association",
+                       1, 0))
+```
+
+
+```{r}
+county_rt1_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + national + cu + 
+    business_roundtable + 
+    I(business_roundtable * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+
+county_rt2_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + national + cu + 
+    business_roundtable + 
+    I(business_roundtable * percent_minority_biz) + 
+    I(national * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+```
+
+```{r}
+# And let's run the bank robustness checks too
+
+baml_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + national + cu + 
+    baml + I(baml * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+
+citi_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + national + cu + 
+    citi + I(citi * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+
+```
+
+```{r}
+jpm_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + national + cu + 
+    jpm + I(jpm * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+```
+
+```{r}
+wells_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + national + cu + 
+    wells + I(wells * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+```
+
+```{r}
+
+national_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths +
+    national + I(national * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+
+cu_biz <- felm(business_days ~ 1 + 
+    median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + cu + I(cu * percent_minority_biz)|lender + state|0|fips, 
+    data = most_recent_ownership_county
+)
+```
+
+
