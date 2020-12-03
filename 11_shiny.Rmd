@@ -11,8 +11,7 @@ library(janitor)
 library(lubridate)
 library(bizdays)
 library(openintro)
-library(lfe)
-library(estimatr)
+library(fixest)
 
 cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 
@@ -24,9 +23,58 @@ cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 ```{r}
 # Reading in the data. I"m just doing this so I can use ggeffect later
 
-most_recent <- readRDS('most_recent_zip_nobanks_1130.rds')
+most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
+  mutate(state = as.factor(state),
+         fips = as.factor(fips),
+         lender = as.factor(lender)) %>%
+   mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(cu = 0) %>%
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
 
-most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds')
+most_recent <- readRDS('most_recent_zip_1130.rds') %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(cu = 0) %>%
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
+
+most_recent_county <- readRDS('most_recent_county_nobanks_1130.rds') %>%
+    mutate(state = as.factor(state),
+         fips = as.factor(fips),
+         lender = as.factor(lender))
+
+most_recent_county <- readRDS('most_recent_county_1130.rds') %>%
+    mutate(state = as.factor(state),
+         fips = as.factor(fips),
+         lender = as.factor(lender)) %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(cu = 0) %>%
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu))
 ```
 
 ```{r}
@@ -121,8 +169,11 @@ race_days3 <- rbind(national, states)
 ```
 
 ```{r}
+
+# Don't run the lm-robust -- seems like there are documented issues here.
+
 set.seed(9)
-sample <- sample_n(most_recent, size = 1000000) %>%
+sample <- sample_n(most_recent, size = 500000) %>%
   mutate(zip = as.factor(zip),
          lender = as.factor(lender),
          state = as.factor(zip),
@@ -167,15 +218,10 @@ covid_fe <- lm_robust(business_days ~ 1 +
 ```
 
 ```{r}
-marginal_race <- ggpredict(covid_fe, 
-                             terms = "minority_percent")
-```
+# This should work better given documented issues with lm-robust and ggeffect
+# Again, ram problems :()
 
-
-
-```{r}
-sq <- felm(
-  business_days ~ 1 + 
+covid <- lm(business_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 
@@ -183,7 +229,7 @@ sq <- felm(
     cook_pvi + 
     rural +
     estimate_gini_index +
-    violent_crime_rate + 
+    violent_crime_rate + renter_percent + 
     delay +
     loan_150_350 +
     loan_350_1mil +
@@ -203,18 +249,189 @@ sq <- felm(
     stay_at_home_apr + 
     stay_at_home_current + 
     non_essential_closure_apr + 
-    non_essential_closure_current +
-    I(minority_percent^2)|fips + lender|0|zip,
-  data = sample)
+    non_essential_closure_current + factor(state), 
+    data = sample)
 ```
-
 ```{r}
-marginal_race_sq <- ggeffect(sq, 
-                             terms = c("minority_percent"))
+
 ```
 
 
+
 ```{r}
+
+covid <- feols(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current|fips + lender,
+  data = most_recent)
+
+# sq <- felm(
+#   business_days ~ 1 + 
+#     median_family_income + 
+#     minority_percent +
+#     high_school_pct + 
+#     married_percent + male_percent + 
+#     cook_pvi + 
+#     rural +
+#     estimate_gini_index +
+#     violent_crime_rate + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     unemployment_rate_apr + 
+#     unemployment_rate + 
+#     mean_start_cases_weighted +
+#     mean_start_deaths_weighted + 
+#     mean_end_cases_weighted +
+#     mean_end_deaths_weighted + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current +
+#     I(minority_percent^2)|fips + lender|0|zip,
+#   data = sample)
+```
+
+```{r}
+# Let's try ggeffects now
+
+covid <- lm_robust(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current,
+  clusters = zip, data = most_recent)
+
+sq <- lm_robust(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + I(minority_percent^2),
+  clusters = zip, data = most_recent)
+```
+
+```{r}
+marg_race_sq <- ggeffect(sq, terms = "minority_percent")
+```
+
+```{r}
+county_covid <- lm_robust(
+  business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    
+    high_school_pct + 
+    married_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + 
+    delay + 
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths +
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current,
+  most_recent_county, clusters = fips, se_type = "stata")
+
 county_interactions <- lm_robust(
   business_days ~ 1 + 
     median_income + 
@@ -250,18 +467,105 @@ county_interactions <- lm_robust(
     non_essential_closure_apr + 
     non_essential_closure_current +
     I(minority_percent^2),
-  most_recent_county, clusters = fips, se_type = "CR0")
+  most_recent_county, clusters = fips, se_type = "stata")
 ```
 
 
 ```{r}
-marginal_race_sq_county <- ggeffect(county_interactions, 
-                                    terms = c("minority_percent"))
+marginal_race_county <- ggeffect(county_covid, 
+                                    terms = "minority_percent")
 ```
 
-Writing equation:
 
-$$y_i = \alpha_{locality} + \beta minority + X'_i\gamma + \epsilon_i$$
+```{r}
+
+# Now do for banks as well
+
+national_reg <- lm_robust(business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    national+ I(national* minority_percent), 
+    most_recent, clusters = zip, se_type = "stata")
+```
+
+```{r}
+national_bank_graph <- ggeffect(national_reg, 
+                                terms = c("national", "minority_percent"))
+
+```
+
+```{r}
+national_reg <- lm_robust(business_days ~ 1 + 
+    median_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent + 
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national+ I(national* minority_percent), 
+    most_recent_county, clusters = fips, se_type = "stata")
+```
+
+```{r}
+national_bank_graph_county <- ggeffect(national_reg, 
+                                terms = c("national", "minority_percent"))
+```
+
+
 ```{r}
 latest_state_cases <- read_csv('COVIDPPP/us-states.csv', col_types = cols()) %>%
   mutate(state_abb = state2abbr(state)) %>%
@@ -293,4 +597,6 @@ latest_state_cases %>%
     theme_classic()
   
 ```
+Writing equation:
 
+$$y_i = \alpha_{locality} + \beta minority + X'_i\gamma + \epsilon_i$$
