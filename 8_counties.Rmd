@@ -556,6 +556,8 @@ most_recent_county <- most_recent_county_2 %>%
 
 most_recent_county <- readRDS('most_recent_county_nobanks_1130.rds')
 
+most_recent_county <- readRDS('most_recent_county_1130.rds')
+
 ownership <- 
   read_csv('raw_data/county/ABSCS2017.AB1700CSA01_data_with_overlays_2020-12-01T000046.csv',
            skip = 1, col_types = cols()) %>%
