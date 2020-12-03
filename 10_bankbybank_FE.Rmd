@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
-library(estimatr)
+# library(estimatr)
 library(lfe)
 library(texreg)
 
@@ -122,6 +122,40 @@ most_recent_both <- readRDS('most_recent_zip_withcounties_1130.rds') %>%
                                           "jpmorgan chase bank, national association",
                                           "wells fargo bank, national association"),
                                       1, 0))
+
+# And this is for ownership share county regression -- at the bottom!
+
+most_recent_ownership <- readRDS('most_recent_county_ownership_1203.rds') %>%
+    mutate(baml = ifelse(lender == "bank of america, national association",
+                       1, 0)) %>%
+  mutate(jpm = ifelse(lender == "jpmorgan chase bank, national association",
+                       1, 0)) %>%
+  mutate(citi = ifelse(lender == "citibank, n.a.",
+                       1, 0)) %>%
+  mutate(wells = ifelse(lender == "wells fargo bank, national association",
+                       1, 0)) %>%
+  mutate(fips = as.factor(fips),
+         zip = as.factor(zip)) %>%
+    mutate(cu = 0) %>%
+    mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1,
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1,
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1,
+                              cu)) %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(business_roundtable = ifelse(lender %in%
+                                        c("bank of america, national association",
+                                          "citibank, n.a.",
+                                          "keybank national association",
+                                          "jpmorgan chase bank, national association",
+                                          "wells fargo bank, national association"),
+                                      1, 0))
+
 ```
 
 ```{r}
@@ -2390,7 +2424,7 @@ wells_robust <- felm(
 # One final robustness check -- replacing minority_percent with ownership
 # percentage!!!
 
-most_recent_ownership_county <- 
+most_recent_ownership <- 
   readRDS('most_recent_county_nobanks_ownership.rds') %>%
   mutate(lender = as.factor(lender), state = as.factor(state),
          fips = as.factor(fips)) %>%
@@ -2449,10 +2483,15 @@ county_rt1_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + national + cu + 
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    national + cu + 
     business_roundtable + 
-    I(business_roundtable * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    I(business_roundtable * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 
 county_rt2_biz <- felm(business_days ~ 1 + 
@@ -2479,11 +2518,16 @@ county_rt2_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + national + cu + 
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current +
+    national + cu + 
     business_roundtable + 
     I(business_roundtable * percent_minority_biz) + 
-    I(national * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    I(national * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 ```
 
@@ -2514,9 +2558,14 @@ baml_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + national + cu + 
-    baml + I(baml * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    national + cu + 
+    baml + I(baml * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 
 citi_biz <- felm(business_days ~ 1 + 
@@ -2543,9 +2592,14 @@ citi_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + national + cu + 
-    citi + I(citi * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    national + cu + 
+    citi + I(citi * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 
 ```
@@ -2575,9 +2629,14 @@ jpm_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + national + cu + 
-    jpm + I(jpm * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    national + cu + 
+    jpm + I(jpm * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 ```
 
@@ -2606,9 +2665,14 @@ wells_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + national + cu + 
-    wells + I(wells * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    national + cu + 
+    wells + I(wells * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 ```
 
@@ -2639,8 +2703,12 @@ national_biz <- felm(business_days ~ 1 +
     mean_start_deaths + 
     mean_end_cases +
     mean_end_deaths +
-    national + I(national * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    national + I(national * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 
 cu_biz <- felm(business_days ~ 1 + 
@@ -2667,8 +2735,13 @@ cu_biz <- felm(business_days ~ 1 +
     mean_start_cases +
     mean_start_deaths + 
     mean_end_cases +
-    mean_end_deaths + cu + I(cu * percent_minority_biz)|lender + state|0|fips, 
-    data = most_recent_ownership_county
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    cu + I(cu * percent_minority_biz)|0|0|fips, 
+    data = most_recent_ownership
 )
 ```
 

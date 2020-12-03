@@ -12,8 +12,10 @@ library(lubridate)
 library(bizdays)
 library(openintro)
 library(fixest)
+library(estimatr)
 
-cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
+
+# cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 
 # This file is purely experimental -- me pulling out chunks of a shiny app
 # run in an rmd or prepping files for the shiny app
@@ -563,6 +565,90 @@ national_reg <- lm_robust(business_days ~ 1 +
 ```{r}
 national_bank_graph_county <- ggeffect(national_reg, 
                                 terms = c("national", "minority_percent"))
+```
+
+```{r}
+
+# Also doing ggeffects for the ownership regression, again w/o fixed
+# effects :((
+
+# You might need to run this in Server for it to work properly sadly
+
+most_recent_ownership <- 
+  readRDS('most_recent_county_nobanks_ownership.rds') %>%
+  mutate(fips = as.factor(fips))
+
+biz_reg <- lm_robust(business_days ~ 1 + median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current, 
+    clusters = fips, data = most_recent_ownership, se_type = "stata")
+```
+
+```{r}
+marg_race_biz <- ggeffect(biz_reg, terms = "percent_minority_biz")
+```
+
+```{r}
+biz_reg_sq <- lm_robust(business_days ~ 1 + median_income + 
+    percent_minority_biz + 
+    high_school_pct + 
+    married_percent + male_percent + 
+    republican_percent + 
+    pop_den +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    gdp +
+    unemployment_rate_apr + 
+    unemployment_rate_percent +
+    mean_start_cases +
+    mean_start_deaths + 
+    mean_end_cases +
+    mean_end_deaths + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+    I(percent_minority_biz^2), 
+    clusters = fips, data = most_recent_ownership, se_type = "stata")
+```
+
+```{r}
+marg_race_biz_sq <- ggeffect(biz_reg_sq, terms = "percent_minority_biz")
+
 ```
 
 

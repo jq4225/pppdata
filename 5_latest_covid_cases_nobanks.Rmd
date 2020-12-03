@@ -509,9 +509,13 @@ biz_count <-
 
 most_recent_2 <- left_join(most_recent_2, biz_count, 
                               by = c("zip" = "geographic_area_name")) %>%
+  
   #rename("white_percent" = "White_percent") %>%
-  rename("white_percent" = "percent_estimate_race_total_population_one_race_white",
-         "median_family_income" = "estimate_median_income_dollars_families_families",
+  
+  rename("white_percent" = 
+           "percent_estimate_race_total_population_one_race_white",
+         "median_family_income" = 
+           "estimate_median_income_dollars_families_families",
          "cook_pvi" = "pct") %>%
   drop_na(number_of_establishments, white_percent,
           high_school_pct, banks_per_pop, cook_pvi, mean_start_cases_weighted,
@@ -522,7 +526,9 @@ most_recent_2 <- left_join(most_recent_2, biz_count,
 
 ```{r}
 # Adding in violent crime rates
-crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+
+crime <- read_excel('raw_data/county/county_health.xlsx', 
+                    sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%
   select(fips, annual_average_violent_crimes)

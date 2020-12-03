@@ -16,6 +16,9 @@ library(openintro)
 ```
 
 ```{r}
+
+# This is final dataset calculations 
+
 most_recent_ownership_county <- most_recent_ownership_county %>%
   drop_na(stay_at_home_apr, 
           non_essential_closure_apr,
@@ -52,6 +55,9 @@ sapply(most_recent_ownership_county, sd) %>%
 ```
 
 ```{r}
+# This is mostly taken from the file 8 counties -- go there for full comments
+# and descriptions of what's going on
+
 loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
 
 county_zip_crosswalk <- 

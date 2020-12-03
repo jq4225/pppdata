@@ -17,11 +17,11 @@ zip_simple <- read_excel('simple_regression2.xlsx', sheet = "zip2")
 
 zip_simple_check <- read_excel('simple_regression2.xlsx', sheet = "zip")
 
-county_regression <- read_excel('zip_table.xlsx', sheet = "county")
+county_regression <- read_excel('zip_table.xlsx', sheet = "countybiz")
 
 county_regressors <- read_excel('regressors.xlsx', sheet = "Sheet2")
 
-county_simple <- read_excel('simple_regression2.xlsx', sheet = "county")
+county_simple <- read_excel('simple_regression2.xlsx', sheet = "countybiz")
 
 race_days <- readRDS('race_days3.rds')
 
@@ -35,11 +35,11 @@ county_banks <- read_excel('bankbybank.xlsx', sheet = "county")
 
 zip_race_graph <- readRDS('marginalrace.rds')
 
-county_race_graph <- readRDS('marginalrace_county.rds')
+county_race_graph <- readRDS('marg_race_biz.rds')
 
 zip_racesq_graph <- readRDS('marginal_race_sq_zip.rds')
 
-county_racesq_graph <- readRDS('marginal_race_sq_county.rds')
+county_racesq_graph <- readRDS('marg_race_biz_sq.rds')
 
 national_banks_zip <- readRDS('national_bank_graph.rds')
 
@@ -94,13 +94,19 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                              p("Later, I also attempt to disaggregate these results by individual banks and bank type, using the 
                                bank names provided in the SBA's dataset."),
                              
-                             # Here, reference the mathjax object in the server part to see the actual code.
+                             # Here, reference the mathjax object in the server part to see the actual code for the equations.
                              
                              p("The basic OLS setup is as follows in the ZIP code case: "),
                              uiOutput('OLS1'),
+                             p(),
+                             p("Later, I add in additional interaction terms between race and other demographic variables."),
                              
-                             p("Later, I add in additional interaction terms between race and other demographic variables. For the
-                               county case, used as a robustness check, county fixed effects are excluded.")
+                             p("To check a more precise measurement of applicant race, I then aggregate these loans on the county level
+                               and regress waiting times against the share of businesses owned by minorities."),
+                             uiOutput('OLS2'),
+                             p(),
+                             p("This provides a slightly better proxy for what race business owner applicants to the PPP will be,
+                               at the expense of having larger intra-county variation in individual applicant race.")
                            ))),
                  
                   tabPanel("Descriptives",
@@ -228,6 +234,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, gt_output('county_banks'))
                                                   )),
                                          tabPanel("Coefficient Definitions",
+                                                  p("On the county level, the bank-disaggregated regressions use minority population percent, while
+                                                    the aggregate analysis uses the percent of local businesses owned by racial minorities -- this is 
+                                                    why both variables are displayed."),
                                                   fluidRow(
                                                     column(6, gt_output('zip_defns')),
                                                     column(6, gt_output('county_defns'))
@@ -238,7 +247,7 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                          
                                          tabPanel("Residuals", 
                                                   fluidRow(
-                                                    img(src = "residuals_abs.jpg"),
+                                                    img(src = "residuals_abs.jpg", width = "50%", height = "50%"),
                                                     p("This displays a plot of the residuals against the outcome variable
                                                       for the ZIP code regression, Model 4. We can see that there is
                                                       some more propensity for error at the upper ranges
@@ -276,6 +285,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                           p(strong("Demographic data: "), "Most demographic data (median income, race, 
                                             marital status, education, and income inequality) came from the 2018
                                             American Community Survey 5-year esimates."),
+                                          
+                                          p(strong("Business ownership data: "), "Data on the proportion of local businesses
+                                            owned by minorities came from the 2017 Annual Business Survey."),
                                           
                                           p(strong("Political preferences: "), "On the ZIP code level, I used data from the
                                                    Cook Political Report's Partisan Voting Index, reported on the Congressional
@@ -388,8 +400,17 @@ server <- function(input, output) {
       withMathJax(
         "$$y_i = \\alpha + \\beta minority_{ZIP} + X'_i \\gamma + \\epsilon_i$$
         Where \\(y_i\\) is the number of business days until the loan is approved, 
-                 \\(\\alpha_{county}\\) are county and lender fixed effects, 
+                 \\(\\alpha\\) are county and lender fixed effects, 
                  \\(minority_{ZIP}\\) is the percent of the ZIP code's population that is non-white, 
+                 and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
+    })
+    
+    output$OLS2 <- renderUI({
+      withMathJax(
+        "$$y_i = \\alpha + \\beta percentminoritybiz_{FIPS} + X'_i \\gamma + \\epsilon_i$$
+        Where \\(y_i\\) is the number of business days until the loan is approved, 
+                 \\(\\alpha\\) are lender and state fixed effects, 
+                 \\(percentminoritybiz_{FIPS}\\) is the percent of the county's businesses owned by racial minorities, 
                  and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
     })
     
@@ -462,7 +483,10 @@ server <- function(input, output) {
         tab_header(title = "Final Sample Descriptives")
     })
     
-    # These ones are produced by ggeffects, plotted 95% CI from "stata" SEs
+    # These ones are produced by ggeffects, plotted 95% CI from "stata" SEs. 
+    # They don't include fixed effects due to limitations of the lm_robust
+    # function and the inability to use ggeffect with any other regression
+    # functions that allow for fixed effects.
     
     output$marginalRace1 <- renderPlot({
       zip_race_graph %>%
@@ -513,11 +537,11 @@ server <- function(input, output) {
         ggplot(aes(x = x, y = predicted)) +
         geom_line(color = "darkblue") +
         geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
-        labs(x = "Minority Proportion of Population (Percent)", 
+        labs(x = "Percent of Businesses Owned by Minorities", 
              y = "Predicted Wait Time (Business Days)",
-             title = "Linear Predicted Effect of Racial Minority Presence on Wait Times
+             title = "Linear Predicted Effect of Racial Minority Businesses on Wait Times
                (Grouping by Counties)") +
-        xlim(0, 100) +
+        xlim(0, 75) +
         theme_classic()
     })
     
@@ -526,11 +550,11 @@ server <- function(input, output) {
         ggplot(aes(x = x, y = predicted)) +
         geom_line(color = "darkblue") +
         geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
-        labs(x = "Minority Proportion of Population (Percent)", 
+        labs(x = "Percent of Businesses Owned by Minorities", 
              y = "Predicted Wait Time (Business Days)",
-             title = "Quadratic Predicted Effect of Racial Minority Presence on Wait Times
+             title = "Quadratic Predicted Effect of Racial Minority Businesses on Wait Times
                (Grouping by Counties)") +
-        xlim(0, 100) +
+        xlim(0, 75) +
         theme_classic()
     })
     
@@ -641,4 +665,5 @@ server <- function(input, output) {
 }
 
 # Run the application 
+
 shinyApp(ui = ui, server = server)
