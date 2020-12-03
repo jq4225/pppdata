@@ -1,6 +1,7 @@
 # PPP Disparity Estimation
 
-This  is really messy, but you can run the files in the order of the numbers - i.e. 1, 2, 3, 4, 5. The raw_data folder is not backed up to GitHub because of size limitations, but contains all of the raw data used. In general, however, data sources are as follows:
+This  is really messy, but you can run the files in the order of the numbers - i.e. 1, 2, 3, 4, 5. When there are multiple files of the same number, this indicates multiple ways the code in that file was implemented -- open each file to read the comments within. Specifically, for file 5, 5_correctedcovid.rmd implements a new way to calculate COVID caes and deaths, while the nobanks.rmd file is for recreating the original dataset without the observations dropped by including bank lending policies.  
+The raw_data folder is not backed up to GitHub because of size limitations, but contains all of the raw data used. In general, however, data sources are as follows:
 
 All demographic data (e.g. race, median income, high school graduation, marital status, Gini index): 2018 American Community Survey 5-year estimates
 

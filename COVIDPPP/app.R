@@ -61,11 +61,16 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                pandemic, cratered consumption, especially harming small businesses with no access
                                to public financial markets. The pandemic shows little signs to abating absent a vaccine,
                                with many state reporting renewed waves of cases in recent weeks."),
+                             
+                             # This is just a simple plot of COVID cases/deaths over time to visualize -- not a core part
+                             # of my project at all.
+                             
                              selectizeInput("stateInput1", "State",
                                             choices = state.abb,  
                                             selected ="AK", multiple = FALSE),
                              column(6, plotOutput("covidCases")),
                              column(6, plotOutput("covidDeaths")),
+                             
                              p("According to some estimates, over 40 percent of small
                                businesses closed because of the pandemic, many of whom had saved just two weeks' of
                                operating costs. Without a safety net for small businesses, US policymakers passed the
@@ -88,6 +93,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                and the loan approval date."),
                              p("Later, I also attempt to disaggregate these results by individual banks and bank type, using the 
                                bank names provided in the SBA's dataset."),
+                             
+                             # Here, reference the mathjax object in the server part to see the actual code.
+                             
                              p("The basic OLS setup is as follows in the ZIP code case: "),
                              uiOutput('OLS1'),
                              
@@ -105,8 +113,15 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                various demographic variables."),
                              
                              tabsetPanel(type = "tabs",
+                                         
+                                         # Heatmaps are jpg's because they take a very long time to render.
+                                         
                                          tabPanel("Full Loan Location Heatmap", img(src = "original_heatmap.jpg", height="75%", width="75%")),
                                          tabPanel("Sample Loan Location Heatmap", img(src = "new_heatmap.jpg", height="75%", width="75%")),
+                                         
+                                         # This is unadjusted calculations of average waiting times in different states, faceted
+                                         # by minority percentages.
+                                         
                                          tabPanel("Waiting Times by Race", 
                                                   fluidRow(
                                                     p("Nationally, there is a slightly positive correlation between
@@ -118,6 +133,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, plotOutput("statePlot")),
                                                     column(6, plotOutput("natPlot"))
                                                   )),
+                                         
+                                         # Sample descriptive!
+                                         
                                          tabPanel("Sample Descriptives",
                                                   fluidRow(
                                                     p("These are descriptive statistics for the loans aggregated by ZIP code.
@@ -135,6 +153,11 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                are heteroskedasticity- and clustering-robust."),
                              tabsetPanel(type = "tabs",
                                          tabPanel("ZIP Codes",
+                                                  
+                                                  # Very sadly I couldn't find a way to include fixed effects in ggeffects -- I don't have the 
+                                                  # RAM for it :(
+                                                  
+                                                  
                                                   fluidRow(
                                                     column(6, plotOutput('marginalRace1')),
                                                     column(6, plotOutput('marginalRace2')),
@@ -154,6 +177,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, gt_output('zip_simple')),
                                                     column(6, gt_output("zip_simple_check"))
                                                   )),
+                                         
+                                         # Same limitations for the plots on the county levels.
+                                         
                                          tabPanel("Counties",
                                                   fluidRow(
                                                     column(6, plotOutput('marginalRace3')),
@@ -206,9 +232,13 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, gt_output('zip_defns')),
                                                     column(6, gt_output('county_defns'))
                                                   )),
+                                         
+                                         # This graph is slightly outdated because it doesn't include fixed effects, but the general idea
+                                         # is the same -- I'll update the graph soon.
+                                         
                                          tabPanel("Residuals", 
                                                   fluidRow(
-                                                    img(src = "residuals_abs.png"),
+                                                    img(src = "residuals_abs.jpg"),
                                                     p("This displays a plot of the residuals against the outcome variable
                                                       for the ZIP code regression, Model 4. We can see that there is
                                                       some more propensity for error at the upper ranges
@@ -290,6 +320,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
 
 server <- function(input, output) {
   
+  
+  # COVID cases and deaths plots from the intro panel
+  
     output$covidCases <- renderPlot({
       state_cases %>%
         filter(state == abbr2state(input$stateInput1)) %>%
@@ -299,6 +332,9 @@ server <- function(input, output) {
              title =  paste("Total COVID-19 Cases,", 
                             abbr2state(input$stateInput1))) + 
         theme(legend.position = "none") + 
+        
+        # I feel like there's a better way to do this but I didn't find it
+        
         scale_x_date(breaks = c(as.Date("2020/02/01"),
                                 as.Date("2020/03/01"),
                                 as.Date("2020/04/01"),
@@ -346,6 +382,8 @@ server <- function(input, output) {
         
     })
     
+    # Equation LaTeX here!
+    
     output$OLS1 <- renderUI({
       withMathJax(
         "$$y_i = \\alpha + \\beta minority_{ZIP} + X'_i \\gamma + \\epsilon_i$$
@@ -354,6 +392,8 @@ server <- function(input, output) {
                  \\(minority_{ZIP}\\) is the percent of the ZIP code's population that is non-white, 
                  and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
     })
+    
+    # Descriptive plots on the waiting times tab of the Descriptives tab. 
     
     output$natPlot <- renderPlot({
       race_days %>%
@@ -422,6 +462,8 @@ server <- function(input, output) {
         tab_header(title = "Final Sample Descriptives")
     })
     
+    # These ones are produced by ggeffects, plotted 95% CI from "stata" SEs
+    
     output$marginalRace1 <- renderPlot({
       zip_race_graph %>%
         ggplot(aes(x = x, y = predicted)) +
@@ -447,6 +489,8 @@ server <- function(input, output) {
         xlim(0, 100) +
         theme_classic()
     })
+    
+    # Here's all the regression tables.
     
     output$zip_simple <- render_gt({
       zip_simple %>%
@@ -535,6 +579,8 @@ server <- function(input, output) {
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
     
+    # More ggeffects graph.
+    
     output$county_banks_graph <- renderPlot({
       national_banks_county %>%
         mutate(x = as.factor(x)) %>%
@@ -556,6 +602,8 @@ server <- function(input, output) {
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
+    
+    # Regression coef definitions
     
     output$zip_defns <- render_gt({
       zip_regressors %>%
