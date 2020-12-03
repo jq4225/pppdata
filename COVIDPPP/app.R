@@ -377,7 +377,7 @@ server <- function(input, output) {
              subtitle = 
                "Dashed line indicates national average.",
              y = "Mean Waiting Time (business days)",
-             fill = "State") +
+             caption = "Source: Small Business Administration") + 
         theme_classic() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
@@ -399,7 +399,9 @@ server <- function(input, output) {
                                       "70-80%",
                                       "80-90%",
                                       "90-100%")) +
-          scale_fill_manual(values = c("coral", "lightblue3")) +
+        scale_fill_manual(name = "Region", values = c("coral", "lightblue3"),
+                          labels = c(paste(abbr2state(input$stateInput2)),
+                                     "National")) +
         labs(title = paste("Mean Loan Waiting Time,", 
                            abbr2state(input$stateInput2), 
                            "vs. National Average"),
