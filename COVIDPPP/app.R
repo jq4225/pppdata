@@ -74,15 +74,16 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                   fluidRow(
                                                     selectizeInput("stateInput1", "State",
                                                                    choices = state.abb,  
-                                                                   selected ="TX", multiple = FALSE),
+                                                                   selected ="AL", multiple = FALSE),
                                                     column(6, plotOutput("covidCases")),
                                                     column(6, plotOutput("covidDeaths"))
                                                   )),
                                          tabPanel("Unemployment",
                                                   fluidRow(
+                                                    p("Please allow some time for the graphics to load."),
                                                     selectizeInput("stateInput2", "State",
                                                                    choices = state.abb,  
-                                                                   selected ="TX", multiple = FALSE),
+                                                                   selected ="AL", multiple = FALSE),
                                                     imageOutput("unemploy")
                                                   ))
 
@@ -413,24 +414,28 @@ server <- function(input, output) {
 
     })
     
+    # Animated plot of unemployment rates
+    
     output$unemploy <- renderImage({
       outfile <- tempfile(fileext='.gif')
       
-      plot1 <- plot_usmap(regions = "counties", color = NA, data = unemploy,
-                 values = "unemployment_rate_percent",
-                 include = input$stateInput2) + 
+      plot1 <- plot_usmap(regions = "counties", color = "grey50", 
+                          data = unemploy,
+                          values = "unemployment_rate_percent",
+                          include = input$stateInput2) + 
         theme(panel.background = element_rect(color = "black", fill = "white"),
               legend.position = "right") +
         scale_fill_distiller(type = "seq",
                              palette = "YlGnBu",
                              na.value = "grey50",
                              direction = 1,
-                             name = "Unemployment Rate (Percent)") + 
+                             name = "Unemployment Rate (Percent)",
+                             n.breaks = 3) + 
         transition_states(month) + 
         shadow_wake(wake_length = 0.05, alpha = FALSE) + 
         labs(title = 
                paste("Unemployment Rate in", abbr2state(input$stateInput2),
-                     "{closest_state}/2020"),
+                     "{closest_state}/2020, by county"),
              caption = "Source: Bureau of Labor Statistics")
       
       anim_save("unemploy.gif", animate(plot1, nframes = 30,
@@ -441,7 +446,10 @@ server <- function(input, output) {
                                         units = "px"))
       
       list(src = "unemploy.gif",
-           contentType = 'image/gif'
+           contentType = 'image/gif',
+           inline = TRUE,
+           width = "55%",
+           height = "100%"
       )}, deleteFile = TRUE)
     
     # Equation LaTeX here!
