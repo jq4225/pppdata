@@ -7,6 +7,7 @@ library(openintro)
 library(usmap)
 library(gganimate)
 library(gifski)
+library(transformr)
 
 # Reading in files here: most of these are excel files converted from 
 # htmlreg and other functions b/c I made tables for the papers I'm writing
@@ -68,7 +69,8 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                to public financial markets. The pandemic shows little signs of abating absent a vaccine,
                                with many states reporting renewed waves of cases in recent weeks."),
                              
-                             # This is just a simple plot of COVID unemployment over time
+                             # This is just a simple plot of COVID unemployment over time, animated!
+                             
                              tabsetPanel(type = "tabs",
                                          tabPanel("Cases and Deaths",
                                                   fluidRow(
@@ -80,10 +82,10 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                   )),
                                          tabPanel("Unemployment",
                                                   fluidRow(
-                                                    p("Please allow some time for the graphics to load."),
                                                     selectizeInput("stateInput2", "State",
                                                                    choices = state.abb,  
                                                                    selected ="AL", multiple = FALSE),
+                                                    p("Please allow some time for the graphics to load."),
                                                     imageOutput("unemploy")
                                                   ))
 
@@ -430,7 +432,7 @@ server <- function(input, output) {
                              na.value = "grey50",
                              direction = 1,
                              name = "Unemployment Rate (Percent)",
-                             n.breaks = 3) + 
+                             n.breaks = 5) + 
         transition_states(month) + 
         shadow_wake(wake_length = 0.05, alpha = FALSE) + 
         labs(title = 
@@ -441,16 +443,17 @@ server <- function(input, output) {
       anim_save("unemploy.gif", animate(plot1, nframes = 30,
                                         detail = 2,
                                         fps = 4,
-                                        width = 500,
-                                        height = 500,
-                                        units = "px"))
-      
+                                        width = 6,
+                                        height = 6,
+                                        res = 150,
+                                        units = "in"))
+
       list(src = "unemploy.gif",
            contentType = 'image/gif',
-           inline = TRUE,
-           width = "55%",
+           width = "450px",
            height = "100%"
       )}, deleteFile = TRUE)
+    
     
     # Equation LaTeX here!
     

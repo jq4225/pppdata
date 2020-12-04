@@ -1409,6 +1409,40 @@ county_covid_biz_sq <- felm(business_days ~ 1 +
     data = most_recent_ownership_county
 )
 ```
+```{r}
+
+# Testing out an IV because I can
+
+# covid_fe <- felm(
+#   business_days ~ 1 + 
+#     median_family_income + 
+#     high_school_pct +  male_percent + 
+#     rural +
+#     estimate_gini_index +
+#     violent_crime_rate + renter_percent + 
+#     delay +
+#     loan_150_350 +
+#     loan_350_1mil +
+#     loan_1mil_2mil +
+#     loan_2mil_5mil + 
+#     loan_5mil_10mil + 
+#     jobs_reported +
+#     banks_per_pop + 
+#     businesses_per_pop + 
+#     payroll +
+#     unemployment_rate_apr + 
+#     unemployment_rate + 
+#     mean_start_cases_weighted +
+#     mean_start_deaths_weighted + 
+#     mean_end_cases_weighted +
+#     mean_end_deaths_weighted + 
+#     stay_at_home_apr + 
+#     stay_at_home_current + 
+#     non_essential_closure_apr + 
+#     non_essential_closure_current|fips + lender|
+#     (minority_percent ~ married_percent + cook_pvi)|zip,
+#   data = most_recent)
+```
 
 
 
