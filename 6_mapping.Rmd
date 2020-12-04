@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(janitor)
 library(maps)
+library(usmap)
+library(readxl)
+library(lubridate)
+library(gganimate)
 ```
 
 ```{r getting zip code counts for original}
@@ -116,5 +120,54 @@ ggplot(new_lat, aes(longitude, latitude)) +
 #         axis.text = element_blank(), panel.grid.major = element_blank()) +
 #   scale_colour_gradient(high="dark blue", low="light blue", 
 #                         name = "Number of Loans")
+```
+
+```{r}
+# Let's read in some unemployment data and see what happens
+
+unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
+  clean_names() %>%
+  select(state_fips_code, county_fips_code, period, 
+         unemployed, labor_force, unemployment_rate_percent) %>%
+  mutate(fips_code = str_c(state_fips_code, county_fips_code, sep = "")) %>%
+  drop_na(fips_code) %>%
+  mutate(period = ifelse(period == "Aug-20 p", "Aug-20", period)) %>%
+  mutate(period = as.Date(paste("01", period, sep="-"), "%d-%b-%y")) %>%
+  mutate(month = month(period)) %>%
+  rename("fips" = "fips_code") %>%
+  select(unemployment_rate_percent, fips, month) %>%
+  mutate(month = as.integer(month))
+```
+
+```{r}
+counties <- unemploy %>%
+  select(fips) %>%
+  distinct()
+
+all <- expand_grid(fips = counties$fips,
+                   month = 1:12)
+
+all_unemploy <- left_join(all, unemploy, by = c("fips", "month"))
+```
+
+```{r}
+unemploy <- unemploy %>%
+  mutate(month = as.integer(month))
+
+plot1 <- plot_usmap(regions = "counties", data = unemploy, values = "unemployment_rate_percent",
+             color = NA, include = "HI") + 
+  labs(title = "{closest_state}",
+       subtitle = "This is a blank map of the counties of the United States.") + 
+  theme(panel.background = element_rect(color = "black", fill = "white"),
+        legend.position = "right") +
+  scale_fill_gradient(high="dark blue", low="light blue",
+                        name = "Unemployment Rate",
+                        n.breaks = 5)
+
+
+
+plot1 + transition_states(month)
+
+# p + transition_time(month)
 ```
 

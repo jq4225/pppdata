@@ -4,6 +4,9 @@ library(shinythemes)
 library(gt)
 library(readxl)
 library(openintro)
+library(usmap)
+library(gganimate)
+library(gifski)
 
 # Reading in files here: most of these are excel files converted from 
 # htmlreg and other functions b/c I made tables for the papers I'm writing
@@ -47,6 +50,10 @@ national_banks_county <- readRDS('national_bank_graph_county.rds')
 
 state_cases <- readRDS('state_cases.rds')
 
+unemploy <- readRDS('unemploy.rds') %>%
+  mutate(month = as.integer(month)) %>%
+  filter(month < 12)
+
 
 # Define UI 
 
@@ -54,22 +61,34 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                   theme = shinytheme("sandstone"),
                   tabPanel("Introduction",
                            mainPanel(
-                             fluidRow(
                              h2("Introduction"),
                              p("The COVID-19 pandemic triggered an unprecedented economic shock. Social distancing measures
                                such as stay-at-home orders and mandatory business closures, combined with the fear of the
                                pandemic, cratered consumption, especially harming small businesses with no access
-                               to public financial markets. The pandemic shows little signs to abating absent a vaccine,
-                               with many state reporting renewed waves of cases in recent weeks."),
+                               to public financial markets. The pandemic shows little signs of abating absent a vaccine,
+                               with many states reporting renewed waves of cases in recent weeks."),
                              
-                             # This is just a simple plot of COVID cases/deaths over time to visualize -- not a core part
-                             # of my project at all.
+                             # This is just a simple plot of COVID unemployment over time
+                             tabsetPanel(type = "tabs",
+                                         tabPanel("Cases and Deaths",
+                                                  fluidRow(
+                                                    selectizeInput("stateInput1", "State",
+                                                                   choices = state.abb,  
+                                                                   selected ="TX", multiple = FALSE),
+                                                    column(6, plotOutput("covidCases")),
+                                                    column(6, plotOutput("covidDeaths"))
+                                                  )),
+                                         tabPanel("Unemployment",
+                                                  fluidRow(
+                                                    selectizeInput("stateInput2", "State",
+                                                                   choices = state.abb,  
+                                                                   selected ="TX", multiple = FALSE),
+                                                    imageOutput("unemploy")
+                                                  ))
+
+                             ),
                              
-                             selectizeInput("stateInput1", "State",
-                                            choices = state.abb,  
-                                            selected ="AK", multiple = FALSE),
-                             column(6, plotOutput("covidCases")),
-                             column(6, plotOutput("covidDeaths")),
+
                              
                              p("According to some estimates, over 40 percent of small
                                businesses closed because of the pandemic, many of whom had saved just two weeks' of
@@ -107,7 +126,7 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                              p(),
                              p("This provides a slightly better proxy for what race business owner applicants to the PPP will be,
                                at the expense of having larger intra-county variation in individual applicant race.")
-                           ))),
+                           )),
                  
                   tabPanel("Descriptives",
                            mainPanel(
@@ -133,7 +152,7 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     p("Nationally, there is a slightly positive correlation between
                                                       minority populations and wait times without any controls. You
                                                       can see state-level visualizations here."),
-                                                    selectizeInput("stateInput2", "State",
+                                                    selectizeInput("stateInput3", "State",
                                                                    choices = state.abb,  
                                                                    selected ="AK", multiple = FALSE),
                                                     column(6, plotOutput("statePlot")),
@@ -341,12 +360,12 @@ server <- function(input, output) {
         ggplot(aes(x = date, y = cases)) +
           geom_line(color = "dodgerblue", size = 1) +
           labs(x = "Month", y = "Cases",
-             title =  paste("Total COVID-19 Cases,", 
-                            abbr2state(input$stateInput1))) + 
-        theme(legend.position = "none") + 
-        
+             title =  paste("Total COVID-19 Cases,",
+                            abbr2state(input$stateInput1))) +
+        theme(legend.position = "none") +
+
         # I feel like there's a better way to do this but I didn't find it
-        
+
         scale_x_date(breaks = c(as.Date("2020/02/01"),
                                 as.Date("2020/03/01"),
                                 as.Date("2020/04/01"),
@@ -359,22 +378,22 @@ server <- function(input, output) {
                                 as.Date("2020/11/01")),
                      labels = c("Feb", "Mar", "Apr",
                                 "May", "Jun", "Jul", "Aug",
-                                "Sept", "Oct", "Nov")) + 
-        scale_y_continuous(breaks = scales::pretty_breaks(n = 10), 
-                           label = scales::comma) + 
+                                "Sept", "Oct", "Nov")) +
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 10),
+                           label = scales::comma) +
         theme_classic()
     })
-    
+
     output$covidDeaths <- renderPlot({
       state_cases %>%
-        filter(state == abbr2state(input$stateInput1)) %>% 
+        filter(state == abbr2state(input$stateInput1)) %>%
         ggplot(aes(x = date, y = deaths)) +
         geom_line(color = "firebrick4", size = 1) +
         labs(x = "Month", y = "Deaths",
-             title =  paste("Total COVID-19 Deaths,", 
+             title =  paste("Total COVID-19 Deaths,",
                             abbr2state(input$stateInput1)),
-             caption = "Source: New York Times") + 
-        theme(legend.position = "none") + 
+             caption = "Source: New York Times") +
+        theme(legend.position = "none") +
         scale_x_date(breaks = c(as.Date("2020/02/01"),
                                 as.Date("2020/03/01"),
                                 as.Date("2020/04/01"),
@@ -387,12 +406,43 @@ server <- function(input, output) {
                                 as.Date("2020/11/01")),
                      labels = c("Feb", "Mar", "Apr",
                                 "May", "Jun", "Jul", "Aug",
-                                "Sept", "Oct", "Nov")) + 
-        scale_y_continuous(breaks = scales::pretty_breaks(n = 10), 
-                           label = scales::comma) + 
+                                "Sept", "Oct", "Nov")) +
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 10),
+                           label = scales::comma) +
         theme_classic()
-        
+
     })
+    
+    output$unemploy <- renderImage({
+      outfile <- tempfile(fileext='.gif')
+      
+      plot1 <- plot_usmap(regions = "counties", color = NA, data = unemploy,
+                 values = "unemployment_rate_percent",
+                 include = input$stateInput2) + 
+        theme(panel.background = element_rect(color = "black", fill = "white"),
+              legend.position = "right") +
+        scale_fill_distiller(type = "seq",
+                             palette = "YlGnBu",
+                             na.value = "grey50",
+                             direction = 1,
+                             name = "Unemployment Rate (Percent)") + 
+        transition_states(month) + 
+        shadow_wake(wake_length = 0.05, alpha = FALSE) + 
+        labs(title = 
+               paste("Unemployment Rate in", abbr2state(input$stateInput2),
+                     "{closest_state}/2020"),
+             caption = "Source: Bureau of Labor Statistics")
+      
+      anim_save("unemploy.gif", animate(plot1, nframes = 30,
+                                        detail = 2,
+                                        fps = 4,
+                                        width = 500,
+                                        height = 500,
+                                        units = "px"))
+      
+      list(src = "unemploy.gif",
+           contentType = 'image/gif'
+      )}, deleteFile = TRUE)
     
     # Equation LaTeX here!
     
@@ -445,7 +495,7 @@ server <- function(input, output) {
     
     output$statePlot <- renderPlot({
       race_days %>%
-        filter(state %in% c(input$stateInput2, "National")) %>%
+        filter(state %in% c(input$stateInput3, "National")) %>%
         group_by(state, cuts) %>%
         ggplot(aes(x = cuts, y = mean_days, fill = state)) +
           geom_col(position = "dodge") +
@@ -461,10 +511,10 @@ server <- function(input, output) {
                                       "80-90%",
                                       "90-100%")) +
         scale_fill_manual(name = "Region", values = c("coral", "lightblue3"),
-                          labels = c(paste(abbr2state(input$stateInput2)),
+                          labels = c(paste(abbr2state(input$stateInput3)),
                                      "National")) +
         labs(title = paste("Mean Loan Waiting Time,", 
-                           abbr2state(input$stateInput2), 
+                           abbr2state(input$stateInput3), 
                            "vs. National Average"),
              y = "Mean Waiting Time (business days)") +
         theme_classic() +
