@@ -387,7 +387,7 @@ national_reg_only <- felm(
 ```{r}
 
 # These regressions end up being unused because of the high correlation 
-# between the interaction terms.
+# between the interaction terms. Ignore them!
 
 baml_reg <- felm(
     business_days ~ 1 + 
@@ -714,7 +714,9 @@ roundtable_reg2 <- felm(
 
 
 ```{r}
-# Redoing county level with felm just to make sure everything's correct
+# Redoing county level with felm just to make sure everything's correct. This
+# doesn't include state FEs but I'm using the same function for consistency
+# there are slight diffs in calculated coefs with lm_robust vs. felm
 
 county_roundtable1 <- felm(business_days ~ 1 + 
     median_income + 
@@ -794,7 +796,7 @@ county_roundtable2 <- felm(business_days ~ 1 +
 
 
 ```{r}
-# banks county
+# banks county -- using only county data, again without FEs
 
 baml_county <- felm(business_days ~ 1 + 
     median_income + 
@@ -1011,7 +1013,6 @@ cu_county <- felm(business_days ~ 1 +
 
 ```{r}
 
-# Robustness check w/ zip and county
 
 # baml_reg_check <- felm(
 #     business_days ~ 1 + 
@@ -1053,6 +1054,10 @@ cu_county <- felm(business_days ~ 1 +
 ```
 
 ```{r}
+
+# Robustness check w/ zip and county -- replacing ZIP estimates with the 
+# county data
+
 baml_check <- felm(
   business_days ~ 1 + 
     median_family_income + 
@@ -1473,6 +1478,10 @@ cu_check <- felm(
 
 
 ```{r}
+
+# Same robustness check just for the indicators for roundtable status -- this is
+# not in Gov 50, please ignore TFs thx.
+
 business_roundtable_check <- felm(
   business_days ~ 1 + 
     median_family_income + 
@@ -1640,7 +1649,9 @@ business_roundtable_check2 <- felm(
 ```{r}
 
 # Trying bank-specific w/ deposits -- this isn't in the initial setup
-# part because I thought to do this a little bit later than the others.
+# part because I thought to do this a little bit later than the others. This
+# adds in deposit data to see if bank-level differences are completely
+# explained by differences in size.
 
 # Read the file in if you have to
 
@@ -1904,6 +1915,9 @@ roundtable_deposits <- felm(
       I(dep * minority_percent)|fips|0|zip, 
     data = most_recent_deposits)
 
+# Second regression just includes an extra interaction term to make sure
+# we've controlled for everything.
+
 roundtable_deposits_2 <- felm(
     business_days ~ 1 + 
     median_family_income + 
@@ -1946,7 +1960,8 @@ roundtable_deposits_2 <- felm(
 ```{r}
 
 # Trying without preference and requirement variables -- i.e., using the 
-# original 3.7 million loan dataset
+# original 3.7 million loan dataset, but without the lender-specific stuff
+# All model specifications here are the same.
 
 most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
   mutate(lender = tolower(lender)) %>%

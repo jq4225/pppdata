@@ -145,7 +145,12 @@ combined_unemploy2 <- left_join(combined_unemploy,
 
 
 ```{r}
-# Zip with fixed effects -- regressions start here
+# Zip with fixed effects -- regressions start here. FELM allows me to include
+# fixed effects regressions, which I later implement (and you can see
+# what the FEs are by what variables are after the first bar in 
+# my formula.) I'm running a bunch of different model specifications 
+# including and excluding certain categories of variables, as you can 
+# see by the name. 
 
 # Regression 1
 
@@ -375,7 +380,9 @@ resid %>%
 most_recent_both <- readRDS('most_recent_zip_withcounties_nobanks_1130.rds') %>%
   mutate(zip = as.factor(zip), fips = as.factor(fips))
 
-# Robustness check -- rerunning regressions with the lovely local data
+# Robustness check -- rerunning regressions with the ZIP-level estimates 
+# substituted for original county data. This means I take out county FEs
+# but I do try out state FEs at some point, tho I don't keep them.
 
 demographics_check <- felm(business_days ~ 1 + 
     median_family_income + 
@@ -548,7 +555,9 @@ interactions_check <- felm(
 
 # County fixed effects gone -- this is county regressions but without 
 # state fixed effects -- I'll come back and rerun with state fixed effects
-# at some point, I'm sure
+# at some point, I'm sure. Actually, state FEs work a little bit worse than
+# the state dummies for COVID policies, so I end up including some regressions
+# showing state FEs but not as my primary specification.
 
 # most_recent_county <- most_recent_county %>%
 #   mutate(lender = as.factor(lender))
@@ -678,6 +687,9 @@ county_sq <- felm(business_days ~ 1 +
     data = most_recent_county
 )
 
+
+# Interactions differs b/c I include a bunch of interaction terms, not just
+# one.
 
 county_interactions <- felm(business_days ~ 1 + 
     median_income + 
@@ -823,7 +835,10 @@ county_interactions <- felm(business_days ~ 1 +
 ```
 ```{r}
 # Trying another way of doing negative binomial w/ fixed effects -- this takes
-# a while but ends up running properly!
+# a while but ends up running properly! Negative binomial reg is for
+# count data, which mine is given it's waiting times. It should help 
+# correct for the skewness of my data (though the results don't really
+# work that well).
 
 dems_binomial <- fenegbin(business_days ~ 1 + 
     median_family_income + 
@@ -904,9 +919,15 @@ covid_binomial <-  fenegbin(business_days ~ 1 +
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current|lender + fips, most_recent)
+
+# You'll note that I don't really have interactions here, because including
+# interactions makes my regressions take SO long that it's not worth it.
 ```
+
 ```{r}
 # Trying log again just to see what will happen -- note R squared is better!
+# The interpretation on this is probably a bit more reasonable than the straight
+# linear regression, but this is still just a robustness check.
 
 # Regression 1
 
@@ -1102,7 +1123,9 @@ log_interactions <- felm(log_days ~
 ```
 ```{r}
 
-# Robustness check -- using state FEs instead of county FEs
+# Robustness check -- using state FEs instead of county FEs on the state level
+# This actually ends up working fairly similarly, though obviously worse
+# b/c there are just more county FEs.
 
 covid_state <- felm(
   business_days ~ 1 + 
@@ -1374,7 +1397,8 @@ county_covid_biz_sq <- felm(business_days ~ 1 +
     data = most_recent_ownership_county
 )
 
-# No state FEs
+# No state FEs to check the fit -- this actually works better than the ones
+# with state FEs.
 
 county_covid_biz_sq <- felm(business_days ~ 1 + 
     median_income + 
