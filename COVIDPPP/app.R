@@ -7,6 +7,10 @@ library(openintro)
 library(usmap)
 library(gganimate)
 library(gifski)
+
+# Transformr is a requirement for doing the fancy animated graphs for 
+# polygonal shapes, which is why it's included.
+
 library(transformr)
 
 # Reading in files here: most of these are excel files converted from 
@@ -69,7 +73,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                to public financial markets. The pandemic shows little signs of abating absent a vaccine,
                                with many states reporting renewed waves of cases in recent weeks."),
                              
-                             # This is just a simple plot of COVID unemployment over time, animated!
+                             # This is just a simple plot of COVID unemployment over time, animated! I include a tab for
+                             # non-animated graphs of cases and deaths (which could've been animated but would just
+                             # not be super educational if they were)
                              
                              tabsetPanel(type = "tabs",
                                          tabPanel("Cases and Deaths",
@@ -148,7 +154,8 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                          tabPanel("Sample Loan Location Heatmap", img(src = "new_heatmap.jpg", height="75%", width="75%")),
                                          
                                          # This is unadjusted calculations of average waiting times in different states, faceted
-                                         # by minority percentages.
+                                         # by minority percentages. Two tabs -- one is the national plot displaying averages at every value
+                                         # nationally, one is a state plot that also includes the national averages at every value for comparison.
                                          
                                          tabPanel("Waiting Times by Race", 
                                                   fluidRow(
@@ -162,7 +169,7 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, plotOutput("natPlot"))
                                                   )),
                                          
-                                         # Sample descriptive!
+                                         # Sample descriptive! Just displaying tables for average values of variables.
                                          
                                          tabPanel("Sample Descriptives",
                                                   fluidRow(
@@ -183,7 +190,7 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                          tabPanel("ZIP Codes",
                                                   
                                                   # Very sadly I couldn't find a way to include fixed effects in ggeffects -- I don't have the 
-                                                  # RAM for it :(
+                                                  # RAM for it :( The two plots are different specifications for the ggeffect input.
                                                   
                                                   
                                                   fluidRow(
@@ -202,6 +209,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     p("Note that due to computational limitations, the graphics show predicted waiting times without
                                                       fixed effects in the regression. While the results with and without fixed effects are qualitatively similar,
                                                       the fixed effects regressions have lower coefficients on the minority percentage variable."),
+                                                    
+                                                    # These are the abbreviated regression tables -- I have another tab for the full ones.
+                                                    
                                                     column(6, gt_output('zip_simple')),
                                                     column(6, gt_output("zip_simple_check"))
                                                   )),
@@ -222,6 +232,9 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     p("Note that due to computational limitations, the graphics show predicted waiting times without
                                                       fixed effects in the regression. While the results with and without fixed effects are qualitatively similar,
                                                       the fixed effects regressions have lower coefficients on the minority percentage variable."),
+                                                    
+                                                    # Again, this is the abbreviated table.
+                                                    
                                                     gt_output('county_simple')
                                                   )),
                                          tabPanel("Full Tables", 
@@ -233,6 +246,10 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, gt_output('county_regression'))
                                                   )),
                                          tabPanel("Bank Type Comparisons",
+                                                  
+                                                  # This tab indicates the advantage of going to a national bank for your loan in racial
+                                                  # disparities in waiting times. I build in a ggeffects plot here as well!
+                                                  
                                                   fluidRow(
                                                     p("I also try to disaggregate racial disparities by type of bank. Here, I provide
                                                       regressions for a couple of the country's largest banks to see if applying to
@@ -243,6 +260,10 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                       exclude interaction terms between minority_percent and other variables, but
                                                       include all of the background variables, as in Model 4 in the ZIP and county 
                                                       regressions."),
+                                                    
+                                                    # The ZIP and county differences here are actually fairly similar, unlike when we
+                                                    # only look at minority population.
+                                                    
                                                     column(6, plotOutput('zip_banks_graph')),
                                                     column(6, plotOutput("county_banks_graph")),
                                                     p("As you can see, aggregating by both ZIPs and counties indicates that large, national
@@ -252,9 +273,16 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                       tables for both individual banks and bank types are shown below: the 'bank' indicator
                                                       refers to a variable that takes the value 1 when the lending institution is the bank indicated
                                                       in the column title and 0 otherwise -- so, its definition is different in each model."),
+                                                    
+                                                    # Only the abbreviated regression tables here again.
+                                                    
                                                     column(6, gt_output('zip_banks')),
                                                     column(6, gt_output('county_banks'))
                                                   )),
+                                         
+                                         
+                                         # Simple table of what each coefficient means / how it was calculated.
+                                         
                                          tabPanel("Coefficient Definitions",
                                                   p("On the county level, the bank-disaggregated regressions use minority population percent, while
                                                     the aggregate analysis uses the percent of local businesses owned by racial minorities -- this is 
@@ -280,6 +308,8 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                   tabPanel("About",
                            mainPanel(
                                h2("About"),
+                               
+                               # Me being arrogant
                                  
                                           h3("Me"),
                                           p("Hi, my name's Justin. I'm a junior in Winthrop House studying Applied
@@ -355,7 +385,8 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
 server <- function(input, output) {
   
   
-  # COVID cases and deaths plots from the intro panel
+  # COVID cases and deaths plots from the intro panel -- not much to 
+  # explain here, it just displays the total cases/deaths by date.
   
     output$covidCases <- renderPlot({
       state_cases %>%
@@ -416,7 +447,10 @@ server <- function(input, output) {
 
     })
     
-    # Animated plot of unemployment rates
+    # Animated plot of unemployment rates by county (aka FIPS codes) -- I 
+    # set some custom options for the gif rendering to make it run a little
+    # bit faster, but it's still quite slow. Note that these graphs only have
+    # unemployment from April to August b/c that's the relevant dates for PPP.
     
     output$unemploy <- renderImage({
       outfile <- tempfile(fileext='.gif')
@@ -434,11 +468,18 @@ server <- function(input, output) {
                              name = "Unemployment Rate (Percent)",
                              n.breaks = 5) + 
         transition_states(month) + 
+        
+        # This makes a smooth transition since my data is all month to month.
+        
         shadow_wake(wake_length = 0.05, alpha = FALSE) + 
         labs(title = 
                paste("Unemployment Rate in", abbr2state(input$stateInput2),
                      "{closest_state}/2020, by county"),
              caption = "Source: Bureau of Labor Statistics")
+      
+      # Displaying animated plots in Shiny is easiest done by saving them as 
+      # gifs and then rendering the gifs, which is why this is render_image
+      # not render_plot
       
       anim_save("unemploy.gif", animate(plot1, nframes = 30,
                                         detail = 2,
@@ -455,27 +496,30 @@ server <- function(input, output) {
       )}, deleteFile = TRUE)
     
     
-    # Equation LaTeX here!
+    # Equation LaTeX here! -- both setups are similar just with differnet
+    # variables.
     
     output$OLS1 <- renderUI({
       withMathJax(
         "$$y_i = \\alpha + \\beta minority_{ZIP} + X'_i \\gamma + \\epsilon_i$$
         Where \\(y_i\\) is the number of business days until the loan is approved, 
-                 \\(\\alpha\\) are county and lender fixed effects, 
-                 \\(minority_{ZIP}\\) is the percent of the ZIP code's population that is non-white, 
-                 and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
+        \\(\\alpha\\) are county and lender fixed effects, 
+        \\(minority_{ZIP}\\) is the percent of the ZIP code's population that is non-white, 
+        and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
     })
     
     output$OLS2 <- renderUI({
       withMathJax(
         "$$y_i = \\alpha + \\beta percentminoritybiz_{FIPS} + X'_i \\gamma + \\epsilon_i$$
         Where \\(y_i\\) is the number of business days until the loan is approved, 
-                 \\(\\alpha\\) are lender and state fixed effects, 
-                 \\(percentminoritybiz_{FIPS}\\) is the percent of the county's businesses owned by racial minorities, 
-                 and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
+        \\(\\alpha\\) are lender and state fixed effects, 
+        \\(percentminoritybiz_{FIPS}\\) is the percent of the county's businesses owned by racial minorities, 
+        and \\(X_i\\) is a vector of controls (e.g. loan size, local demographics).")
     })
     
     # Descriptive plots on the waiting times tab of the Descriptives tab. 
+    # These just display average waiting times by racial percentages for
+    # each state, unadjusted for anything or controls.
     
     output$natPlot <- renderPlot({
       race_days %>%
@@ -575,7 +619,9 @@ server <- function(input, output) {
         theme_classic()
     })
     
-    # Here's all the regression tables.
+    # Here's all the regression tables. -- no explanation really needed, 
+    # I add in an explanation of the star notation in each one and tell
+    # them to keep the empty cells empty.
     
     output$zip_simple <- render_gt({
       zip_simple %>%
@@ -605,6 +651,9 @@ server <- function(input, output) {
         xlim(0, 75) +
         theme_classic()
     })
+    
+    # The marginal race graphs again are self explanatory -- I graph with a 
+    # ribbon to display the 95% CI.
     
     output$marginalRace4 <- renderPlot({
       county_racesq_graph %>%
@@ -641,6 +690,9 @@ server <- function(input, output) {
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
+    
+    # The banking graphs show up as bar graphs just because I've gotten
+    # the ggeffect for two, rather than 1 variable.
     
     output$zip_banks_graph <- renderPlot({
       national_banks_zip %>%
@@ -688,7 +740,7 @@ server <- function(input, output) {
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
     })
     
-    # Regression coef definitions
+    # Regression coef definitions -- just gt'ing the tables I created.
     
     output$zip_defns <- render_gt({
       zip_regressors %>%

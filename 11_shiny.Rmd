@@ -147,6 +147,10 @@ ppp_total <- rbind(ppp_150_newcol, all_states2)
 
 
 ```{r}
+
+# This code is for the state-level graph on raw waiting days -- I add the
+# code to subset my ZIPs by racial percentages.
+
 loan_race <- left_join(ppp_total, race, 
                        by = c("zip" = "geographic_area_name")) %>%
   drop_na(minority_percent) %>%
@@ -172,7 +176,8 @@ race_days3 <- rbind(national, states)
 
 ```{r}
 
-# Don't run the lm-robust -- seems like there are documented issues here.
+# Don't run the lm-robust -- seems like there are documented issues here w/
+# fixed effects problems.
 
 set.seed(9)
 sample <- sample_n(most_recent, size = 500000) %>%
@@ -221,7 +226,7 @@ covid_fe <- lm_robust(business_days ~ 1 +
 
 ```{r}
 # This should work better given documented issues with lm-robust and ggeffect
-# Again, ram problems :()
+# Again, ram problems :( -- don't run this.
 
 covid <- lm(business_days ~ 1 + 
     median_family_income + 
@@ -261,6 +266,9 @@ covid <- lm(business_days ~ 1 +
 
 
 ```{r}
+
+# feols has a predict function but it doesn't seem to work for ggeffect, so
+# this gets thrown out too. 
 
 covid <- feols(
   business_days ~ 1 + 
@@ -329,7 +337,8 @@ covid <- feols(
 ```
 
 ```{r}
-# Let's try ggeffects now
+# Let's try ggeffects now -- we're excluding all FEs due to computational
+# problems and the documented issues with lm_robust in handling FEs.
 
 covid <- lm_robust(
   business_days ~ 1 + 
@@ -397,10 +406,20 @@ sq <- lm_robust(
 ```
 
 ```{r}
+
+# ggeffect gives us a tidy tibble for the marginal effect of minority percent
+# on waiting times, holding everything else constant. We use this in the Shiny
+# app to graphically represent my results. Everything from here on down 
+# is the same thing just with different datasets.
+
 marg_race_sq <- ggeffect(sq, terms = "minority_percent")
 ```
 
 ```{r}
+
+# Doing the same regression on the county level and then running ggeffect
+# as before.
+
 county_covid <- lm_robust(
   business_days ~ 1 + 
     median_income + 
@@ -481,7 +500,8 @@ marginal_race_county <- ggeffect(county_covid,
 
 ```{r}
 
-# Now do for banks as well
+# Now do for banks as well -- same thing, except for the national and minority
+# percent variables.
 
 national_reg <- lm_robust(business_days ~ 1 + 
     median_family_income + 
@@ -515,7 +535,7 @@ national_reg <- lm_robust(business_days ~ 1 +
     stay_at_home_current + 
     non_essential_closure_apr + 
     non_essential_closure_current + 
-    national+ I(national* minority_percent), 
+    national+ I(national * minority_percent), 
     most_recent, clusters = zip, se_type = "stata")
 ```
 
@@ -610,10 +630,17 @@ biz_reg <- lm_robust(business_days ~ 1 + median_income +
 ```
 
 ```{r}
+
+# Confirmed -- run this in Rstudio Cloud, or else it runs out of RAM here.
+
 marg_race_biz <- ggeffect(biz_reg, terms = "percent_minority_biz")
 ```
 
 ```{r}
+
+# This is the county regression that uses percent of businesses owned by 
+# minorities for a bigger marginal effect.
+
 biz_reg_sq <- lm_robust(business_days ~ 1 + median_income + 
     percent_minority_biz + 
     high_school_pct + 
@@ -653,6 +680,10 @@ marg_race_biz_sq <- ggeffect(biz_reg_sq, terms = "percent_minority_biz")
 
 
 ```{r}
+# This is me experimenting with a graph of COVID cases -- this code is 
+# basically pasted into the Shiny app -- I was just experimenting with
+# some different arguments.
+
 latest_state_cases <- read_csv('COVIDPPP/us-states.csv', col_types = cols()) %>%
   mutate(state_abb = state2abbr(state)) %>%
   select(-fips)
@@ -689,7 +720,8 @@ Writing equation:
 $$y_i = \alpha_{locality} + \beta minority + X'_i\gamma + \epsilon_i$$
 
 ```{r}
-# Trying graphing my marginal race stuff
+# Trying graphing my marginal race ggeffect results to make sure that I've 
+# done everything correctly in Shiny.
 
 marg_race <- readRDS('marg_race.rds')
 
@@ -699,7 +731,8 @@ marg_race %>%
           geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .2) +
           labs(x = "Minority Proportion of Population (Percent)", 
                y = "Predicted Wait Time (Business Days)",
-               title = "Linear Predicted Effect of Racial Minority Presence on Wait Times
+               title = "Linear Predicted Effect of Racial Minority 
+               Presence on Wait Times
                (Grouping by ZIP Codes)") +
           xlim(0, 100) +
           theme_classic()
