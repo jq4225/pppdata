@@ -641,11 +641,13 @@ sba_cleaning <- function(file) {
 }
 
 # run for Mac
+
 file.names1 <- 
   dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", 
       pattern = ".csv")
 
 # run for Windows
+
 file.names2 <- 
   dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
 

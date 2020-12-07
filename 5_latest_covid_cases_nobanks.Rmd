@@ -18,7 +18,9 @@ cal <- create.calendar(name = "mycal", weekdays=c("saturday", "sunday"))
 
 # This is actually the equivalent of files 1-5 except for a situation where
 # I'm not matching based on bank lending requirements, which adds back
-# almost 2 million data points into my analysis.
+# almost 2 million data points into my analysis. Note that the COVID
+# cases data calculations are outdated and you should reference the
+# corrected covid file, also number 5.
 
 ```
 

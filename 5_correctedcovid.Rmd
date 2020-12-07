@@ -52,6 +52,10 @@ weighted_cases1 <- left_join(county_zip_crosswalk, county_covid,
 
 ```
 ```{r}
+
+# Read in and join my new stats -- I'm unselecting the old columns b/c I
+# calculated them wrong in the other 5_latest_covid_cases file.
+
 most_recent <- most_recent %>%
   select(-mean_start_cases_weighted, -mean_start_deaths_weighted,
          -mean_end_cases_weighted, -mean_end_deaths_weighted)
@@ -61,6 +65,9 @@ most_recent_1129 <- left_join(most_recent, weighted_cases1, by = "zip") %>%
 ```
 
 ```{r}
+# We're just getting a tibble w/ all the ZIP + date combinations for loan
+# approvals and making them distinct, then matching up the weekly
+# COVID case/death rates for each of those combinations.
 
 weighted_cases_current <- 
   left_join(county_zip_crosswalk, county_covid, by = c("county" = "fips"))
@@ -93,6 +100,10 @@ weighted_cases_current_3 <- left_join(dates_approved, weighted_cases_current_2,
             .groups = "drop")
 ```
 ```{r}
+
+# This is our result for Rstudio cloud, which we then join together with the
+# other most recent tibble and transform it to per 100k people.
+
 weighted_cases_current_3 <- readRDS('weighted_cases_current_3.rds')
 
 most_recent_1129 <- left_join(most_recent_1129, 
@@ -134,6 +145,10 @@ most_recent_1129 <- left_join(most_recent_1129,
 ```
 
 ```{r}
+# The rest of this code is highly repetitive and does the above process
+# for a bunch of different manually named rds files (hence why
+# I didn't bother to write a function for this)
+
 most_recent <- readRDS('most_recent_zip_banksmatched_1128.rds') %>%
       select(-mean_start_cases_weighted, -mean_start_deaths_weighted,
          -mean_end_cases_weighted, -mean_end_deaths_weighted)
@@ -206,6 +221,9 @@ most_recent_county_1129 <- left_join(most_recent_county_1129,
 ```
 
 ```{r}
+# From here on down we're doing the same thing with counties, so we don't
+# need the ZIP-county transformations that we were doing before.
+
 most_recent_county <- readRDS('most_recent_county_nobanks_1118.rds') %>%
   select(-mean_start_cases, -mean_start_deaths, 
          -mean_end_deaths, -mean_end_cases)
@@ -262,6 +280,12 @@ zipcounty_pop <- left_join(most_recent_zipcounty, pop,
 
 
 ```{r}
+
+# Again all of this is repetitive with a bunch of different files that 
+# are designed for different model specifications -- this is why 
+# I don't really comment from here on down, it's all the same code over
+# and over again.
+
 most_recent_zipcounty_1129 <- left_join(zipcounty_pop, current_cases,
                                      by = "fips") %>%
   mutate(mean_start_cases = cases * 100000/estimate_total,

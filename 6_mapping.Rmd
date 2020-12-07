@@ -123,7 +123,8 @@ ggplot(new_lat, aes(longitude, latitude)) +
 ```
 
 ```{r}
-# Let's read in some unemployment data and see what happens
+# Let's read in some unemployment data and see what happens -- trying to make
+# a county level heatmap
 
 unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
   clean_names() %>%
@@ -140,6 +141,8 @@ unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
 ```
 
 ```{r}
+# This is me just setting up the dates properly.
+
 counties <- unemploy %>%
   select(fips) %>%
   distinct()
@@ -151,10 +154,15 @@ all_unemploy <- left_join(all, unemploy, by = c("fips", "month"))
 ```
 
 ```{r}
+# THis is just rough code that I then modify and put into my Shiny app, so it
+# doesn't look great and isn't finalized -- just for me to experiment with
+# some different settings
+
 unemploy <- unemploy %>%
   mutate(month = as.integer(month))
 
-plot1 <- plot_usmap(regions = "counties", data = unemploy, values = "unemployment_rate_percent",
+plot1 <- plot_usmap(regions = "counties", data = unemploy, 
+                    values = "unemployment_rate_percent",
              color = NA, include = "HI") + 
   labs(title = "{closest_state}",
        subtitle = "This is a blank map of the counties of the United States.") + 

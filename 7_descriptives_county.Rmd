@@ -75,6 +75,10 @@ loan_only_fips <- left_join(loan_only, county_zip_crosswalk, by = "zip") %>%
 ```
 
 ```{r}
+
+# High school education data -- check the comments in the 8_counties file
+# for more extensive notes on what these things do.
+
 educ <- read_csv('raw_data/county/county_edu.csv', skip = 1, col_types = cols()) %>%
   clean_names()
 
@@ -92,6 +96,9 @@ temp1 <- left_join(loan_only_fips, hs_id, by = "fips") %>%
 ```
 
 ```{r}
+
+# Median income data
+
 income <- read_csv('raw_data/county/county_income.csv', skip = 1) %>%
   clean_names() %>%
   select(id, estimate_households_median_income_dollars) %>%
@@ -111,6 +118,9 @@ temp2
 
 
 ```{r}
+
+# Marital status data
+
 marital <- read_csv('raw_data/county/county_marital.csv', skip = 1) %>%
   clean_names() %>%
   select(id, 
@@ -129,6 +139,9 @@ temp3
 ```
 
 ```{r}
+
+# Racial proportion data
+
 race <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
   clean_names() %>%
   select(id, estimate_total, estimate_total_white_alone,) %>%
@@ -146,6 +159,9 @@ loan_only %>%
 ```
 
 ```{r}
+
+# Business count data
+
 businesses <- 
   read_csv('raw_data/county/CBP2016.CB1600CBP_data_with_overlays_2020-10-16T114119.csv',
                        skip = 1, col_types = cols()) %>%
@@ -169,6 +185,9 @@ temp5 %>%
   summarize(n = n(), mean = mean(biz), sd = sd(biz))
 ```
 ```{r}
+
+# Election data on county level (not cook pvi anymore)
+
 elections <- read_csv('raw_data/county_elections/countypres_2000-2016.csv') %>%
   clean_names() %>%
   filter(year == "2016") %>%
@@ -187,6 +206,9 @@ temp6 <- left_join(loan_only, elections, by = "fips") %>%
 temp6
 ```
 ```{r}
+
+# Financial institution density -- have to crosswalk this to FIPS first
+
 banks <- read_csv("raw_data/fdic/OFFICES2_PART2.csv", col_types = cols(
   'ZIP' = col_character()))%>%
   clean_names() %>%
@@ -208,6 +230,9 @@ temp7 %>%
   summarize(n = n(), mean = mean(banks_per_pop), sd = sd(banks_per_pop))
 ```
 ```{r}
+
+# Population density data
+
 pop_density <- read_csv('raw_data/county/census-population-landarea.csv') %>%
   clean_names() %>%
   select(fips, 'pop060210') %>%
@@ -221,6 +246,10 @@ temp8 %>%
   summarize(n = n(), mean = mean(pop_den), sd = sd(pop_den))
 ```
 ```{r}
+
+# COVID cases data -- check 5_covidcorrected for the full comments on what
+# this code does
+
 county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
   filter(date >= as.Date("2020-03-28")) %>%
   select(date, fips, cases, deaths)
@@ -245,6 +274,9 @@ temp9 %>%
             sd2 = sd(mean_start_deaths))
 ```
 ```{r}
+
+# We're just matching up 7-day averages of daily cases and deaths
+
 dates_approved <- loan_only %>%
   select(date_approved, fips) %>%
   distinct()
@@ -271,6 +303,9 @@ temp10 %>%
             sd2 = sd(mean_end_deaths))
 ```
 ```{r}
+
+# county unemployment data!
+
 unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
   clean_names() %>%
   select(state_fips_code, county_fips_code, period, 
@@ -284,6 +319,9 @@ unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
 ```
 
 ```{r}
+
+# This is just matching up unemployment by the month of date approved
+
 ppp_months <- loan_only %>%
   mutate(month = month(date_approved))
 
@@ -313,6 +351,9 @@ combined_unemploy2 %>%
 ```
 
 ```{r}
+
+# Gini coef for inequality
+
 gini <- read_csv('raw_data/county/county_inequality.csv', skip = 1) %>%
   clean_names() %>%
   select(id, estimate_gini_index) %>%
@@ -329,6 +370,9 @@ income_inequality %>%
             n = n())
 ```
 ```{r}
+
+# Crime rates!
+
 crime <- read_excel('raw_data/county/county_health.xlsx', 
                     sheet = 'Ranked Measure Data',
                     skip = 1) %>%
@@ -345,6 +389,9 @@ county_crime %>%
 ```
 
 ```{r}
+
+# Total GDP for counties (pre-COVID)
+
 gdp <- read_csv('raw_data/gdp/CAGDP2__ALL_AREAS_2001_2018.csv') %>%
   clean_names() %>%
   filter(industry_classification == "All industry total") %>%
@@ -364,6 +411,9 @@ county_gdp %>%
 ```
 
 ```{r}
+
+# Data on business ownership proportion by minority
+
 ownership <- 
   read_csv('raw_data/county/ABSCS2017.AB1700CSA01_data_with_overlays_2020-12-01T000046.csv',
            skip = 1, col_types = cols()) %>%
@@ -394,6 +444,9 @@ most_recent_ownership %>%
 ```
 
 ```{r}
+
+# Gender ratios 
+
 gender <- 
   read_csv('raw_data/county/ACSDP5Y2018.DP05_data_with_overlays_2020-11-12T203338.csv', 
            skip = 1) %>%
@@ -414,6 +467,9 @@ temp11 %>%
             sd = sd(male_percent))
 ```
 ```{r}
+
+# Rental data for housing units from ACS
+
 housing_county <- 
   read_csv('raw_data/county/ACSDP5Y2018.DP04_data_with_overlays_2020-11-23T151752.csv',
            skip = 1, col_types = cols()) %>%

@@ -183,6 +183,31 @@ elections_clean <- elections %>%
          fips = str_pad(fips, width = 5, "left", "0")) %>%
   select(-party)
 ```
+```{r}
+# This is for my own curiosity - ignore it
+
+elections <- read_csv('raw_data/county_elections/countypres_2000-2016.csv',
+                      col_types = cols()) %>%
+  clean_names() %>%
+  filter(year == "2016") %>%
+  mutate(fips = str_pad(fips, width = 5, "left", "0")) %>%
+  select(fips, party, candidatevotes) %>%
+  drop_na()
+
+elections_pivot <- elections %>%
+  pivot_wider(id_cols = fips,
+              names_from = party, values_from = candidatevotes) %>%
+  mutate(is_republican = ifelse(republican >= democrat, TRUE, FALSE))
+
+elections_pivot2 <- elections %>%
+  group_by(fips) %>%
+  arrange(desc(candidatevotes)) %>%
+  slice(1) %>%
+  mutate(is_republican = ifelse(party == "republican", TRUE, FALSE))
+
+# Add a pipe in to select out the vote counts if you want, then join to 
+# the big dataset with left_join
+```
 
 
 ```{r}
