@@ -773,7 +773,11 @@ server <- function(input, output) {
                    values = "estimate",
                    data = state_disparities) +
         theme(panel.background = element_rect(color = "black", fill = "white"),
-              legend.position = "right") +
+              legend.position = "right",
+              legend.text = element_text(size = 12),
+              legend.title = element_text(size = 13),
+              plot.title = element_text(size = 16),
+              plot.subtitle = element_text(size = 14)) +
         scale_fill_distiller(type = "seq",
                              palette = "Blues",
                              na.value = "grey50",
@@ -781,7 +785,9 @@ server <- function(input, output) {
                              name = "Interaction Coefficient",
                              n.breaks = 5) +
         labs(title = "Racial Disparities in Lending by State",
-             subtitle = "Values are coefficients of interaction terms")
+             subtitle = "Values are coefficients of interaction terms (log-scaled business days regressed on race).") +
+        guides(fill = guide_colourbar(frame.colour = "black",
+                                      ticks.colour = "black"))
     })
     
     # Regression coef definitions -- just gt'ing the tables I created.

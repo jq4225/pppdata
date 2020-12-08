@@ -1477,7 +1477,7 @@ most_recent <- most_recent %>%
   drop_na(state) 
 
 covid_fe <- felm(
-  business_days ~ 1 + 
+  log_days ~ 1 + 
     median_family_income + 
     minority_percent +
     high_school_pct + 

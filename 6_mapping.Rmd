@@ -184,7 +184,7 @@ plot1 + transition_states(month)
 # the coefficients on interaction terms -- this is purely experimental, and
 # needs the usmap function I think
 
-covid_fe_tidied <- covid_fe_tidy %>%
+covid_fe_tidied <- covid %>%
   slice(27:78) %>%
   mutate(state = str_sub(term, 23)) %>%
   drop_na() %>%
@@ -202,6 +202,8 @@ plot_usmap(regions = "states", data = covid_fe_tidied,
                              name = "Interaction Coefficient",
                              n.breaks = 5) +
   labs(title = "Racial Disparities in Lending by State",
-       subtitle = "Values are coefficients of interaction terms")
+       subtitle = "Values are coefficients of interaction terms (log-scaled business days regressed on race).") +
+  guides(fill = guide_colourbar(frame.colour = "black",
+                                      ticks.colour = "black"))
 ```
 
