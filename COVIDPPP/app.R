@@ -59,6 +59,8 @@ unemploy <- readRDS('unemploy.rds') %>%
   mutate(month = as.integer(month)) %>%
   filter(month < 12)
 
+state_disparities <- readRDS('state_disparities.rds')
+
 
 # Define UI 
 
@@ -237,6 +239,7 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     
                                                     gt_output('county_simple')
                                                   )),
+                                         
                                          tabPanel("Full Tables", 
                                                   fluidRow(
                                                     p("These are the full regression tables for the ZIP and county level. You can see
@@ -245,6 +248,29 @@ ui <- navbarPage("Equitable Lending? Don't Bank on It: Racial Disparities in the
                                                     column(6, gt_output('zip_regression')),
                                                     column(6, gt_output('county_regression'))
                                                   )),
+                                         
+                                         tabPanel("State Comparisons",
+                                                  fluidRow(
+                                                    p("I tried disaggregating racial disparities by state by adding in an interaction term
+                                                      for each state and the minority racial population variable. This means higher/more
+                                                      positive values of the interaction term indicate higher racial disparities and vice versa.
+                                                      The displayed coefficients are relative to the state of Alaska (whose coefficient is 0).
+                                                      In line with the interaction terms you saw in the ZIP regression, it seems like many
+                                                      traditionally liberal states do not have lower racial disparities, and in some cases 
+                                                      the disparities might actually be larger."),
+                                                    p("You can interpret the interaction term's coefficients like this: suppose that every 
+                                                      percentage point increase in minority population, on average, correlates with some 
+                                                      increase in the average expected waiting time. The interaction term indicates that 
+                                                      every percentage point increase in minority population in a ZIP code in a particular
+                                                      state has an additional predicted effect on waiting time: either being in that state
+                                                      can be associated with a lower increase in waiting time per percentage point increase in
+                                                      minority population (a negative interaction term), or it can be associated with 
+                                                      a higher increase in waiting time than average."),
+                                                    column(12, plotOutput('state_disparities',
+                                                                          width = "100%",
+                                                                          height = "500px"))
+                                                  )),
+                                         
                                          tabPanel("Bank Type Comparisons",
                                                   
                                                   # This tab indicates the advantage of going to a national bank for your loan in racial
@@ -738,6 +764,24 @@ server <- function(input, output) {
         tab_header(title = "Counties") %>%
         fmt_missing(columns = everything(), missing_text = "") %>%
         tab_source_note(source_note = "***p < 0.001; **p < 0.01; *p < 0.05")
+    })
+    
+    # State by state comparison of lending disparities
+    
+    output$state_disparities <- renderPlot({
+        plot_usmap(regions = "states",
+                   values = "estimate",
+                   data = state_disparities) +
+        theme(panel.background = element_rect(color = "black", fill = "white"),
+              legend.position = "right") +
+        scale_fill_distiller(type = "seq",
+                             palette = "Blues",
+                             na.value = "grey50",
+                             direction = 1,
+                             name = "Interaction Coefficient",
+                             n.breaks = 5) +
+        labs(title = "Racial Disparities in Lending by State",
+             subtitle = "Values are coefficients of interaction terms")
     })
     
     # Regression coef definitions -- just gt'ing the tables I created.

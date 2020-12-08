@@ -179,3 +179,29 @@ plot1 + transition_states(month)
 # p + transition_time(month)
 ```
 
+```{r}
+# This is me creating a map of minority percent disparities by state using 
+# the coefficients on interaction terms -- this is purely experimental, and
+# needs the usmap function I think
+
+covid_fe_tidied <- covid_fe_tidy %>%
+  slice(27:78) %>%
+  mutate(state = str_sub(term, 23)) %>%
+  drop_na() %>%
+  select(state, estimate) %>%
+  add_row(state = "AK", estimate = 0)
+
+plot_usmap(regions = "states", data = covid_fe_tidied,
+           values = "estimate") +
+  theme(panel.background = element_rect(color = "black", fill = "white"),
+        legend.position = "right") +
+   scale_fill_distiller(type = "seq",
+                             palette = "Blues",
+                             na.value = "grey50",
+                             direction = 1,
+                             name = "Interaction Coefficient",
+                             n.breaks = 5) +
+  labs(title = "Racial Disparities in Lending by State",
+       subtitle = "Values are coefficients of interaction terms")
+```
+

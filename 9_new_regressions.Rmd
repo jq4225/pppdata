@@ -1468,5 +1468,43 @@ county_covid_biz_sq <- felm(business_days ~ 1 +
 #   data = most_recent)
 ```
 
+```{r}
+
+# Again trying something for a different graph later -- adding in state FEs
+# and state * minority_percent interactions
+
+most_recent <- most_recent %>%
+  drop_na(state) 
+
+covid_fe <- felm(
+  business_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent + 
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent + 
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    state:minority_percent|lender + state|0|zip,
+  data = most_recent)
+
+```
 
 
