@@ -1705,7 +1705,7 @@ county_sq <- felm(business_days ~ 1 +
 
 
 ```{r}
-# One more check -- I want to see if minority business ownership is significnant
+# One more check -- I want to see if minority business ownership is significant
 # controlling for population
 
 county_covid_biz <- felm(business_days ~ 1 + 
