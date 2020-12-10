@@ -14,6 +14,7 @@ library(usmap)
 library(readxl)
 library(lubridate)
 library(gganimate)
+library(lfe)
 ```
 
 ```{r getting zip code counts for original}
@@ -205,5 +206,166 @@ plot_usmap(regions = "states", data = covid_fe_tidied,
        subtitle = "Values are coefficients of interaction terms (log-scaled business days regressed on race).") +
   guides(fill = guide_colourbar(frame.colour = "black",
                                       ticks.colour = "black"))
+```
+```{r}
+
+# Adding yet another map -- bank loans by location for the Business
+# Roundtable banks
+
+most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
+  mutate(lender = tolower(lender)) %>%
+  mutate(lender = as.factor(lender)) %>%
+  select(zip, lender) %>%
+  group_by(zip, lender) %>%
+  summarize(number = n(), .groups = "drop") %>%
+  filter(lender %in% c("bank of america, national association",
+                        "citibank, n.a.",
+                        "keybank national association",
+                        "jpmorgan chase bank, national association",
+                        "wells fargo bank, national association"))
+
+
+ziplat <- 
+  read_delim('raw_data/crosswalks/us-zip-code-latitude-and-longitude.csv',
+                   delim = ";") %>%
+  clean_names() %>%
+  select(zip, latitude, longitude)
+
+new_lat <- left_join(most_recent, ziplat, by = "zip") %>%
+  drop_na(latitude) %>%
+  mutate(lender = as.character(lender)) %>%
+  mutate(lender = ifelse(lender == "bank of america, national association",
+                         "Bank of America", lender)) %>%
+  mutate(lender = ifelse(lender == "citibank, n.a.",
+                         "Citibank", lender)) %>%
+  mutate(lender = ifelse(lender == "keybank national association",
+                         "KeyBank", lender)) %>%
+  mutate(lender = ifelse(lender == "jpmorgan chase bank, national association",
+                         "JPMorgan Chase", lender)) %>%
+  mutate(lender = ifelse(lender == "wells fargo bank, national association",
+                         "Wells Fargo", lender)) %>%
+  mutate(lender = as.factor(lender))
+```
+
+```{r}
+us <- map_data('state')
+
+ggplot(new_lat, aes(longitude, latitude)) +
+  geom_polygon(data=us,aes(x = long,y = lat, group = group),
+               color = 'gray', fill = NA, alpha = .35) +
+  geom_point(aes(color = number),size = 1,alpha = 0.07) +
+  xlim(-125,-65) + ylim(25,50) +
+  theme_linedraw() +
+  theme(axis.ticks = element_blank(),
+        axis.line = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.85, 0.25),
+        legend.background = element_rect(colour = "black")) +
+  scale_color_gradient(low = "dodgerblue", high = "dodgerblue4",
+                        name = "Number of Loans",
+                        n.breaks = 4,
+                      breaks = waiver(),
+                      limits = c(0, 600)) +
+  guides(color = guide_colourbar(frame.colour = "black",
+                                      ticks.colour = "black")) +
+  facet_wrap(~ lender)
+```
+```{r}
+# Let's try mapping Business Roundtable by state as well
+
+most_recent <- readRDS('most_recent_zip_1130.rds') %>%
+  mutate(national = 0) %>%
+  mutate(national = ifelse(str_detect(lender, pattern = "national association"),
+                           1, national),
+         national = ifelse(str_detect(lender, pattern = "n.a."),
+                           1, national)) %>%
+  mutate(cu = 0) %>%
+  mutate(cu = ifelse(str_detect(lender, pattern = "\\sfcu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "\\scu$"), 1, 
+                              cu),
+         cu = ifelse(str_detect(lender, pattern = "credit union"), 1, 
+                              cu)) %>%
+  mutate(business_roundtable = ifelse(lender %in%
+                                        c("bank of america, national association",
+                                          "citibank, n.a.",
+                                          "keybank national association",
+                                          "jpmorgan chase bank, national association",
+                                          "wells fargo bank, national association"),
+                                      1, 0)) %>%
+  mutate(state = as.factor(state), zip = as.factor(zip),
+         log_days = log(business_days + 1))
+  
+roundtable_reg <- felm(
+    log_days ~ 1 + 
+    median_family_income + 
+    minority_percent +
+    high_school_pct + 
+    married_percent + male_percent +
+    cook_pvi + 
+    rural +
+    estimate_gini_index +
+    violent_crime_rate + renter_percent +
+    delay +
+    loan_150_350 +
+    loan_350_1mil +
+    loan_1mil_2mil +
+    loan_2mil_5mil + 
+    loan_5mil_10mil + 
+    preference + 
+    requirement + 
+    bank_ppp_issued + 
+    jobs_reported +
+    banks_per_pop + 
+    businesses_per_pop + 
+    payroll +
+    unemployment_rate_apr + 
+    unemployment_rate + 
+    mean_start_cases_weighted +
+    mean_start_deaths_weighted + 
+    mean_end_cases_weighted +
+    mean_end_deaths_weighted + 
+    stay_at_home_apr + 
+    stay_at_home_current + 
+    non_essential_closure_apr + 
+    non_essential_closure_current + 
+       national + cu + business_roundtable +
+    I(national * minority_percent) + 
+    I(business_roundtable * minority_percent) + 
+    state:minority_percent:business_roundtable + 
+    state:minority_percent|state|0|zip, 
+    data = most_recent)
+
+roundtable <- tidy(roundtable_reg)
+
+```
+```{r}
+roundtable_clean <- roundtable %>%
+  slice(90:141) %>%
+  drop_na(estimate) %>%
+  mutate(state = str_sub(term, 43)) %>%
+  select(-term) %>%
+  select(estimate, state)
+
+plot_usmap(regions = "states", data = roundtable_clean,
+           values = "estimate") +
+  theme(panel.background = element_rect(color = "black", fill = "white"),
+        legend.position = "right") +
+   scale_fill_distiller(type = "seq",
+                             palette = "YlGnBu",
+                             na.value = "grey50",
+                             direction = 1,
+                             name = "Interaction Coefficient",
+                             n.breaks = 5) +
+  labs(title = "Business Roundtable Effect by State",
+       subtitle = "Values are coefficients of interaction terms (log-scaled business days regressed on signatory status).") +
+  guides(fill = guide_colourbar(frame.colour = "black",
+                                      ticks.colour = "black"))
+
 ```
 
