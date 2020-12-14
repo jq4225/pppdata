@@ -15,6 +15,9 @@ library(readxl)
 library(lubridate)
 library(gganimate)
 library(lfe)
+
+# This file creates a variety of maps -- basically, all the data visualization
+# I need for any of my projects are all done here.
 ```
 
 ```{r getting zip code counts for original}
@@ -50,13 +53,15 @@ new <- readRDS('most_recent_zip_nobanks_1118.rds') %>%
 
 ```{r matching up zips and lat/long}
 # This converts zip codes to rough lat-long estimates
+
 ziplat <- 
   read_delim('raw_data/crosswalks/us-zip-code-latitude-and-longitude.csv',
                    delim = ";") %>%
   clean_names() %>%
   select(zip, latitude, longitude)
 
-# We convert original loan data and new loan data to zip.
+# We convert original loan data and new loan data to zip to match these up
+# w/ the file we just read in to convert to coordinates
 
 original_lat <- left_join(original, ziplat, by = "zip") %>%
   drop_na(latitude)
@@ -91,7 +96,7 @@ ggplot(original_lat, aes(longitude, latitude)) +
 
 
 ```{r graphing}
-# Similarly we then do this for our final dataset too!
+# Similarly we then do this for our final dataset too! Same steps here
 
 ggplot(new_lat, aes(longitude, latitude)) +
   geom_polygon(data = us, aes(x = long,y = lat, group = group), color = 'gray',
@@ -125,7 +130,8 @@ ggplot(new_lat, aes(longitude, latitude)) +
 
 ```{r}
 # Let's read in some unemployment data and see what happens -- trying to make
-# a county level heatmap
+# a county level heatmap too using the usmap package which is a bit
+# different from what we did before
 
 unemploy <- read_excel('raw_data/unemployment/laucntycur14.xlsx', skip = 4) %>%
   clean_names() %>%
@@ -157,7 +163,8 @@ all_unemploy <- left_join(all, unemploy, by = c("fips", "month"))
 ```{r}
 # THis is just rough code that I then modify and put into my Shiny app, so it
 # doesn't look great and isn't finalized -- just for me to experiment with
-# some different settings
+# some different settings. Using usmap handles a lot of the setup for us
+# which makes my life substantially easier.
 
 unemploy <- unemploy %>%
   mutate(month = as.integer(month))
@@ -210,7 +217,8 @@ plot_usmap(regions = "states", data = covid_fe_tidied,
 ```{r}
 
 # Adding yet another map -- bank loans by location for the Business
-# Roundtable banks
+# Roundtable banks -- same thing as before here, so the comments will 
+# be sort of sparse.
 
 most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
   mutate(lender = tolower(lender)) %>%
@@ -276,7 +284,10 @@ ggplot(new_lat, aes(longitude, latitude)) +
   facet_wrap(~ lender)
 ```
 ```{r}
-# Let's try mapping Business Roundtable by state as well
+# Let's try mapping Business Roundtable by state as well -- again, sparse
+# comments since this is already all done elsewhere. This code is copied
+# from our regressions file -- we're just coding some dummies for if a 
+# bank comes from a certain type of institution or group.
 
 most_recent <- readRDS('most_recent_zip_1130.rds') %>%
   mutate(national = 0) %>%

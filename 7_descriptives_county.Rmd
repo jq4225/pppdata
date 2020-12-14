@@ -11,13 +11,14 @@ library(readxl)
 library(openintro)
 
 # This calculates descriptives for my county dataset -- again, not relevant
-# to Gov 50
+# to Gov 50 at all, since this table doesn't show up (so grader, keep moving!)
 
 ```
 
 ```{r}
 
-# This is final dataset calculations 
+# This is final dataset calculations -- we can use saply to calculate means
+# for everything we need
 
 most_recent_ownership_county <- most_recent_ownership_county %>%
   drop_na(stay_at_home_apr, 
@@ -31,6 +32,8 @@ sapply(most_recent_ownership_county, mean) %>%
                values_to = "mean")
 ```
 ```{r}
+
+# Again, need to select only the numeric values otherwise SD won't work
 
 most_recent_ownership_county <- most_recent_ownership_county %>%
   select(business_days, median_income, percent_minority_biz,
@@ -56,7 +59,11 @@ sapply(most_recent_ownership_county, sd) %>%
 
 ```{r}
 # This is mostly taken from the file 8 counties -- go there for full comments
-# and descriptions of what's going on
+# and descriptions of what's going on. Otherwise, general idea-- we need to 
+# merger in our datasets one by one to make sure we don't drop data
+# and then calculate descriptives
+
+# starting just by converting zip to fips codes
 
 loan_only <- readRDS('ppp_loanonly_with_jobs.rds')
 

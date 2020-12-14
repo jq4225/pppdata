@@ -121,6 +121,9 @@ marital <- read_csv('raw_data/county/county_marital.csv', skip = 1) %>%
 
 
 ```{r}
+
+# This is race, as you might have guessed
+
 race <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
   clean_names() %>%
   select(id, geographic_area_name, estimate_total, estimate_total_white_alone,
@@ -135,8 +138,12 @@ race <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
 
 
 ```{r}
+
+# Reading in county-level business counts
+
 businesses <- read_csv('raw_data/county/CBP2016.CB1600CBP_data_with_overlays_2020-10-16T114119.csv',
-                       skip = 1) %>%
+                       skip = 1,
+                       col_types = cols()) %>%
   clean_names() %>%
   filter(meaning_of_employment_size_of_establishments == "All establishments",
          meaning_of_legal_form_of_organization_code == "All establishments") %>%
@@ -150,6 +157,9 @@ businesses <- read_csv('raw_data/county/CBP2016.CB1600CBP_data_with_overlays_202
 
 
 ```{r}
+
+# Merging all the ACS stuff together since they have the common ID numbers
+
 merge1 <- inner_join(hs_id, income, by = "id")
 
 merge2 <- inner_join(merge1, marital, by = "id")
@@ -211,6 +221,9 @@ elections_pivot2 <- elections %>%
 
 
 ```{r}
+
+# Continuing to merge after converting the ACS ids to proper FIPS codes
+
 demographics <- merge4 %>%
   mutate(fips = map_chr(id, ~ substring(., 10)))
 
@@ -238,7 +251,8 @@ loan_only_fips <- left_join(loan_only, county_zip_crosswalk, by = "zip") %>%
 
 combined <- left_join(loan_only_fips, merge5, by = "fips") %>%
   rename('high_school_pct' = 'estimate_percent_population_25_years_and_over_population_35_to_44_years_high_school_graduate_or_higher', 'republican_percent' = 'percent') %>%
-  drop_na(high_school_pct, median_income, married_percent, estimate_total, black_percent,
+  drop_na(high_school_pct, median_income, married_percent, estimate_total, 
+          black_percent,
           white_percent, businesses_per_pop, republican_percent)
 ```
 
@@ -285,7 +299,8 @@ pop_density <- read_csv('raw_data/county/census-population-landarea.csv') %>%
   select(fips, 'pop060210') %>%
   mutate(fips = str_pad(fips, width = 5, "left", "0"))
 
-combined_with_popden <- left_join(combined_with_bank, pop_density, by = "fips") %>%
+combined_with_popden <- left_join(combined_with_bank, pop_density, 
+                                  by = "fips") %>%
   drop_na('pop060210') %>%
   rename('pop_den' = 'pop060210')
 ```
@@ -303,7 +318,8 @@ current_cases <- county_covid %>%
   group_by(fips) %>%
   summarize(cases = mean(cases), deaths = mean(deaths), .groups = "drop")
 
-combined_covid_curr <- left_join(combined_with_popden, current_cases, by = "fips") %>%
+combined_covid_curr <- left_join(combined_with_popden, current_cases, 
+                                 by = "fips") %>%
   mutate(mean_start_cases = cases * 10000/estimate_total,
          mean_start_deaths = deaths * 10000/estimate_total) %>%
   select(-cases, -deaths) %>%
@@ -377,7 +393,8 @@ unemploy_apr <- unemploy %>%
   rename("unemployment_rate_apr" = "unemployment_rate_percent")
 
 combined_unemploy2 <- left_join(combined_unemploy,
-                                         unemploy_apr, by = c("fips" = "fips_code")) %>%
+                                         unemploy_apr, 
+                                by = c("fips" = "fips_code")) %>%
   drop_na(unemployment_rate_percent, unemployment_rate_apr) %>%
   select(-period, -unemployed, -labor_force, -state_fips_code,
          -county_fips_code)
@@ -393,7 +410,8 @@ so_far <- combined_unemploy2
 
 state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
                              sheet = "2020-06-22_Social Distancing Or", skip = 1,
-                             col_types = c("guess", "date", "date", "date", "date",
+                             col_types = c("guess", "date", "date", "date", 
+                                           "date",
                                            "date", "date", "guess", "date",
                                            "date", "date", "date", "date",
                                            "date")) %>%
@@ -447,6 +465,10 @@ states_merged <- left_join(prepping_state_policies, state_policies,
 
 
 ```{r}
+
+# Bank loan policies -- not always included since we don't need this for all
+# my datasets
+
 bank_ppp_policy_manual <- 
   read_excel('raw_data/bank_ppp_policy_manual.xlsx', sheet = "Sheet2") %>%
   mutate(sba_name = tolower(sba_name)) %>%
@@ -463,6 +485,9 @@ banking_policies <- left_join(states_merged, bank_ppp_policy_manual,
                               1, requirement)) %>%
   drop_na(requirement) %>%
   mutate(preference = replace_na(preference, 0))
+
+# Number of loans per bank -- we get this by going back to a saved copy of the
+# full loan dataset
 
 loan_only2 <- readRDS('ppp_loanonly_all_loans.rds')
 
@@ -484,6 +509,9 @@ loan_numbers2 <- loan_numbers2 %>%
 
 
 ```{r}
+
+# Income inequality
+
 gini <- read_csv('raw_data/county/county_inequality.csv', skip = 1) %>%
   clean_names() %>%
   select(id, estimate_gini_index) %>%
@@ -633,6 +661,9 @@ most_recent_county_housing <- left_join(most_recent_county,
 ```
 
 ```{r}
+
+# Merging with housing data
+
 most_recent_county <- readRDS('most_recent_county_nobanks_1130.rds')
 
 most_recent_county_housing <- left_join(most_recent_county,

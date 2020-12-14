@@ -109,7 +109,8 @@ ppp_allvars_1028 <- left_join(ppp_allvars_1024_marital,
 
 ppp_allvars_1028 <- ppp_allvars_1028 %>%
   mutate(mean_end_cases_weighted = mean_end_cases_weighted * 10000 / population,
-         mean_end_deaths_weighted = mean_end_deaths_weighted * 10000 / population)
+         mean_end_deaths_weighted = 
+           mean_end_deaths_weighted * 10000 / population)
 ```
 
 ```{r}
@@ -118,7 +119,8 @@ ppp_allvars_1028 <- ppp_allvars_1028 %>%
 # but gets the final numbers right anyway, so I just tolerate the errors.
 
 state_policies <- read_excel("raw_data/covid/7-30-2020_Social_Distancing.xlsx",
-                             sheet = "2020-06-22_Social Distancing Or", skip = 1,
+                             sheet = "2020-06-22_Social Distancing Or", 
+                             skip = 1,
                              col_types = c("guess", "date", "date", "date", 
                                            "date",
                                            "date", "date", "guess", "date",
@@ -194,7 +196,8 @@ ppp_allvars_1028_lockdowns <- bind_cols(ppp_allvars_1028, states_merged_cleaned)
 
 # This is taken from earlier when we needed to do county-zip weighting.
 
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio)
 
@@ -298,14 +301,16 @@ ppp_allvars_1027 <- left_join(current, inequality,
 ```{r}
 # Adding in violent crime rates
 
-crime <- read_excel('raw_data/county/county_health.xlsx', sheet = 'Ranked Measure Data',
+crime <- read_excel('raw_data/county/county_health.xlsx', 
+                    sheet = 'Ranked Measure Data',
                     skip = 1) %>%
   clean_names() %>%
   select(fips, annual_average_violent_crimes)
 
 # Don't need to run this again if you have it above
 
-county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
+county_zip_crosswalk <- 
+  read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx') %>%
   clean_names() %>%
   select(county, zip, res_ratio)
 
@@ -313,8 +318,10 @@ county_zip_crosswalk <- read_excel('raw_data/crosswalks/COUNTY_ZIP_092020.xlsx')
 # unemployment, but we've kept the ACS population estimates so we can calculate
 # our own per-population crime rate estimates.
 
-crime_zip <- left_join(county_zip_crosswalk, crime, by = c("county" = "fips")) %>%
-  mutate(annual_average_violent_crimes = annual_average_violent_crimes * res_ratio) %>%
+crime_zip <- left_join(county_zip_crosswalk, crime, 
+                       by = c("county" = "fips")) %>%
+  mutate(annual_average_violent_crimes = 
+           annual_average_violent_crimes * res_ratio) %>%
   drop_na(annual_average_violent_crimes) %>%
   group_by(zip) %>%
   summarize(total_crime = sum(annual_average_violent_crimes), .groups = "drop")
@@ -335,7 +342,7 @@ ppp_allvars_1027_crime <- left_join(ppp_allvars_1027, crime_zip, by = "zip") %>%
 
 payroll <- 
   read_csv('raw_data/acs_business/ZBP2016.CB1600ZBP_data_with_overlays_2020-11-05T115551.csv',
-           skip = 1) %>%
+           skip = 1, col_types = cols()) %>%
   clean_names() %>%
   filter(meaning_of_2012_naics_code == "Total for all sectors") %>%
   select(geographic_area_name, annual_payroll_1_000) %>%
@@ -366,7 +373,8 @@ gender <-
            as.double(percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male)) %>%
   mutate(geographic_area_name = str_trim(geographic_area_name, side = "both"))
 
-most_recent_2 <- left_join(most_recent, gender, by = c("zip" = "geographic_area_name")) %>%
+most_recent_2 <- left_join(most_recent, gender, 
+                           by = c("zip" = "geographic_area_name")) %>%
   rename("male_percent" = 
            "percent_estimate_citizen_voting_age_population_citizen_18_and_over_population_male") %>%
   drop_na(male_percent)

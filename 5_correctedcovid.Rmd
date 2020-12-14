@@ -22,7 +22,8 @@ county_zip_crosswalk <-
 # 3-27 is 1 week before April 3rd when apps opened so we filter here for
 # less computational need + b/c we only need 7-day averages
 
-county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+county_covid <- read_csv('raw_data/covid/us-counties.csv',
+                         col_types = cols()) %>%
   filter(date > as.Date("2020-03-27")) %>%
   select(-county, -state)
 
@@ -174,7 +175,8 @@ most_recent_1129 <- left_join(most_recent_1129,
 ```{r}
 # Doing the same for counties -- need some recalculations here
 
-county_covid <- read_csv('raw_data/covid/us-counties.csv') %>%
+county_covid <- read_csv('raw_data/covid/us-counties.csv',
+                         col_types = cols()) %>%
   filter(date >= as.Date("2020-03-28")) %>%
   select(date, fips, cases, deaths)
 
@@ -256,7 +258,8 @@ most_recent_county_1129 <- left_join(most_recent_county_1129,
 
 ```{r}
 # We can also do this for the zip with counties, both with and without
-# banks
+# banks. This just reads in another file to do the same thing (obviously
+# this code won't work since I haven't uploaded the files to Github)
 
 most_recent_zipcounty <- 
   readRDS('most_recent_zip_withcounties_nobanks_1118.rds') %>%
@@ -267,7 +270,8 @@ most_recent_zipcounty <-
 
 # read in county population data
 
-pop <- read_csv('raw_data/county/county_race.csv', skip = 1) %>%
+pop <- read_csv('raw_data/county/county_race.csv', col_types = cols(), 
+                skip = 1) %>%
   clean_names() %>%
   select(id, estimate_total) %>%
   mutate(fips = str_sub(id, start = 10)) %>%
@@ -305,7 +309,8 @@ temp <- left_join(dates_approved, county_covid, by = "fips") %>%
   filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
   group_by(fips, date_approved) %>%
   summarize(mean_end_cases = (max(cases) - min(cases))/7, 
-            mean_end_deaths = (max(deaths) - min(deaths))/7)
+            mean_end_deaths = (max(deaths) - min(deaths))/7,
+            .groups = "drop")
 
 most_recent_zipcounty_1129 <- left_join(most_recent_zipcounty_1129,
                                      temp, by = c("fips", "date_approved")) %>%
@@ -355,7 +360,8 @@ temp <- left_join(dates_approved, county_covid, by = "fips") %>%
   filter(date %in% c(as.Date(date_approved - 6), date_approved)) %>%
   group_by(fips, date_approved) %>%
   summarize(mean_end_cases = (max(cases) - min(cases))/7, 
-            mean_end_deaths = (max(deaths) - min(deaths))/7)
+            mean_end_deaths = (max(deaths) - min(deaths))/7,
+            .groups = "drop")
 
 most_recent_zipcounty_1129 <- left_join(most_recent_zipcounty_1129,
                                      temp, by = c("fips", "date_approved")) %>%

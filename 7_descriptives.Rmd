@@ -78,7 +78,8 @@ sapply(most_recent, mean) %>%
 ```
 
 ```{r}
-# SD for everything
+# SD for everything -- we need to pick the numerical columns only, o/w
+# it won't work.
 
 most_recent <- most_recent %>%
   select(business_days, median_family_income, minority_percent,
@@ -163,6 +164,9 @@ temp2 %>%
 
 
 ```{r}
+
+# Reading in the race data
+
 race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
                 skip = 1) %>%
   clean_names() %>%
@@ -400,7 +404,8 @@ temp8 %>%
 
 ```{r}
 
-# Rurality descriptives
+# Rurality dummy variables -- have to convert the list of zip codes to
+# a list of dummies
 
 rural <- read_excel("raw_data/crosswalks/forhp-eligible-zips.xlsx") %>%
   clean_names() %>%
