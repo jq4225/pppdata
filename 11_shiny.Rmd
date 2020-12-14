@@ -23,7 +23,8 @@ library(estimatr)
 
 
 ```{r}
-# Reading in the data. I"m just doing this so I can use ggeffect later
+# Reading in the data. I"m just doing this so I can use ggeffect later after
+# we finish running regressions on it
 
 most_recent <- readRDS('most_recent_zip_nobanks_1130.rds') %>%
   mutate(state = as.factor(state),
@@ -80,7 +81,8 @@ most_recent_county <- readRDS('most_recent_county_1130.rds') %>%
 ```
 
 ```{r}
-# Adding in the race days stuff
+# Fixing up our previous files by replacing black and white percentages with
+# non-white percent for a better proxy of minority status
 
 race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-12T162449.csv",
                 skip = 1) %>%
@@ -98,6 +100,8 @@ race <- read_csv("raw_data/acs_race/ACSDP5Y2018.DP05_data_with_overlays_2020-10-
 ```
 
 ```{r}
+# Generating our original loan files -- this is taken from file 1 directly
+
 ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   clean_names() %>%
   select(loan_range, zip, date_approved, lender, address, city, state,
@@ -105,6 +109,7 @@ ppp_150 <- read_csv("raw_data/sba/PPP_SBA_150.csv") %>%
   drop_na(zip, jobs_reported) %>%
   
   # This calculates the date on which loans were approved vs. when apps opened.
+  
   mutate(date_approved = mdy(date_approved), 
          days_to_approval = date_approved - mdy("04/03/2020"),
          zip = as.character(zip))
@@ -126,11 +131,15 @@ sba_cleaning <- function(file) {
 
 # run for Mac
 
-file.names1 <- dir(path = "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", pattern = ".csv")
+file.names1 <- dir(path = 
+                     "/Users/Regular/Desktop/GOV50/pppdata/raw_data/sba/states/", 
+                   pattern = ".csv")
 
 # run for Windows
 
-file.names2 <- dir(path = "C:/Justin/Gov50/pppdata/raw_data/sba/states/", pattern = ".csv")
+file.names2 <- dir(path = 
+                     "C:/Justin/Gov50/pppdata/raw_data/sba/states/", 
+                   pattern = ".csv")
 
 all_states<- tibble()
 
@@ -337,7 +346,7 @@ covid <- feols(
 ```
 
 ```{r}
-# Let's try ggeffects now -- we're excluding all FEs due to computational
+# Let's try ggeffects now on lmr -- we're excluding all FEs due to computational
 # problems and the documented issues with lm_robust in handling FEs.
 
 covid <- lm_robust(

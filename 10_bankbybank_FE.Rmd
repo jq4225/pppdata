@@ -1056,7 +1056,7 @@ cu_county <- felm(business_days ~ 1 +
 ```{r}
 
 # Robustness check w/ zip and county -- replacing ZIP estimates with the 
-# county data
+# county data, but keeping other data at ZIP level
 
 baml_check <- felm(
   business_days ~ 1 + 
